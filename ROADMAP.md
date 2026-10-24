@@ -171,7 +171,7 @@ No new features; this milestone makes the existing ones dependable, then freezes
   - [x] publish automatically once CI passes on `main`, from the exact commit CI tested;
   - [x] limit the npm version in the release workflow to `^11.5.1` instead of `npm@latest`;
   - [x] run `npm run check` (not only `npm test`) before publishing;
-  - enforce Conventional Commits on pull requests (commitlint) so every change is classified for semantic-release;
+  - [x] enforce Conventional Commits on pull request titles, which become the squash-merge commit, so every change is classified for semantic-release;
   - publish a `CHANGELOG.md` with `@semantic-release/changelog`.
 - [ ] **Contributor files:** `CONTRIBUTING.md`, issue and pull request templates.
 

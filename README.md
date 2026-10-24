@@ -173,6 +173,15 @@ Run the complete local verification command:
 npm run check
 ```
 
+### Workflow
+
+Every change is made on a short-lived branch and reaches `main` through a pull request:
+
+1. Create a branch named after the change, for example `feat/project-search`, `fix/ctrl-c` or `docs/readme`.
+2. Commit and push to it as often as needed. Nothing is released from a branch.
+3. Open a pull request. CI runs the full test matrix, and a check makes sure the title follows [Conventional Commits](https://www.conventionalcommits.org/), for example `feat: add project search`.
+4. Squash-merge it. The pull request title becomes the single commit on `main`, which decides the release described below.
+
 ### Releasing
 
 Releases are automatic. When CI passes for a push to `main`, the Release workflow runs [semantic-release](https://semantic-release.gitbook.io/), which reads the commit messages since the last release:
@@ -199,7 +208,7 @@ See the [roadmap](ROADMAP.md) for the features planned up to version 1.0.0.
 
 ## Contributing
 
-Bug reports, feature suggestions, and contributions are welcome. Please include clear reproduction steps when reporting a problem.
+Bug reports, feature suggestions, and contributions are welcome. Please include clear reproduction steps when reporting a problem. Pull requests follow the [workflow](#workflow) described above.
 
 ## License
 

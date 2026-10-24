@@ -1,7 +1,10 @@
 name: CI
 
+# Work happens on branches and reaches main through pull requests, so CI runs
+# on every pull request and on main itself, not twice for each branch push.
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
