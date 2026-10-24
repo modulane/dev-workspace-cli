@@ -30,11 +30,30 @@ test('getProjects lists immediate folders alphabetically', async () => {
     await mkdir(path.join(directory, 'alpha'))
     await writeFile(path.join(directory, 'notes.txt'), 'Not a project')
 
-    const projects = await getProjects(directory, path.join(directory, 'cli'))
+    const projects = await getProjects(directory)
 
     assert.deepEqual(
       projects.map(project => project.name),
       ['alpha', 'zeta'],
+    )
+  })
+})
+
+test('getProjects leaves out folders that are never projects', async () => {
+  await withTempDirectory(async directory => {
+    for (const name of ['.git', '.vscode', '.idea', 'node_modules', 'web']) {
+      await mkdir(path.join(directory, name))
+    }
+
+    // Names that only contain a dot or "node_modules" are still projects.
+    await mkdir(path.join(directory, 'my.app'))
+    await mkdir(path.join(directory, 'node_modules-tools'))
+
+    const projects = await getProjects(directory)
+
+    assert.deepEqual(
+      projects.map(project => project.name),
+      ['my.app', 'node_modules-tools', 'web'],
     )
   })
 })

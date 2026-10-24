@@ -69,7 +69,7 @@ The CLI currently assumes npm and lists every folder. This milestone makes it co
 
 The project list currently shows every subfolder of the workspace, including folders that can never be projects. Opening one of them leads to an empty "No scripts found" screen.
 
-- [ ] Leave out of the project list the workspace subfolders that are never projects: names starting with a dot (`.git`, `.vscode`, `.idea`, …) and `node_modules`.
+- [x] Leave out of the project list the workspace subfolders that are never projects: names starting with a dot (`.git`, `.vscode`, `.idea`, …) and `node_modules`.
 - [ ] Show subfolders without a `package.json` dimmed, at the end of the list, or hide them with a setting (see [Configuration and scripts](#configuration-and-scripts)).
 - [ ] Sort projects case-insensitively.
 
