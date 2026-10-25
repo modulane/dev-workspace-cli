@@ -173,7 +173,9 @@ No new features; this milestone makes the existing ones dependable, then freezes
   - [x] run `npm run check` (not only `npm test`) before publishing;
   - [x] enforce Conventional Commits on pull request titles, which become the squash-merge commit, so every change is classified for semantic-release;
   - publish a `CHANGELOG.md` with `@semantic-release/changelog`.
-- [ ] **Contributor files:** `CONTRIBUTING.md`, issue and pull request templates.
+- [ ] **Contributor files:**
+  - [x] `CONTRIBUTING.md` with the development setup, workflow and release process;
+  - issue and pull request templates.
 
 ### Release candidate
 
