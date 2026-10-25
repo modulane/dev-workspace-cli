@@ -32,6 +32,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    # Repository settings can limit this environment to main and add
+    # protection rules, and the npm trusted publisher can require it.
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@modulane/dev-workspace-cli
+
     # Never run two releases at the same time; queue them instead. Only this
     # job waits, so CI for the next commit can start straight away.
     concurrency:
