@@ -75,8 +75,8 @@ The project list currently shows every subfolder of the workspace, including fol
 
 ### Scripts
 
-- [ ] Group `pre*` and `post*` lifecycle scripts under their main script, so `pretest` is not listed as a separate entry.
-- [ ] Show the script command as the description, truncated to the terminal width.
+- [x] Group `pre*` and `post*` lifecycle scripts under their main script, so `pretest` is not listed as a separate entry. Hooks whose main script does not exist, such as `postinstall` on its own, stay listed.
+- [x] Show the script command as the description, truncated to the terminal width, followed by its hooks.
 
 **Done when:** a workspace that mixes npm, pnpm, Yarn and Bun projects runs every script with the right tool on all three operating systems in CI.
 

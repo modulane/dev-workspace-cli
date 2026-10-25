@@ -208,3 +208,57 @@ test('chooseProject disables folders without a package.json', async () => {
     { name: '📁  notes', value: projects[1], disabled: '(no package.json)' },
   ])
 })
+
+test('chooseScript fits the command to the terminal width', async () => {
+  const calls = []
+  const select = async options => {
+    calls.push(options)
+    return null
+  }
+  const long = `node ${'x'.repeat(200)}.js`
+
+  for (const [columns, expectedLength] of [
+    [40, 38],
+    [120, 118],
+    [undefined, 78],
+    [5, 20],
+  ]) {
+    calls.length = 0
+
+    await createPrompts({ select, columns: () => columns }).chooseScript([
+      { name: 'build', command: long },
+    ])
+
+    const { description } = calls[0].choices[0]
+
+    assert.equal(description.length, expectedLength, String(columns))
+    assert.ok(description.endsWith('…'))
+  }
+
+  calls.length = 0
+  await createPrompts({ select, columns: () => 40 }).chooseScript([
+    { name: 'dev', command: 'node server.js' },
+  ])
+  assert.equal(calls[0].choices[0].description, 'node server.js')
+})
+
+test('chooseScript keeps the hooks note when shortening the command', async () => {
+  const calls = []
+  const select = async options => {
+    calls.push(options)
+    return null
+  }
+
+  await createPrompts({ select, columns: () => 50 }).chooseScript([
+    {
+      name: 'build',
+      command: `node ${'x'.repeat(100)}.js`,
+      hooks: ['prebuild', 'postbuild'],
+    },
+  ])
+
+  const { description } = calls[0].choices[0]
+
+  assert.equal(description.length, 48)
+  assert.ok(description.endsWith('…  (+ prebuild, postbuild)'), description)
+})
