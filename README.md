@@ -1,6 +1,6 @@
 # Dev Workspace CLI
 
-[![CI](https://github.com/modulane/dev-workspace-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/modulane/dev-workspace-cli/actions/workflows/ci.yml)
+[![CI](https://github.com/modulane/dev-workspace-cli/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/modulane/dev-workspace-cli/actions/workflows/release.yml)
 ![Coverage](https://modulane.github.io/dev-workspace-cli/coverage.svg)
 [![npm version](https://img.shields.io/npm/v/@modulane/dev-workspace-cli)](https://www.npmjs.com/package/@modulane/dev-workspace-cli)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)

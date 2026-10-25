@@ -1,11 +1,12 @@
 name: CI
 
 # Work happens on branches and reaches main through pull requests, so CI runs
-# on every pull request and on main itself, not twice for each branch push.
+# on every pull request, not twice for each branch push. On main, the Release
+# workflow calls this workflow before publishing, so the commit it tests is
+# the commit it releases, in the same run.
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
