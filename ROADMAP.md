@@ -70,8 +70,8 @@ The CLI currently assumes npm and lists every folder. This milestone makes it co
 The project list currently shows every subfolder of the workspace, including folders that can never be projects. Opening one of them leads to an empty "No scripts found" screen.
 
 - [x] Leave out of the project list the workspace subfolders that are never projects: names starting with a dot (`.git`, `.vscode`, `.idea`, …) and `node_modules`.
-- [ ] Show subfolders without a `package.json` dimmed, at the end of the list, or hide them with a setting (see [Configuration and scripts](#configuration-and-scripts)).
-- [ ] Sort projects case-insensitively.
+- [x] Show subfolders without a `package.json` dimmed and unselectable, at the end of the list. A setting to hide them entirely is part of [Configuration and scripts](#configuration-and-scripts).
+- [x] Sort projects ignoring case, with numbers compared by value (`app2` before `app10`).
 
 ### Scripts
 
@@ -149,7 +149,7 @@ The classic Windows console was the riskiest case, so mouse support is confirmed
 ## Configuration and scripts
 
 - [ ] **Versioned config schema:** add a `"version"` field and migrate older files automatically, with a backup (`config.json.bak`) before any migration.
-- [ ] **Settings:** default package manager, hidden scripts (glob patterns), hidden folders, search depth, and whether to show non-Node folders.
+- [ ] **Settings:** default package manager, hidden scripts (glob patterns), hidden folders, search depth, and whether to show folders without a `package.json` (currently always shown, dimmed).
 - [ ] **`config` command:** `dev-workspace config get|set|list|edit`, so users never have to edit JSON by hand. `edit` opens the file in `$EDITOR` / `%EDITOR%`.
 - [ ] **JSON output for automation:** `dev-workspace --list --json` prints projects and scripts as JSON and exits.
 - [ ] **Update notice:** at most once a day, after a run, mention when a newer version exists on npm. It must never delay startup, and can be disabled with `DEV_WORKSPACE_NO_UPDATE_CHECK=1` and in CI.

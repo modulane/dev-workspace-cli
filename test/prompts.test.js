@@ -193,3 +193,18 @@ test('chooseProject returns the selected project object', async () => {
 
   assert.equal(await prompts.chooseProject([project]), project)
 })
+
+test('chooseProject disables folders without a package.json', async () => {
+  const projects = [
+    { name: 'web', directory: '/projects/web', hasPackageJson: true },
+    { name: 'notes', directory: '/projects/notes', hasPackageJson: false },
+  ]
+  const { calls, prompts } = createPromptMocks({ select: null })
+
+  await prompts.chooseProject(projects)
+
+  assert.deepEqual(calls.select[0].choices.slice(0, 2), [
+    { name: '📁  web', value: projects[0] },
+    { name: '📁  notes', value: projects[1], disabled: '(no package.json)' },
+  ])
+})

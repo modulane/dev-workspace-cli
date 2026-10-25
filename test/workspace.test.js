@@ -148,3 +148,44 @@ test('getProjects rejects a missing workspace', async () => {
     )
   })
 })
+
+test('getProjects lists folders without a package.json last', async () => {
+  await withTempDirectory(async directory => {
+    for (const name of ['notes', 'web', 'archive', 'api']) {
+      await mkdir(path.join(directory, name))
+    }
+
+    await writeFile(path.join(directory, 'web', 'package.json'), '{}')
+    await writeFile(path.join(directory, 'api', 'package.json'), '{}')
+
+    // A folder named package.json does not count.
+    await mkdir(path.join(directory, 'archive', 'package.json'))
+
+    const projects = await getProjects(directory)
+
+    assert.deepEqual(
+      projects.map(({ name, hasPackageJson }) => [name, hasPackageJson]),
+      [
+        ['api', true],
+        ['web', true],
+        ['archive', false],
+        ['notes', false],
+      ],
+    )
+  })
+})
+
+test('getProjects sorts names ignoring case and by number', async () => {
+  await withTempDirectory(async directory => {
+    for (const name of ['beta', 'App10', 'app2', 'Alpha']) {
+      await mkdir(path.join(directory, name))
+    }
+
+    const projects = await getProjects(directory)
+
+    assert.deepEqual(
+      projects.map(project => project.name),
+      ['Alpha', 'app2', 'App10', 'beta'],
+    )
+  })
+})
