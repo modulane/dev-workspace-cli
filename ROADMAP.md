@@ -18,23 +18,23 @@ These apply to every milestone:
 
 ## Overview
 
-| Milestone                       | Status            | Highlights                                                                |
-| ------------------------------- | ----------------- | ------------------------------------------------------------------------- |
-| Interface refresh               | Released in 0.2.0 | New header, prompt formatting, screen clearing                            |
-| Foundations                     | Released in 0.3.0 | Platform config location, CLI flags, aliases, Ctrl+C fix                  |
-| Works with every project        | In progress       | Package manager detection, project filtering, lifecycle scripts           |
-| Fast navigation                 | Planned           | Fuzzy search, recent items, direct mode, script arguments                 |
-| A polished interface            | Planned           | Mouse support, correct layout, themes, project details, first run         |
-| Bigger workspaces               | Planned           | Monorepos, nested projects, multiple named workspaces                     |
-| Configuration and scripts       | Planned           | Versioned config schema, `config` command, JSON output                    |
-| Hardening and release candidate | Planned           | Linting, type checks, end-to-end tests, interface freeze, feedback period |
-| Stable                          | Planned: 1.0.0    | Semver guarantees for flags, config and exit codes                        |
+| Milestone                       | Status                                    | Highlights                                                                |
+| ------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------- |
+| Interface refresh               | Released in 0.2.0, since removed from npm | New header, prompt formatting, screen clearing                            |
+| Foundations                     | Released in 0.3.0                         | Platform config location, CLI flags, aliases, Ctrl+C fix                  |
+| Works with every project        | In progress                               | Package manager detection, project filtering, lifecycle scripts           |
+| Fast navigation                 | Planned                                   | Fuzzy search, recent items, direct mode, script arguments                 |
+| A polished interface            | Planned                                   | Mouse support, correct layout, themes, project details, first run         |
+| Bigger workspaces               | Planned                                   | Monorepos, nested projects, multiple named workspaces                     |
+| Configuration and scripts       | Planned                                   | Versioned config schema, `config` command, JSON output                    |
+| Hardening and release candidate | Planned                                   | Linting, type checks, end-to-end tests, interface freeze, feedback period |
+| Stable                          | Planned: 1.0.0                            | Semver guarantees for flags, config and exit codes                        |
 
 Milestones are listed in their planned order. Work on a later milestone can start early when it unblocks something, but a milestone counts as complete only when all its items and its "Done when" condition are met.
 
 ---
 
-## Interface refresh _(released in 0.2.0)_
+## Interface refresh _(released in 0.2.0, since removed from npm)_
 
 - [x] Boxed header showing the workspace and current section.
 - [x] Formatted project and script menus, with the script command shown as a description.
@@ -182,7 +182,7 @@ No new features; this milestone makes the existing ones dependable, then freezes
 Once the hardening work is done and CI is green across the full matrix, with coverage at or above 90% and no open `bug` issues:
 
 - [ ] **Interface freeze:** list every public flag, environment variable, config key and exit code in the README, under a "Stability" section. No changes after this point without a deprecation period.
-- [ ] **Clean up legacy behaviour:** keep the 0.1.x config migration, but document it as the only supported upgrade path and drop any other compatibility code added during 0.x.
+- [ ] **Clean up legacy behaviour:** keep the migration from the configuration location used before 0.3.0, but document it as the only supported upgrade path and drop any other compatibility code added during 0.x.
 - [ ] **Documentation:** animated demo (asciinema or GIF) at the top of the README, a full usage guide and a troubleshooting section.
 - [ ] **Feedback period:** publish under the `next` npm tag for at least two weeks and fix reported issues.
 
@@ -204,6 +204,7 @@ The 1.0.0 release promises, under semantic versioning, that these will not chang
 
 - Releases are created automatically by semantic-release when CI passes on `main`, from Conventional Commit messages: `fix:` makes a patch release and `feat:` a minor one. Versions keep counting past 0.9 (0.10.0, 0.11.0, …) until 1.0.0; semantic versioning has no upper limit.
 - Because every feature is released on its own, version numbers are not predicted in this document. A milestone's heading records the release that completed it.
+- Versions 0.0.0-stage to 0.2.0 were removed from npm on 2026-10-25, and 0.3.0 is deprecated, so 0.4.0 is the oldest supported release. Their git tags and GitHub releases remain as history.
 - The real version only exists in git tags and on npm. `package.json` keeps the placeholder `0.0.0-development`, and semantic-release writes the actual version into the package at publish time.
 - **Avoid `BREAKING CHANGE` footers and `!` commits before 1.0.0.** semantic-release turns any breaking change into a major release, which would publish 1.0.0 too early. Breaking changes before 1.0.0 should be released as `feat:` and described in the release notes.
 - 1.0.0 itself is released by a commit marked as a breaking change once the "Hardening and release candidate" milestone is complete.

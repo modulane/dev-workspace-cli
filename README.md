@@ -156,7 +156,7 @@ The workspace path is saved in the standard configuration folder of your operati
 - `dws --config-path` prints the exact path on your machine.
 - The `DEV_WORKSPACE_CONFIG` environment variable points the CLI at a different file.
 - To switch workspaces, choose **Change workspace** in the project list or run `dws --workspace <path>`. If the saved workspace no longer exists, the CLI asks for a new one.
-- Early versions stored the file in `~/.dev-workspace-cli/config.json`. It is moved to the new location automatically.
+- Versions before 0.3.0 stored the file in `~/.dev-workspace-cli/config.json`. If that file exists, it is moved to the new location automatically.
 
 ## Uninstalling
 
