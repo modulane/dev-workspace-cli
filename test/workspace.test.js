@@ -189,3 +189,36 @@ test('getProjects sorts names ignoring case and by number', async () => {
     )
   })
 })
+
+test('getScripts attaches pre and post hooks to their main script', async () => {
+  await withTempDirectory(async directory => {
+    await writeFile(
+      path.join(directory, 'package.json'),
+      JSON.stringify({
+        scripts: {
+          prebuild: 'node clean.js',
+          build: 'node build.js',
+          postbuild: 'node report.js',
+          pretest: 'node lint.js',
+          test: 'node --test',
+          // No "install" or "view" script: these stay ordinary entries.
+          postinstall: 'node setup.js',
+          preview: 'node serve.js',
+          pre: 'node odd.js',
+        },
+      }),
+    )
+
+    assert.deepEqual(await getScripts(directory), [
+      {
+        name: 'build',
+        command: 'node build.js',
+        hooks: ['prebuild', 'postbuild'],
+      },
+      { name: 'test', command: 'node --test', hooks: ['pretest'] },
+      { name: 'postinstall', command: 'node setup.js' },
+      { name: 'preview', command: 'node serve.js' },
+      { name: 'pre', command: 'node odd.js' },
+    ])
+  })
+})

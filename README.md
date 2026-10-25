@@ -93,6 +93,8 @@ Every subfolder of the workspace is listed as a project, except folders that are
 
 Projects are sorted by name, ignoring case. Folders without a `package.json` have no scripts to run, so they appear dimmed at the end of the list, marked `(no package.json)`, and cannot be selected.
 
+In the script list, the selected script's command is shown below the list, shortened to fit the terminal. Lifecycle hooks are listed with their main script instead of separately: with `prebuild`, `build` and `postbuild` scripts, the list shows only `build`, described as `node build.js  (+ prebuild, postbuild)`. Running `build` runs its hooks too, as the package manager normally does. A hook without its main script, such as `postinstall` on its own, is listed like any other script.
+
 ## Package managers
 
 Each project's scripts run with the package manager that project uses. It is chosen in this order:
@@ -110,6 +112,8 @@ Each project's scripts run with the package manager that project uses. It is cho
 3. npm, when neither is present.
 
 The project screen shows the choice and the reason, for example `Package manager: pnpm (from pnpm-lock.yaml)`. If that package manager is not installed, the CLI explains how to install it.
+
+Whether `pre` and `post` hooks run is decided by the package manager: npm, pnpm, Bun and Yarn 1 run them, while Yarn 2 and later ignore them.
 
 ## Command-line options
 
