@@ -93,7 +93,7 @@ Publish a fix through a normal `fix:` pull request, then deprecate the broken ve
 
 ```bash
 npm login
-npm deprecate "@modulane/dev-workspace-cli@0.5.0" "Broken: <what is wrong>. Upgrade to the latest version."
+npm deprecate "@modulane/dev-workspace-cli@X.Y.Z" "Broken: <what is wrong>. Upgrade to the latest version."
 ```
 
 This needs a maintainer's npm account; the release workflow cannot deprecate versions.
