@@ -4,11 +4,17 @@ name: Release
 # in the same run and from the same commit. semantic-release decides from the
 # commit messages whether a release is needed: fix: and feat: commits publish,
 # docs:, style: and chore: do not.
-# The manual trigger remains available as a fallback.
+# The manual trigger remains available as a fallback, and its dry run shows
+# what the next release would be without publishing anything.
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Preview the next release without publishing it
+        type: boolean
+        default: false
 
 # Nothing by default: each job asks for exactly what it needs.
 permissions: {}
@@ -95,4 +101,11 @@ jobs:
       - name: Publish release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx --no-install semantic-release
+          # Read from the environment, never interpolated into the script.
+          DRY_RUN: ${{ inputs.dry-run }}
+        run: |
+          if [ "$DRY_RUN" = true ]; then
+            npx --no-install semantic-release --dry-run
+          else
+            npx --no-install semantic-release
+          fi
