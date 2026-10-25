@@ -22,7 +22,7 @@ These apply to every milestone:
 | ------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------- |
 | Interface refresh               | Released in 0.2.0, since removed from npm | New header, prompt formatting, screen clearing                            |
 | Foundations                     | Released in 0.3.0                         | Platform config location, CLI flags, aliases, Ctrl+C fix                  |
-| Works with every project        | In progress                               | Package manager detection, project filtering, lifecycle scripts           |
+| Works with every project        | Released in 0.5.0                         | Package manager detection, project filtering, lifecycle scripts           |
 | Fast navigation                 | Planned                                   | Fuzzy search, recent items, direct mode, script arguments                 |
 | A polished interface            | Planned                                   | Mouse support, correct layout, themes, project details, first run         |
 | Bigger workspaces               | Planned                                   | Monorepos, nested projects, multiple named workspaces                     |
@@ -51,9 +51,9 @@ Milestones are listed in their planned order. Work on a later milestone can star
 - [x] Prettier formatting enforced in `npm run check`.
 - [x] Built-in `dws` command, and custom aliases with `--add-alias`, `--remove-alias` and `--list-aliases`.
 
-## Works with every project _(in progress)_
+## Works with every project _(released in 0.5.0)_
 
-The CLI currently assumes npm and lists every folder. This milestone makes it correct for real-world workspaces.
+Before this milestone, the CLI assumed npm and listed every folder. It made the CLI correct for real-world workspaces.
 
 ### Package manager detection
 
