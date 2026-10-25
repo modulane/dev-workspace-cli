@@ -1,0 +1,20 @@
+version: 2
+
+updates:
+  # Actions are pinned to commit SHAs, so they are only updated through
+  # these pull requests, which also update the "# vX.Y.Z" comments.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # Propose a release only once it is a week old, so a compromised one is
+    # more likely to have been found and pulled by then.
+    cooldown:
+      default-days: 7
+    # A ci: title never triggers a release.
+    commit-message:
+      prefix: ci
+    # One pull request a week for all actions.
+    groups:
+      github-actions:
+        patterns: ['*']
