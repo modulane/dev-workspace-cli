@@ -10,6 +10,11 @@ on:
 permissions:
   pull-requests: read # read the pull request title
 
+# Only the latest title and commit of a pull request matter.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     name: Conventional Commit title
