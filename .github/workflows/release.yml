@@ -22,7 +22,7 @@ permissions: {}
 jobs:
   ci:
     name: CI
-    uses: ./.github/workflows/ci.yml
+    uses: $/.github/workflows/ci.yml
     # A called workflow can use at most the permissions granted here. Its jobs
     # read the repository, and the coverage badge job deploys to GitHub Pages.
     permissions:
