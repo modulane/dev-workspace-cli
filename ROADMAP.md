@@ -133,6 +133,7 @@ The classic Windows console was the riskiest case, so mouse support is confirmed
 - [ ] **Consistent theme:** apply one theme to every prompt, with all colours going through `color()` so `NO_COLOR` and non-TTY output are always respected. Support `FORCE_COLOR`.
 - [ ] **Project details:** show package manager, script count and Git branch (if any) next to each project, without slowing down the list (read lazily, cache per session).
 - [ ] **First-run experience:** suggest common folders that exist (`~/dev`, `~/projects`, `~/code`, `~/src`, `~/repos`) as choices, with "Enter another path" as the last option.
+- [x] **Typed paths:** the workspace prompt and `--workspace` accept the forms a shell would normally clean up: `~/projects`, quoted paths (as copied by Explorer's "Copy as path") and, outside Windows, escaped spaces (`my\ projects`). A missing folder is reported with the full path that was checked ([#9](https://github.com/modulane/dev-workspace-cli/issues/9)).
 - [ ] **Non-interactive guard:** when stdin is not a TTY and no direct-mode arguments are given, exit with a clear message instead of a prompt error.
 - [ ] **Coloured `--help`.**
 

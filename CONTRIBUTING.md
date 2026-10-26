@@ -32,17 +32,17 @@ DEV_WORKSPACE_CONFIG=/tmp/dws-test.json npm start
 
 `index.js` is the executable; everything else lives in `lib/`:
 
-| File                  | Responsibility                                              |
-| --------------------- | ----------------------------------------------------------- |
-| `cli.js`              | Option handling, workspace setup and the interactive menus  |
-| `args.js`             | Command-line parsing and the `--help` text                  |
-| `config.js`           | Configuration file location, reading, writing and migration |
-| `workspace.js`        | Listing projects and reading their scripts                  |
-| `package-managers.js` | Detecting each project's package manager                    |
-| `commands.js`         | Running a script with that package manager                  |
-| `aliases.js`          | Creating, listing and removing custom aliases               |
-| `prompts.js`          | Questions and menus, built on `@inquirer/prompts`           |
-| `ui.js`               | Colours, the header and screen clearing                     |
+| File                  | Responsibility                                                 |
+| --------------------- | -------------------------------------------------------------- |
+| `cli.js`              | Option handling, workspace setup and the interactive menus     |
+| `args.js`             | Command-line parsing and the `--help` text                     |
+| `config.js`           | Configuration file location, reading, writing and migration    |
+| `workspace.js`        | Listing projects, reading their scripts, resolving typed paths |
+| `package-managers.js` | Detecting each project's package manager                       |
+| `commands.js`         | Running a script with that package manager                     |
+| `aliases.js`          | Creating, listing and removing custom aliases                  |
+| `prompts.js`          | Questions and menus, built on `@inquirer/prompts`              |
+| `ui.js`               | Colours, the header and screen clearing                        |
 
 Each file in `lib/` starts with a comment describing what it contains and how it is used. Keep that comment accurate when you change the file.
 

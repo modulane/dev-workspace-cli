@@ -63,7 +63,7 @@ This installs two equivalent commands, `dev-workspace` and the shorter `dws`.
        └── package.json
    ```
 
-   The folder is saved, so the CLI opens it directly next time.
+   You can type the path as you would in a terminal: `~/projects`, or a quoted path such as one copied with Explorer's **Copy as path**. The folder is saved as an absolute path, so the CLI opens it directly next time.
 
 3. Choose a project, then one of its scripts. With this `package.json`:
 
