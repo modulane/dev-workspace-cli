@@ -69,6 +69,22 @@ Keep the summary lowercase and in the imperative: `feat: add project search`, no
 
 **Do not mark changes as breaking before 1.0.0.** A `!` after the type (`feat!:`) or a `BREAKING CHANGE:` footer makes a major release, which would publish 1.0.0 early. Until then, describe incompatible changes in the pull request and release them as `feat:`.
 
+### Labels and reviews
+
+The **Pull request labels** workflow labels each pull request from its title, and updates the labels when the title is edited:
+
+| Title type                                      | Kind label      | Release label    |
+| ----------------------------------------------- | --------------- | ---------------- |
+| `feat:`                                         | `enhancement`   | `release: minor` |
+| `fix:`                                          | `bug`           | `release: patch` |
+| `docs:`                                         | `documentation` | `release: none`  |
+| `ci:`, `build:`                                 | `ci`            | `release: none`  |
+| `refactor:`, `perf:`, `test:`, `style:`, others | `maintenance`   | `release: none`  |
+
+A `!` after the type replaces the release label with `release: major`, so a breaking change is visible before it is merged. The workflow also assigns a new pull request to its author, and [`CODEOWNERS`](.github/CODEOWNERS) requests a review from the maintainer.
+
+The labels themselves are defined in [`.github/labels.json`](.github/labels.json). When that file changes on `main`, the **Labels** workflow creates the missing labels and updates the others. It never deletes a label; remove one in the repository settings after taking it out of the file.
+
 ## Releases
 
 Releases are fully automated with [semantic-release](https://semantic-release.gitbook.io/). Nobody publishes by hand.

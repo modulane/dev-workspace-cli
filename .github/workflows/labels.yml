@@ -1,0 +1,47 @@
+name: Labels
+
+# .github/labels.json is the list of labels this repository uses. When it
+# changes on main, create the labels that are missing and update the colour
+# and description of the others. Labels that are not in the file are left
+# alone, so removing one is a deliberate step in the repository settings.
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/labels.json
+  workflow_dispatch:
+
+permissions: {}
+
+# Two syncs never run at once; a later one waits and applies the newest file.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync labels
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    permissions:
+      contents: read # read .github/labels.json
+      issues: write # create and edit labels
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Create or update each label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          jq -c '.[]' .github/labels.json | while read -r label; do
+            gh label create "$(jq -r .name <<< "$label")" \
+              --color "$(jq -r .color <<< "$label")" \
+              --description "$(jq -r .description <<< "$label")" \
+              --force
+          done

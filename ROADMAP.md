@@ -175,6 +175,7 @@ No new features; this milestone makes the existing ones dependable, then freezes
   - publish a `CHANGELOG.md` with `@semantic-release/changelog`.
 - [ ] **Contributor files:**
   - [x] `CONTRIBUTING.md` with the development setup, workflow and release process;
+  - [x] labels defined in `.github/labels.json`, applied to pull requests from their title, with reviews requested through `CODEOWNERS`;
   - issue and pull request templates.
 
 ### Release candidate

@@ -1,0 +1,86 @@
+name: Pull request labels
+
+# Label every pull request from its Conventional Commit title: its kind
+# (feat: enhancement, fix: bug, docs: documentation, ...) and the release
+# that merging it publishes (feat: minor, fix: patch, a "!" major, other
+# types none). The labels follow the title when it is edited. A new pull
+# request is also assigned to its author.
+#
+# pull_request_target gives this job a token that can label pull requests
+# from forks. It is safe here because the job never checks out or runs code
+# from the pull request: it only reads the title, through an environment
+# variable, never interpolated into the script.
+on:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] no pull request code is checked out or run
+    types: [opened, edited, reopened]
+
+permissions: {}
+
+# Only the latest title matters.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  label:
+    name: Label from the title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    permissions:
+      pull-requests: write # add and remove labels, assign the author
+
+    steps:
+      - name: Apply the kind and release labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          TITLE: ${{ github.event.pull_request.title }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          ACTION: ${{ github.event.action }}
+        run: |
+          # "type(scope)!: summary"; the "Pull request title" check enforces
+          # the format, so a title that does not match gets no labels.
+          pattern='^([a-z]+)(\([^)]*\))?(!)?: '
+          kind=''
+          release=''
+
+          if [[ $TITLE =~ $pattern ]]; then
+            case ${BASH_REMATCH[1]} in
+              feat) kind=enhancement release='release: minor' ;;
+              fix) kind=bug release='release: patch' ;;
+              docs) kind=documentation release='release: none' ;;
+              ci | build) kind=ci release='release: none' ;;
+              *) kind=maintenance release='release: none' ;;
+            esac
+
+            if [[ -n ${BASH_REMATCH[3]} ]]; then
+              release='release: major'
+            fi
+          fi
+
+          # Labels this workflow manages. Any other label is left alone.
+          managed=(enhancement bug documentation ci maintenance
+            'release: major' 'release: minor' 'release: patch' 'release: none')
+
+          current=$(gh api "repos/$GH_REPO/issues/$NUMBER/labels" --jq '.[].name')
+
+          for label in "${managed[@]}"; do
+            if [[ $label != "$kind" && $label != "$release" ]] &&
+              grep -qxF "$label" <<< "$current"; then
+              gh api -X DELETE "repos/$GH_REPO/issues/$NUMBER/labels/${label// /%20}" > /dev/null
+            fi
+          done
+
+          for label in "$kind" "$release"; do
+            if [[ -n $label ]]; then
+              gh api "repos/$GH_REPO/issues/$NUMBER/labels" -f "labels[]=$label" > /dev/null
+            fi
+          done
+
+          # Only people with write access can be assigned; GitHub ignores
+          # the request for anyone else.
+          if [[ $ACTION == opened ]]; then
+            gh api "repos/$GH_REPO/issues/$NUMBER/assignees" -f "assignees[]=$AUTHOR" > /dev/null
+          fi

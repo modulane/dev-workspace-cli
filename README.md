@@ -179,7 +179,7 @@ Scripts run with your user account's permissions, exactly as if you ran them you
 
 ## Contributing
 
-Bug reports and feature ideas are welcome in the [issue tracker](https://github.com/modulane/dev-workspace-cli/issues). See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup, workflow and release process, and the [roadmap](ROADMAP.md) for what is planned before 1.0.0.
+Bug reports and feature ideas are welcome in the [issue tracker](https://github.com/modulane/dev-workspace-cli/issues). See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup, workflow, labels and release process, and the [roadmap](ROADMAP.md) for what is planned before 1.0.0.
 
 ## License
 

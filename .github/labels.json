@@ -1,0 +1,97 @@
+[
+  {
+    "name": "bug",
+    "color": "d73a4a",
+    "description": "Something does not work as described"
+  },
+  {
+    "name": "enhancement",
+    "color": "a2eeef",
+    "description": "New feature or improvement"
+  },
+  {
+    "name": "documentation",
+    "color": "0075ca",
+    "description": "README, guides and code comments"
+  },
+  {
+    "name": "ci",
+    "color": "5319e7",
+    "description": "Workflows, CI and release tooling"
+  },
+  {
+    "name": "maintenance",
+    "color": "c5def5",
+    "description": "Refactoring, tests, formatting and other upkeep"
+  },
+  {
+    "name": "dependencies",
+    "color": "0366d6",
+    "description": "Updates a dependency or a pinned action"
+  },
+  {
+    "name": "question",
+    "color": "d876e3",
+    "description": "How to use a tool"
+  },
+  {
+    "name": "release: major",
+    "color": "b60205",
+    "description": "Merging publishes a major release (breaking change)"
+  },
+  {
+    "name": "release: minor",
+    "color": "0e8a16",
+    "description": "Merging publishes a minor release (feat:)"
+  },
+  {
+    "name": "release: patch",
+    "color": "c2e0c6",
+    "description": "Merging publishes a patch release (fix:)"
+  },
+  {
+    "name": "release: none",
+    "color": "ededed",
+    "description": "Merging publishes nothing"
+  },
+  {
+    "name": "released",
+    "color": "1d76db",
+    "description": "Included in a published release (added by semantic-release)"
+  },
+  {
+    "name": "needs-triage",
+    "color": "fbca04",
+    "description": "Not reviewed by a maintainer yet"
+  },
+  {
+    "name": "accessibility",
+    "color": "f143ab",
+    "description": "Barrier affecting people with disabilities"
+  },
+  {
+    "name": "good first issue",
+    "color": "7057ff",
+    "description": "Good for newcomers"
+  },
+  {
+    "name": "help wanted",
+    "color": "008672",
+    "description": "Extra attention is needed"
+  },
+  {
+    "name": "duplicate",
+    "color": "cfd3d7",
+    "description": "This issue or pull request already exists"
+  },
+  {
+    "name": "invalid",
+    "color": "e4e669",
+    "description": "This does not seem right"
+  },
+  {
+    "name": "wontfix",
+    "color": "ffffff",
+    "description": "This will not be worked on"
+  }
+]
