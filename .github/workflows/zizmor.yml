@@ -1,0 +1,41 @@
+name: Workflow security
+
+# Audit the workflows with zizmor whenever a pull request changes them, so a
+# regression (an unpinned action, a persisted token, a risky trigger) is
+# caught before it reaches main.
+on:
+  pull_request:
+    paths:
+      - .github/**
+
+permissions: {}
+
+# A new push to a pull request cancels the run it replaces.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    permissions:
+      contents: read # read the workflows
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Findings appear as annotations on the pull request and fail the job.
+      # The zizmor version is fixed so a new audit never fails an unrelated
+      # pull request; Dependabot does not update it, so raise it by hand.
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
+        with:
+          version: 1.31.1
+          advanced-security: false
+          annotations: true

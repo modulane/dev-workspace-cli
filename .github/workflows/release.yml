@@ -1,64 +1,111 @@
 name: Release
 
-# Publish automatically once CI has passed for a push to main.
-# semantic-release decides from the commit messages whether a release is
-# needed: fix: and feat: commits publish, docs:, style: and chore: do not.
-# The manual trigger remains available as a fallback.
+# Every push to main runs the CI workflow, then publishes once it has passed,
+# in the same run and from the same commit. semantic-release decides from the
+# commit messages whether a release is needed: fix: and feat: commits publish,
+# docs:, style: and chore: do not.
+# The manual trigger remains available as a fallback, and its dry run shows
+# what the next release would be without publishing anything.
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
+  push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Preview the next release without publishing it
+        type: boolean
+        default: false
 
-permissions:
-  contents: read
-
-# Never run two releases at the same time; queue them instead.
-concurrency:
-  group: release
-  cancel-in-progress: false
+# Nothing by default: each job asks for exactly what it needs.
+permissions: {}
 
 jobs:
+  ci:
+    name: CI
+    uses: $/.github/workflows/ci.yml
+    # A called workflow can use at most the permissions granted here. Its jobs
+    # read the repository, and the coverage badge job deploys to GitHub Pages.
+    permissions:
+      contents: read # check out the code
+      pages: write # deploy the coverage badge
+      id-token: write # prove to Pages that the deployment comes from this run
+
   release:
-    name: Test and publish
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push')
+    name: Publish
+    needs: ci
+    # Publish only from main, and never from a fork that has Actions enabled.
+    if: github.repository == 'modulane/dev-workspace-cli' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Repository settings can limit this environment to main and add
+    # protection rules, and the npm trusted publisher can require it.
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@modulane/dev-workspace-cli
+
+    # Never run two releases at the same time; queue them instead. Only this
+    # job waits, so CI for the next commit can start straight away.
+    concurrency:
+      group: release
+      cancel-in-progress: false
 
     permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-      id-token: write
+      contents: write # push the vX.Y.Z tag and create the GitHub release
+      issues: write # comment on the issues a release resolves
+      pull-requests: write # comment on the pull requests a release includes
+      id-token: write # trusted publishing to npm, with provenance
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          # Release exactly the commit that CI tested.
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          # semantic-release pushes the tag with GITHUB_TOKEN itself, so the
+          # token does not have to stay in .git/config for the whole job.
+          persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
+          # No cache in the job that publishes: a poisoned cache could reach npm.
           package-manager-cache: false
 
-      # Trusted publishing needs npm 11.5.1 or newer.
-      - name: Ensure a compatible npm version
-        run: npm install --global "npm@^11.5.1"
+      # Trusted publishing needs npm 11.5.1 or newer. The npm bundled with
+      # Node.js 24 provides it, so check it instead of downloading another npm
+      # while this job can request an OIDC token.
+      - name: Check the npm version
+        run: |
+          node --eval '
+            const [major, minor, patch] = process.argv[1].split(".").map(Number);
+            if (major * 1e6 + minor * 1e3 + patch < 11005001) {
+              console.log("::error::Trusted publishing needs npm 11.5.1 or newer, found " + process.argv[1]);
+              process.exit(1);
+            }
+          ' "$(npm --version)"
 
+      # Any step of this job can request an OIDC token, dependency install
+      # scripts included. No dependency needs one, so none is allowed to run.
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
-      - name: Run checks and tests
-        run: npm run check
+      # Fail if the registry signature or provenance of a dependency is invalid.
+      - name: Verify dependency signatures
+        run: npm audit signatures
 
+      # The CI job has already run the checks on this commit, and
+      # prepublishOnly runs them once more before anything is published.
+      # --no-install runs the semantic-release from package-lock.json and
+      # never downloads one.
       - name: Publish release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release
+          # Read from the environment, never interpolated into the script.
+          DRY_RUN: ${{ inputs.dry-run }}
+        run: |
+          if [ "$DRY_RUN" = true ]; then
+            npx --no-install semantic-release --dry-run
+          else
+            npx --no-install semantic-release
+          fi

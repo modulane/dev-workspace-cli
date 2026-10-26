@@ -1,6 +1,6 @@
 # Dev Workspace CLI
 
-[![CI](https://github.com/modulane/dev-workspace-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/modulane/dev-workspace-cli/actions/workflows/ci.yml)
+[![CI](https://github.com/modulane/dev-workspace-cli/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/modulane/dev-workspace-cli/actions/workflows/release.yml)
 ![Coverage](https://modulane.github.io/dev-workspace-cli/coverage.svg)
 [![npm version](https://img.shields.io/npm/v/@modulane/dev-workspace-cli)](https://www.npmjs.com/package/@modulane/dev-workspace-cli)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -31,11 +31,11 @@ Dev Workspace CLI detects each project's package manager (npm, pnpm, Yarn or Bun
 - **Stays out of the way:** scripts run in the project folder with full terminal output. Pressing Ctrl+C stops the script and brings you back to the menu.
 - **Short commands:** start it with `dev-workspace`, `dws`, or an alias of your choice.
 - **Remembers your workspace:** the configuration is stored in your user profile and survives updates and reinstalls.
-- **Cross-platform:** tested on Windows, macOS and Linux with Node.js 20, 22 and 24.
+- **Cross-platform:** tested on Windows, macOS and Linux with Node.js 20, 22, 24 and 26.
 
 ## Installation
 
-Dev Workspace CLI requires [Node.js](https://nodejs.org/) 20 or newer.
+Dev Workspace CLI requires [Node.js](https://nodejs.org/) 20.17 or newer in the 20.x line, 22.13 or newer in the 22.x line, or 23.5 and later.
 
 ```bash
 npm install --global @modulane/dev-workspace-cli
@@ -63,7 +63,7 @@ This installs two equivalent commands, `dev-workspace` and the shorter `dws`.
        └── package.json
    ```
 
-   The folder is saved, so the CLI opens it directly next time.
+   You can type the path as you would in a terminal: `~/projects`, or a quoted path such as one copied with Explorer's **Copy as path**. The folder is saved as an absolute path, so the CLI opens it directly next time.
 
 3. Choose a project, then one of its scripts. With this `package.json`:
 
@@ -89,7 +89,7 @@ This installs two equivalent commands, `dev-workspace` and the shorter `dws`.
 
 Each list also has entries to go **Back**, **Exit**, or **Change workspace**.
 
-Every subfolder of the workspace is listed as a project, except folders that are never projects: names starting with a dot (such as `.git` or `.vscode`) and `node_modules`. Only the immediate subfolders are listed; projects nested deeper are not discovered.
+Every subfolder of the workspace is listed as a project, including links to folders (symbolic links, and junctions on Windows), except folders that are never projects: names starting with a dot (such as `.git` or `.vscode`) and `node_modules`. Only the immediate subfolders are listed; projects nested deeper are not discovered.
 
 Projects are sorted by name, ignoring case. Folders without a `package.json` have no scripts to run, so they appear dimmed at the end of the list, marked `(no package.json)`, and cannot be selected.
 

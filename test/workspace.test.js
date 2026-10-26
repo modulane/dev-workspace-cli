@@ -1,10 +1,16 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import { isDirectory, getProjects, getScripts } from '../lib/workspace.js'
+import {
+  isDirectory,
+  getProjects,
+  getScripts,
+  normalizePathInput,
+  resolveDirectoryInput,
+} from '../lib/workspace.js'
 
 // Each test gets its own isolated temporary directory.
 async function withTempDirectory(callback) {
@@ -22,6 +28,85 @@ test('isDirectory recognizes directories and rejects missing paths', async () =>
     assert.equal(await isDirectory(directory), true)
     assert.equal(await isDirectory(path.join(directory, 'missing')), false)
   })
+})
+
+test('normalizePathInput undoes shell syntax on Linux and macOS', () => {
+  const options = { platform: 'linux', homeDirectory: '/home/you' }
+  const cases = [
+    ['~', '/home/you'],
+    ['~/projects', '/home/you/projects'],
+    ['  ~/projects  ', '/home/you/projects'],
+    ['"/home/you/my projects"', '/home/you/my projects'],
+    ["'/home/you/my projects'", '/home/you/my projects'],
+    ['"~/my projects"', '/home/you/my projects'],
+    ['/home/you/my\\ projects', '/home/you/my projects'],
+    ['~\\projects', '~\\projects'],
+    ['~other/projects', '~other/projects'],
+    ['"/unmatched', '"/unmatched'],
+    ['"', '"'],
+    ['""', ''],
+  ]
+
+  for (const [input, expected] of cases) {
+    assert.equal(normalizePathInput(input, options), expected, input)
+  }
+})
+
+test('normalizePathInput keeps backslashes as separators on Windows', () => {
+  const options = { platform: 'win32', homeDirectory: 'C:\\Users\\you' }
+  const cases = [
+    ['~\\projects', 'C:\\Users\\you\\projects'],
+    ['~/projects', 'C:\\Users\\you/projects'],
+    ['"C:\\Users\\you\\my projects"', 'C:\\Users\\you\\my projects'],
+    ['C:\\Users\\you\\my\\ projects', 'C:\\Users\\you\\my\\ projects'],
+  ]
+
+  for (const [input, expected] of cases) {
+    assert.equal(normalizePathInput(input, options), expected, input)
+  }
+})
+
+test('resolveDirectoryInput finds folders typed with ~ or quotes', async () => {
+  await withTempDirectory(async home => {
+    const projects = path.join(home, 'my projects')
+    await mkdir(projects)
+
+    for (const input of ['~/my projects', `"${projects}"`, `'${projects}'`]) {
+      assert.deepEqual(
+        await resolveDirectoryInput(input, { homeDirectory: home }),
+        { directory: projects, exists: true },
+        input,
+      )
+    }
+
+    assert.deepEqual(
+      await resolveDirectoryInput('~/missing', { homeDirectory: home }),
+      { directory: path.join(home, 'missing'), exists: false },
+    )
+  })
+})
+
+test('resolveDirectoryInput prefers the path exactly as typed', async () => {
+  const typed = path.resolve('"quoted"')
+  const checked = []
+
+  const result = await resolveDirectoryInput(' "quoted" ', {
+    isDirectory: async directory => {
+      checked.push(directory)
+      return directory === typed
+    },
+  })
+
+  assert.deepEqual(result, { directory: typed, exists: true })
+  assert.deepEqual(checked, [typed])
+})
+
+test('resolveDirectoryInput does not turn empty quotes into the current folder', async () => {
+  const result = await resolveDirectoryInput('""', {
+    isDirectory: async () => false,
+  })
+
+  assert.deepEqual(result, { directory: path.resolve('""'), exists: false })
 })
 
 test('getProjects lists immediate folders alphabetically', async () => {
@@ -54,6 +139,40 @@ test('getProjects leaves out folders that are never projects', async () => {
     assert.deepEqual(
       projects.map(project => project.name),
       ['my.app', 'node_modules-tools', 'web'],
+    )
+  })
+})
+
+test('getProjects lists links to folders and leaves out broken links', async () => {
+  await withTempDirectory(async directory => {
+    const workspace = path.join(directory, 'workspace')
+    const elsewhere = path.join(directory, 'elsewhere')
+
+    await mkdir(path.join(workspace, 'real-app'), { recursive: true })
+    await mkdir(path.join(elsewhere, 'linked-app'), { recursive: true })
+    await mkdir(path.join(elsewhere, 'removed-app'))
+    await writeFile(path.join(elsewhere, 'linked-app', 'package.json'), '{}')
+
+    // "junction" lets Windows create the link without administrator rights;
+    // other platforms ignore it and create a symbolic link.
+    for (const name of ['linked-app', 'removed-app']) {
+      await symlink(
+        path.join(elsewhere, name),
+        path.join(workspace, name),
+        'junction',
+      )
+    }
+
+    await rm(path.join(elsewhere, 'removed-app'), { recursive: true })
+
+    const projects = await getProjects(workspace)
+
+    assert.deepEqual(
+      projects.map(({ name, hasPackageJson }) => [name, hasPackageJson]),
+      [
+        ['linked-app', true],
+        ['real-app', false],
+      ],
     )
   })
 })

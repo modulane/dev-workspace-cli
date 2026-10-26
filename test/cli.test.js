@@ -5,6 +5,7 @@ import assert from 'node:assert/strict'
 
 import { createCli } from '../lib/cli.js'
 import { CHANGE_WORKSPACE } from '../lib/prompts.js'
+import { resolveDirectoryInput } from '../lib/workspace.js'
 
 const { version } = createRequire(import.meta.url)('../package.json')
 
@@ -534,9 +535,43 @@ test('CLI rejects a missing --workspace directory', async () => {
 
   await assert.rejects(
     createCli(dependencies).start(['-w', 'missing']),
-    /Invalid workspace "missing": That directory does not exist/,
+    /Invalid workspace "missing": No accessible directory at .*missing$/,
   )
   assert.equal(calls.savedWorkspaces.length, 0)
+})
+
+test('CLI saves the absolute path behind a quoted, ~-prefixed prompt answer', async () => {
+  const home = path.resolve('fake/home')
+  const projects = path.join(home, 'my projects')
+  let validation
+
+  const { dependencies, calls } = createDependencies({
+    config: { readWorkspaceConfig: async () => null },
+    workspace: {
+      isDirectory: async directory => directory === projects,
+      resolveDirectoryInput: (value, options) =>
+        resolveDirectoryInput(value, { ...options, homeDirectory: home }),
+    },
+    prompts: {
+      askForWorkspace: async validate => {
+        validation = {
+          missing: await validate('~/missing'),
+          quoted: await validate('"~/my projects"'),
+        }
+        return '"~/my projects"'
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.equal(
+    validation.missing,
+    `No accessible directory at ${path.join(home, 'missing')}`,
+  )
+  assert.equal(validation.quoted, true)
+  assert.equal(calls.savedWorkspaces[0].workspace, projects)
+  assert.equal(calls.discoveredWorkspaces[0].root, projects)
 })
 
 test('CLI prints help, version and config path without starting', async () => {

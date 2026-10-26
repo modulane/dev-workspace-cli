@@ -14,7 +14,7 @@ These apply to every milestone:
 - **Never surprise the user.** No silent data loss, and no prompts in non-interactive use. A failure always exits with a non-zero code.
 - **Keep it small.** Add a dependency only when it replaces substantial, tricky code (for example, terminal width or fuzzy matching).
 - **Every feature ships with tests and documentation.** Coverage stays at or above 90% of lines, and the README is updated in the same pull request.
-- **Cross-platform by default.** Every change is checked by CI on Windows, macOS and Linux with Node 20, 22 and 24.
+- **Cross-platform by default.** Every change is checked by CI on Windows, macOS and Linux with Node 20, 22, 24 and 26.
 
 ## Overview
 
@@ -133,6 +133,7 @@ The classic Windows console was the riskiest case, so mouse support is confirmed
 - [ ] **Consistent theme:** apply one theme to every prompt, with all colours going through `color()` so `NO_COLOR` and non-TTY output are always respected. Support `FORCE_COLOR`.
 - [ ] **Project details:** show package manager, script count and Git branch (if any) next to each project, without slowing down the list (read lazily, cache per session).
 - [ ] **First-run experience:** suggest common folders that exist (`~/dev`, `~/projects`, `~/code`, `~/src`, `~/repos`) as choices, with "Enter another path" as the last option.
+- [x] **Typed paths:** the workspace prompt and `--workspace` accept the forms a shell would normally clean up: `~/projects`, quoted paths (as copied by Explorer's "Copy as path") and, outside Windows, escaped spaces (`my\ projects`). A missing folder is reported with the full path that was checked ([#9](https://github.com/modulane/dev-workspace-cli/issues/9)).
 - [ ] **Non-interactive guard:** when stdin is not a TTY and no direct-mode arguments are given, exit with a clear message instead of a prompt error.
 - [ ] **Coloured `--help`.**
 
@@ -168,10 +169,12 @@ No new features; this milestone makes the existing ones dependable, then freezes
 - [ ] **Signal handling:** SIGINT and SIGTERM are forwarded correctly, and no child process is left behind when the terminal closes.
 - [ ] **Performance budget:** startup to first menu in under 150 ms, checked in CI.
 - [ ] **Release safety:**
-  - [x] publish automatically once CI passes on `main`, from the exact commit CI tested;
-  - [x] limit the npm version in the release workflow to `^11.5.1` instead of `npm@latest`;
+  - [x] publish automatically once CI passes on `main`, in the same workflow run and from the same commit;
+  - [x] publish with the npm bundled with Node.js 24, checked to be 11.5.1 or newer, instead of installing `npm@latest`;
   - [x] run `npm run check` (not only `npm test`) before publishing;
   - [x] enforce Conventional Commits on pull request titles, which become the squash-merge commit, so every change is classified for semantic-release;
+  - [x] pin every action to a full commit SHA, kept up to date by Dependabot, and audit the workflows with zizmor on pull requests;
+  - [x] give the publish job only the permissions it needs, with no git credential on disk and no dependency install scripts while it can request an OIDC token;
   - publish a `CHANGELOG.md` with `@semantic-release/changelog`.
 - [ ] **Contributor files:**
   - [x] `CONTRIBUTING.md` with the development setup, workflow and release process;
