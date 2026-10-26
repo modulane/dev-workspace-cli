@@ -45,8 +45,10 @@ jobs:
         run: npm ci
 
       # The tests run a real script with every supported package manager.
+      # Their latest versions are installed on purpose, to test what users
+      # have; this job can read the repository and nothing else.
       - name: Install pnpm and Yarn
-        run: npm install --global pnpm yarn
+        run: npm install --global pnpm yarn # zizmor: ignore[adhoc-packages]
 
       - name: Install Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
