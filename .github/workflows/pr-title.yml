@@ -8,7 +8,7 @@ on:
     types: [opened, edited, reopened, synchronize]
 
 permissions:
-  pull-requests: read
+  pull-requests: read # read the pull request title
 
 jobs:
   check:

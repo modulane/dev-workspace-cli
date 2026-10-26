@@ -26,9 +26,9 @@ jobs:
     # A called workflow can use at most the permissions granted here. Its jobs
     # read the repository, and the coverage badge job deploys to GitHub Pages.
     permissions:
-      contents: read
-      pages: write
-      id-token: write
+      contents: read # check out the code
+      pages: write # deploy the coverage badge
+      id-token: write # prove to Pages that the deployment comes from this run
 
   release:
     name: Publish

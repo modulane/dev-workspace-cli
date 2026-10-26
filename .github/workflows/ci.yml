@@ -9,7 +9,7 @@ on:
   workflow_call:
 
 permissions:
-  contents: read
+  contents: read # check out the code
 
 jobs:
   test:
@@ -98,8 +98,8 @@ jobs:
     timeout-minutes: 10
 
     permissions:
-      pages: write
-      id-token: write
+      pages: write # publish the badge to GitHub Pages
+      id-token: write # prove to Pages that the deployment comes from this run
 
     environment:
       name: github-pages
