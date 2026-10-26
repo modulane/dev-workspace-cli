@@ -89,7 +89,7 @@ This installs two equivalent commands, `dev-workspace` and the shorter `dws`.
 
 Each list also has entries to go **Back**, **Exit**, or **Change workspace**.
 
-Every subfolder of the workspace is listed as a project, except folders that are never projects: names starting with a dot (such as `.git` or `.vscode`) and `node_modules`. Only the immediate subfolders are listed; projects nested deeper are not discovered.
+Every subfolder of the workspace is listed as a project, including links to folders (symbolic links, and junctions on Windows), except folders that are never projects: names starting with a dot (such as `.git` or `.vscode`) and `node_modules`. Only the immediate subfolders are listed; projects nested deeper are not discovered.
 
 Projects are sorted by name, ignoring case. Folders without a `package.json` have no scripts to run, so they appear dimmed at the end of the list, marked `(no package.json)`, and cannot be selected.
 

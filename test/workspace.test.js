@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
@@ -54,6 +54,40 @@ test('getProjects leaves out folders that are never projects', async () => {
     assert.deepEqual(
       projects.map(project => project.name),
       ['my.app', 'node_modules-tools', 'web'],
+    )
+  })
+})
+
+test('getProjects lists links to folders and leaves out broken links', async () => {
+  await withTempDirectory(async directory => {
+    const workspace = path.join(directory, 'workspace')
+    const elsewhere = path.join(directory, 'elsewhere')
+
+    await mkdir(path.join(workspace, 'real-app'), { recursive: true })
+    await mkdir(path.join(elsewhere, 'linked-app'), { recursive: true })
+    await mkdir(path.join(elsewhere, 'removed-app'))
+    await writeFile(path.join(elsewhere, 'linked-app', 'package.json'), '{}')
+
+    // "junction" lets Windows create the link without administrator rights;
+    // other platforms ignore it and create a symbolic link.
+    for (const name of ['linked-app', 'removed-app']) {
+      await symlink(
+        path.join(elsewhere, name),
+        path.join(workspace, name),
+        'junction',
+      )
+    }
+
+    await rm(path.join(elsewhere, 'removed-app'), { recursive: true })
+
+    const projects = await getProjects(workspace)
+
+    assert.deepEqual(
+      projects.map(({ name, hasPackageJson }) => [name, hasPackageJson]),
+      [
+        ['linked-app', true],
+        ['real-app', false],
+      ],
     )
   })
 })
