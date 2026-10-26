@@ -54,7 +54,7 @@ Every change is made on a short-lived branch and reaches `main` through a pull r
 
 1. Create a branch named after the change: `feat/project-search`, `fix/ctrl-c`, `docs/readme`, …
 2. Commit and push as often as needed. Nothing is released from a branch.
-3. Open a pull request. CI runs the test matrix (Windows, macOS and Linux with Node.js 20, 22 and 24), and a check verifies that the title follows [Conventional Commits](https://www.conventionalcommits.org/).
+3. Open a pull request. CI runs the test matrix (Windows, macOS and Linux with Node.js 20, 22 and 24), and a check verifies that the title follows [Conventional Commits](https://www.conventionalcommits.org/). Pull requests that change `.github/` are also audited by [zizmor](https://docs.zizmor.sh/).
 4. Squash-merge it. The pull request title becomes the only commit on `main`.
 
 The pull request title decides what is released, so choose its type carefully:
@@ -74,8 +74,8 @@ Keep the summary lowercase and in the imperative: `feat: add project search`, no
 Releases are fully automated with [semantic-release](https://semantic-release.gitbook.io/). Nobody publishes by hand.
 
 1. A pull request is merged into `main`.
-2. The **CI** workflow runs the full test matrix on that commit.
-3. If CI succeeds, the **Release** workflow starts. It checks out the exact commit CI tested and runs `npm run check` again.
+2. The **Release** workflow starts on that commit. Its first job runs the **CI** workflow: the full test matrix and the coverage badge.
+3. If CI succeeds, the publish job runs semantic-release in the same run, on the same commit.
 4. semantic-release reads the commits since the last release tag. If none of them is a `fix:` or `feat:`, it stops and nothing is published.
 5. Otherwise it computes the next version and:
    - publishes the package to npm through [trusted publishing](https://docs.npmjs.com/trusted-publishers), so no npm token is stored in the repository, and with a provenance attestation linking the package to this workflow run;
@@ -85,7 +85,15 @@ The version in `package.json` is always `0.0.0-development`. The real version ex
 
 The git tag and GitHub release appear as soon as the workflow ends. The new version can take up to about ten minutes to appear on npm.
 
-The Release workflow can also be started by hand from the Actions tab. It then performs the same steps on the latest commit of `main`.
+The Release workflow can also be started by hand from the Actions tab. It then performs the same steps on the latest commit of `main`. Check **dry-run** to see the next version and its release notes without publishing anything.
+
+### Workflow security
+
+The publish job can request an OIDC token that publishes to npm, so the workflows keep what it runs to a minimum:
+
+- Every action is pinned to a full commit SHA, with its version in a comment. Dependabot proposes updates once a week, only for releases that are at least seven days old. Its pull requests are titled `ci:`, so they never trigger a release.
+- Each job asks only for the permissions it needs, and each permission says what it is for.
+- The publish job runs only on `main`, in the `npm` environment. It keeps no git credential on disk, installs dependencies without running their install scripts, and verifies their registry signatures. A new dependency that needs an install script will not work in that job, so check this before adding one.
 
 ### When a release is broken
 

@@ -168,10 +168,12 @@ No new features; this milestone makes the existing ones dependable, then freezes
 - [ ] **Signal handling:** SIGINT and SIGTERM are forwarded correctly, and no child process is left behind when the terminal closes.
 - [ ] **Performance budget:** startup to first menu in under 150 ms, checked in CI.
 - [ ] **Release safety:**
-  - [x] publish automatically once CI passes on `main`, from the exact commit CI tested;
-  - [x] limit the npm version in the release workflow to `^11.5.1` instead of `npm@latest`;
+  - [x] publish automatically once CI passes on `main`, in the same workflow run and from the same commit;
+  - [x] publish with the npm bundled with Node.js 24, checked to be 11.5.1 or newer, instead of installing `npm@latest`;
   - [x] run `npm run check` (not only `npm test`) before publishing;
   - [x] enforce Conventional Commits on pull request titles, which become the squash-merge commit, so every change is classified for semantic-release;
+  - [x] pin every action to a full commit SHA, kept up to date by Dependabot, and audit the workflows with zizmor on pull requests;
+  - [x] give the publish job only the permissions it needs, with no git credential on disk and no dependency install scripts while it can request an OIDC token;
   - publish a `CHANGELOG.md` with `@semantic-release/changelog`.
 - [ ] **Contributor files:**
   - [x] `CONTRIBUTING.md` with the development setup, workflow and release process;
