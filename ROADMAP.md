@@ -175,6 +175,7 @@ No new features; this milestone makes the existing ones dependable, then freezes
   - [x] enforce Conventional Commits on pull request titles, which become the squash-merge commit, so every change is classified for semantic-release;
   - [x] pin every action to a full commit SHA, kept up to date by Dependabot, and audit the workflows with zizmor on pull requests;
   - [x] give the publish job only the permissions it needs, with no git credential on disk and no dependency install scripts while it can request an OIDC token;
+  - [x] require the `CI passed` and `Conventional Commit title` checks in the `main` ruleset, so a pull request with failing CI cannot be merged;
   - publish a `CHANGELOG.md` with `@semantic-release/changelog`.
 - [ ] **Contributor files:**
   - [x] `CONTRIBUTING.md` with the development setup, workflow and release process;

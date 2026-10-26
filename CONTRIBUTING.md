@@ -54,7 +54,7 @@ Every change is made on a short-lived branch and reaches `main` through a pull r
 
 1. Create a branch named after the change: `feat/project-search`, `fix/ctrl-c`, `docs/readme`, …
 2. Commit and push as often as needed. Nothing is released from a branch.
-3. Open a pull request. CI runs the test matrix (Windows, macOS and Linux with Node.js 20, 22, 24 and 26), and a check verifies that the title follows [Conventional Commits](https://www.conventionalcommits.org/). Pull requests that change `.github/` are also audited by [zizmor](https://docs.zizmor.sh/).
+3. Open a pull request. CI runs the test matrix (Windows, macOS and Linux with Node.js 20, 22, 24 and 26), and a check verifies that the title follows [Conventional Commits](https://www.conventionalcommits.org/). Pull requests that change `.github/` are also audited by [zizmor](https://docs.zizmor.sh/). A final **CI passed** job succeeds only when every test and coverage job has passed. It and the title check are the checks that must pass before a pull request can be merged, so changing the test matrix never requires changing the repository rules.
 4. Squash-merge it. The pull request title becomes the only commit on `main`.
 
 The pull request title decides what is released, so choose its type carefully:
