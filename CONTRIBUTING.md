@@ -4,7 +4,7 @@ Thank you for helping improve Dev Workspace CLI. This guide covers the developme
 
 ## Development setup
 
-Requirements: Node.js 20 or newer and npm.
+Requirements: Node.js 20.17, 22.13 or 23.5 and later (the versions the dependencies support), and npm.
 
 ```bash
 git clone https://github.com/modulane/dev-workspace-cli.git

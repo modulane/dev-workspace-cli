@@ -29,7 +29,7 @@
     "terminal"
   ],
   "engines": {
-    "node": ">=20"
+    "node": "^20.17.0 || ^22.13.0 || >=23.5.0"
   },
   "license": "MIT",
   "publishConfig": {

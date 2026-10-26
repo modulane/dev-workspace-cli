@@ -35,7 +35,7 @@ Dev Workspace CLI detects each project's package manager (npm, pnpm, Yarn or Bun
 
 ## Installation
 
-Dev Workspace CLI requires [Node.js](https://nodejs.org/) 20 or newer.
+Dev Workspace CLI requires [Node.js](https://nodejs.org/) 20.17 or newer in the 20.x line, 22.13 or newer in the 22.x line, or 23.5 and later.
 
 ```bash
 npm install --global @modulane/dev-workspace-cli
