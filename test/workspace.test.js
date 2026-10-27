@@ -362,3 +362,16 @@ test('getScripts lists hooks as ordinary scripts when grouping is off', async ()
     ])
   })
 })
+
+test('getScripts reads a package.json that starts with a byte order mark', async () => {
+  await withTempDirectory(async directory => {
+    await writeFile(
+      path.join(directory, 'package.json'),
+      '\uFEFF' + JSON.stringify({ scripts: { hello: 'echo hello' } }),
+    )
+
+    assert.deepEqual(await getScripts(directory), [
+      { name: 'hello', command: 'echo hello' },
+    ])
+  })
+})

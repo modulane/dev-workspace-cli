@@ -91,7 +91,7 @@ Each list also has entries to go **Back**, **Exit**, or **Change workspace**.
 
 Every subfolder of the workspace is listed as a project, including links to folders (symbolic links, and junctions on Windows), except folders that are never projects: names starting with a dot (such as `.git` or `.vscode`) and `node_modules`. Only the immediate subfolders are listed; projects nested deeper are not discovered.
 
-Projects are sorted by name, ignoring case. Folders without a `package.json` have no scripts to run, so they appear dimmed at the end of the list, marked `(no package.json)`, and cannot be selected.
+Projects are sorted by name, ignoring case. Folders without a `package.json` have no scripts to run, so they appear dimmed at the end of the list, marked `(no package.json)`, and cannot be selected. A `package.json` that starts with a UTF-8 byte order mark, as Windows PowerShell 5.1 and some editors write it, is read normally, as npm does.
 
 In the script list, the selected script's command is shown below the list, shortened to fit the terminal. Lifecycle hooks are listed with their main script instead of separately: with `prebuild`, `build` and `postbuild` scripts, the list shows only `build`, described as `node build.js  (+ prebuild, postbuild)`. Running `build` runs its hooks too, as the package manager normally does. A hook without its main script, such as `postinstall` on its own, is listed like any other script. In Yarn 2+ projects, which never run these hooks, every hook is listed as a separate script so you can still run it.
 
@@ -161,6 +161,7 @@ The workspace path is saved in the standard configuration folder of your operati
 
 - `dws --config-path` prints the exact path on your machine.
 - The `DEV_WORKSPACE_CONFIG` environment variable points the CLI at a different file.
+- If you edit the file by hand, an editor that saves it with a UTF-8 byte order mark does no harm.
 - To switch workspaces, choose **Change workspace** in the project list or run `dws --workspace <path>`. If the saved workspace no longer exists, the CLI asks for a new one.
 - Versions before 0.3.0 stored the file in `~/.dev-workspace-cli/config.json`. If that file exists, it is moved to the new location automatically.
 

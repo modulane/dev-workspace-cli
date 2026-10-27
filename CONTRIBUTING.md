@@ -40,6 +40,7 @@ DEV_WORKSPACE_CONFIG=/tmp/dws-test.json npm start
 | `workspace.js`        | Listing projects, reading their scripts, resolving typed paths |
 | `package-managers.js` | Detecting each project's package manager                       |
 | `commands.js`         | Running a script with that package manager                     |
+| `json.js`             | Parsing JSON files, ignoring a leading byte order mark         |
 | `aliases.js`          | Creating, listing and removing custom aliases                  |
 | `prompts.js`          | Questions and menus, built on `@inquirer/prompts`              |
 | `ui.js`               | Colours, the header and screen clearing                        |
