@@ -93,7 +93,7 @@ Every subfolder of the workspace is listed as a project, including links to fold
 
 Projects are sorted by name, ignoring case. Folders without a `package.json` have no scripts to run, so they appear dimmed at the end of the list, marked `(no package.json)`, and cannot be selected.
 
-In the script list, the selected script's command is shown below the list, shortened to fit the terminal. Lifecycle hooks are listed with their main script instead of separately: with `prebuild`, `build` and `postbuild` scripts, the list shows only `build`, described as `node build.js  (+ prebuild, postbuild)`. Running `build` runs its hooks too, as the package manager normally does. A hook without its main script, such as `postinstall` on its own, is listed like any other script.
+In the script list, the selected script's command is shown below the list, shortened to fit the terminal. Lifecycle hooks are listed with their main script instead of separately: with `prebuild`, `build` and `postbuild` scripts, the list shows only `build`, described as `node build.js  (+ prebuild, postbuild)`. Running `build` runs its hooks too, as the package manager normally does. A hook without its main script, such as `postinstall` on its own, is listed like any other script. In Yarn 2+ projects, which never run these hooks, every hook is listed as a separate script so you can still run it.
 
 ## Package managers
 
@@ -113,7 +113,7 @@ Each project's scripts run with the package manager that project uses. It is cho
 
 The project screen shows the choice and the reason, for example `Package manager: pnpm (from pnpm-lock.yaml)`. If that package manager is not installed, the CLI explains how to install it. For pnpm and Yarn it suggests `corepack enable` on Node.js 24 and earlier; Node.js 25 and later no longer include Corepack, so there it suggests `npm install --global` first.
 
-Whether `pre` and `post` hooks run is decided by the package manager: npm, pnpm, Bun and Yarn 1 run them, while Yarn 2 and later ignore them.
+Whether `pre` and `post` hooks run is decided by the package manager: npm, pnpm, Bun and Yarn 1 run them, while Yarn 2 and later ignore them. The CLI recognises Yarn 2+ from a `packageManager` field such as `yarn@4.5.0`, or from a `yarn.lock` that starts with a `__metadata:` block, and then lists the hooks separately instead of grouping them.
 
 ## Command-line options
 
