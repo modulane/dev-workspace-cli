@@ -76,6 +76,7 @@ The project list currently shows every subfolder of the workspace, including fol
 ### Scripts
 
 - [x] Group `pre*` and `post*` lifecycle scripts under their main script, so `pretest` is not listed as a separate entry. Hooks whose main script does not exist, such as `postinstall` on its own, stay listed.
+  - [x] Except in Yarn 2+ projects, which never run these hooks: recognised from the `packageManager` field or the `yarn.lock` format, they list every hook as a separate script. CI runs a real script with Yarn 4 to check that its hooks are skipped ([#8](https://github.com/modulane/dev-workspace-cli/issues/8)).
 - [x] Show the script command as the description, truncated to the terminal width, followed by its hooks.
 
 **Done when:** a workspace that mixes npm, pnpm, Yarn and Bun projects runs every script with the right tool on all three operating systems in CI.
