@@ -257,3 +257,18 @@ test('saveWorkspaceConfig rejects an empty workspace path', async () => {
     )
   })
 })
+
+test('readWorkspaceConfig reads a file that starts with a byte order mark', async () => {
+  await withTempHome(async home => {
+    const { directory, file } = pathsIn(home)
+
+    await mkdir(directory, { recursive: true })
+    await writeFile(
+      file,
+      '\uFEFF' + JSON.stringify({ workspace: '/projects' }),
+      'utf8',
+    )
+
+    assert.equal(await readWorkspaceConfig(file), '/projects')
+  })
+})

@@ -61,6 +61,7 @@ Before this milestone, the CLI assumed npm and listed every folder. It made the 
   1. the `packageManager` field in `package.json` (for example, `pnpm@9.1.0`);
   2. the lockfile: `pnpm-lock.yaml`, `yarn.lock`, `bun.lock` / `bun.lockb`, `package-lock.json`;
   3. npm as the fallback.
+  - [x] Read a `package.json` that starts with a UTF-8 byte order mark, as npm does, both for the `packageManager` field and for the script list; the configuration file too ([#14](https://github.com/modulane/dev-workspace-cli/issues/14)).
 - [x] Run scripts with the detected tool (`pnpm run`, `yarn run`, `bun run`, `npm run`).
 - [x] Show which package manager will be used in the project screen.
 - [x] When the detected tool is not installed, show an actionable error naming the tool and how to install it (for example, `corepack enable`).

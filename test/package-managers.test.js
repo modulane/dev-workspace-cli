@@ -44,6 +44,21 @@ test('detectPackageManager prefers the packageManager field', async () => {
   )
 })
 
+test('detectPackageManager reads a package.json that starts with a byte order mark', async () => {
+  await withProject(
+    {
+      'package.json': '\uFEFF' + packageJson({ packageManager: 'pnpm@9.1.0' }),
+      'yarn.lock': '',
+    },
+    async directory => {
+      assert.deepEqual(await detectPackageManager(directory), {
+        name: 'pnpm',
+        source: 'packageManager',
+      })
+    },
+  )
+})
+
 test('detectPackageManager falls back to the lockfile', async () => {
   const cases = [
     ['pnpm-lock.yaml', 'pnpm'],
