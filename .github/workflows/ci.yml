@@ -54,6 +54,7 @@ jobs:
         run: npm ci
 
       # The tests run a real script with every supported package manager.
+      # Yarn 2+ comes from a pinned devDependency, run through this Yarn 1.
       # Their latest versions are installed on purpose, to test what users
       # have; this job can read the repository and nothing else.
       - name: Install pnpm and Yarn

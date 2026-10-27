@@ -20,7 +20,7 @@ npm install
 | `npm run format`   | Format every file with Prettier                             |
 | `npm run check`    | Check formatting and run the tests, as CI does              |
 
-Some tests run a real script with each supported package manager. Package managers that are not installed are skipped locally; CI installs all of them and sets `REQUIRE_ALL_PACKAGE_MANAGERS=1` so none is skipped there.
+Some tests run a real script with each supported package manager. Package managers that are not installed are skipped locally; CI installs all of them and sets `REQUIRE_ALL_PACKAGE_MANAGERS=1` so none is skipped there. These tests also check whether each tool runs `pre`/`post` hooks. Yarn 2+, which does not, is tested with the `@yarnpkg/cli-dist` devDependency: the installed `yarn` (Yarn 1 is enough) hands over to it through `yarnPath`, so Corepack is not needed.
 
 When testing the real command by hand, point it at a temporary configuration so your own settings are not changed:
 

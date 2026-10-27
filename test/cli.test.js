@@ -825,3 +825,33 @@ test('CLI explains where the package manager choice comes from', async () => {
     assert.match(loggedText(calls), expected)
   }
 })
+
+test('CLI groups hooks only when the package manager runs them', async () => {
+  for (const runsHooks of [true, false]) {
+    const project = { name: 'p', directory: path.join(WORKSPACE, 'p') }
+    let projectSelections = 0
+    let scriptOptions
+
+    const { dependencies } = createDependencies({
+      workspace: {
+        getProjects: async () => [project],
+        getScripts: async (directory, options) => {
+          scriptOptions = options
+          return [{ name: 'build', command: 'node build.js' }]
+        },
+        detectPackageManager: async () => ({
+          name: 'yarn',
+          source: 'yarn.lock',
+          runsHooks,
+        }),
+      },
+      prompts: {
+        chooseProject: async () => (++projectSelections === 1 ? project : null),
+      },
+    })
+
+    await createCli(dependencies).run()
+
+    assert.deepEqual(scriptOptions, { groupHooks: runsHooks })
+  }
+})

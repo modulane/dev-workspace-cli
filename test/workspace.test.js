@@ -342,6 +342,27 @@ test('getScripts attaches pre and post hooks to their main script', async () => 
   })
 })
 
+test('getScripts lists hooks as ordinary scripts when grouping is off', async () => {
+  await withTempDirectory(async directory => {
+    await writeFile(
+      path.join(directory, 'package.json'),
+      JSON.stringify({
+        scripts: {
+          prebuild: 'node clean.js',
+          build: 'node build.js',
+          postbuild: 'node report.js',
+        },
+      }),
+    )
+
+    assert.deepEqual(await getScripts(directory, { groupHooks: false }), [
+      { name: 'prebuild', command: 'node clean.js' },
+      { name: 'build', command: 'node build.js' },
+      { name: 'postbuild', command: 'node report.js' },
+    ])
+  })
+})
+
 test('getScripts reads a package.json that starts with a byte order mark', async () => {
   await withTempDirectory(async directory => {
     await writeFile(
