@@ -111,7 +111,7 @@ Each project's scripts run with the package manager that project uses. It is cho
 
 3. npm, when neither is present.
 
-The project screen shows the choice and the reason, for example `Package manager: pnpm (from pnpm-lock.yaml)`. If that package manager is not installed, the CLI explains how to install it.
+The project screen shows the choice and the reason, for example `Package manager: pnpm (from pnpm-lock.yaml)`. If that package manager is not installed, the CLI explains how to install it. For pnpm and Yarn it suggests `corepack enable` on Node.js 24 and earlier; Node.js 25 and later no longer include Corepack, so there it suggests `npm install --global` first.
 
 Whether `pre` and `post` hooks run is decided by the package manager: npm, pnpm, Bun and Yarn 1 run them, while Yarn 2 and later ignore them.
 

@@ -64,6 +64,7 @@ Before this milestone, the CLI assumed npm and listed every folder. It made the 
 - [x] Run scripts with the detected tool (`pnpm run`, `yarn run`, `bun run`, `npm run`).
 - [x] Show which package manager will be used in the project screen.
 - [x] When the detected tool is not installed, show an actionable error naming the tool and how to install it (for example, `corepack enable`).
+  - [x] Suggest `corepack enable` only on Node.js 24 and earlier: Node.js 25 and later no longer ship Corepack, so the hint starts with `npm install --global` there ([#15](https://github.com/modulane/dev-workspace-cli/issues/15)).
 
 ### Project filtering
 

@@ -165,20 +165,28 @@ test('runCommand explains how to install a missing package manager', async () =>
   const cases = [
     [
       'pnpm',
-      /Could not find pnpm, which this project uses\..*corepack enable pnpm/,
+      '24.11.1',
+      /Could not find pnpm, which this project uses\. Install it with "corepack enable pnpm"/,
     ],
-    ['yarn', /corepack enable yarn/],
-    ['bun', /https:\/\/bun\.sh/],
-    ['custom', /Install it, then restart the CLI/],
+    ['yarn', '24.11.1', /Install it with "corepack enable yarn"/],
+    // Node.js 25 and later no longer ship Corepack.
+    [
+      'pnpm',
+      '26.0.0',
+      /Install it with "npm install --global pnpm", or with "npm install --global corepack" followed by "corepack enable pnpm"/,
+    ],
+    ['bun', '26.0.0', /https:\/\/bun\.sh/],
+    ['custom', '26.0.0', /Install it, then restart the CLI/],
   ]
 
-  for (const [packageManager, expected] of cases) {
+  for (const [packageManager, nodeVersion, expected] of cases) {
     const child = createFakeProcess()
     const { spawnMock } = createSpawnMock(child)
 
     const resultPromise = runCommand('dev', '/projects/example', {
       spawnProcess: spawnMock,
       packageManager,
+      nodeVersion,
     })
 
     child.emit('error', Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))

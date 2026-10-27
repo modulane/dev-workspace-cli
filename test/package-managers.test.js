@@ -11,6 +11,7 @@ import { runCommand } from '../lib/commands.js'
 import {
   PACKAGE_MANAGERS,
   detectPackageManager,
+  installHint,
 } from '../lib/package-managers.js'
 
 async function withProject(files, callback) {
@@ -106,6 +107,26 @@ test('detectPackageManager defaults to npm', async () => {
   await withProject({}, async directory => {
     assert.equal((await detectPackageManager(directory)).name, 'npm')
   })
+})
+
+test('installHint offers Corepack only where Node.js ships it', () => {
+  for (const name of ['pnpm', 'yarn']) {
+    assert.equal(
+      installHint(name, '24.11.1'),
+      `Install it with "corepack enable ${name}" or "npm install --global ${name}".`,
+    )
+
+    for (const nodeVersion of ['25.0.0', '26.12.1']) {
+      assert.equal(
+        installHint(name, nodeVersion),
+        `Install it with "npm install --global ${name}", or with "npm install --global corepack" followed by "corepack enable ${name}".`,
+      )
+    }
+  }
+
+  assert.match(installHint('npm', '26.0.0'), /Install Node\.js with npm/)
+  assert.match(installHint('bun', '20.0.0'), /https:\/\/bun\.sh/)
+  assert.equal(installHint('toString'), 'Install it, then restart the CLI.')
 })
 
 // Run a real script with every package manager installed on this machine.
