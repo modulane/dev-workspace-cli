@@ -216,3 +216,28 @@ test('runCommand wraps startup errors without an error code', async () => {
     return true
   })
 })
+
+test('runCommand passes extra arguments the way each package manager needs', async () => {
+  const cases = [
+    ['npm', ['run', 'dev', '--', '--port', '4000']],
+    ['pnpm', ['run', 'dev', '--port', '4000']],
+    ['yarn', ['run', 'dev', '--port', '4000']],
+    ['bun', ['run', 'dev', '--port', '4000']],
+  ]
+
+  for (const [packageManager, expected] of cases) {
+    const child = createFakeProcess()
+    const { spawnMock, calls } = createSpawnMock(child)
+
+    const resultPromise = runCommand('dev', '/projects/example', {
+      spawnProcess: spawnMock,
+      packageManager,
+      args: ['--port', '4000'],
+    })
+
+    assert.deepEqual(calls[0][1], expected, packageManager)
+
+    child.emit('close', 0, null)
+    await resultPromise
+  }
+})

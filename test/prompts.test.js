@@ -1,6 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { CHANGE_WORKSPACE, createPrompts } from '../lib/prompts.js'
+import {
+  CHANGE_WORKSPACE,
+  RUN_WITH_ARGUMENTS,
+  createPrompts,
+} from '../lib/prompts.js'
 
 function createPromptMocks(results = {}) {
   const calls = {
@@ -56,7 +60,7 @@ test('confirmWorkspaceChange defaults to true', async () => {
   ])
 })
 
-test('chooseProject maps projects and adds workspace and exit choices', async () => {
+test('chooseProject lists projects, then workspace and exit actions', async () => {
   const projects = [
     { name: 'project-a', directory: '/projects/a' },
     { name: 'project-b', directory: '/projects/b' },
@@ -70,26 +74,17 @@ test('chooseProject maps projects and adds workspace and exit choices', async ()
   assert.equal(result, projects[0])
   assert.deepEqual(calls.select[0], {
     message: 'Select a project',
-    choices: [
+    items: [
+      { icon: '📁', label: 'project-a', value: projects[0] },
+      { icon: '📁', label: 'project-b', value: projects[1] },
       {
-        name: '📁  project-a',
-        value: projects[0],
-      },
-      {
-        name: '📁  project-b',
-        value: projects[1],
-      },
-      {
-        name: '⚙  Change workspace',
+        icon: '⚙',
+        label: 'Change workspace',
         value: CHANGE_WORKSPACE,
+        action: true,
       },
-      {
-        name: '↩  Exit',
-        value: null,
-      },
+      { icon: '↩', label: 'Exit', value: null, action: true },
     ],
-    pageSize: 15,
-    loop: false,
   })
 })
 
@@ -99,99 +94,25 @@ test('chooseProject supports an empty project list', async () => {
   const result = await prompts.chooseProject([])
 
   assert.equal(result, null)
-  assert.deepEqual(calls.select[0].choices, [
-    { name: '⚙  Change workspace', value: CHANGE_WORKSPACE },
-    { name: '↩  Exit', value: null },
-  ])
+  assert.deepEqual(
+    calls.select[0].items.map(item => item.value),
+    [CHANGE_WORKSPACE, null],
+  )
 })
 
-test('chooseScript formats scripts and adds a back choice', async () => {
-  const scripts = [
-    { name: 'dev', command: 'nuxt dev' },
-    { name: 'build', command: 'nuxt build' },
-  ]
-  const { calls, prompts } = createPromptMocks({ select: scripts[0] })
-
-  const result = await prompts.chooseScript(scripts)
-
-  assert.equal(result, scripts[0])
-  assert.deepEqual(calls.select[0], {
-    message: 'Select a script',
-    choices: [
-      {
-        name: '▶  dev',
-        value: scripts[0],
-        description: 'nuxt dev',
-      },
-      {
-        name: '▶  build',
-        value: scripts[1],
-        description: 'nuxt build',
-      },
-      {
-        name: '↩  Back to projects',
-        value: null,
-      },
-    ],
-    pageSize: 15,
-    loop: false,
-  })
-})
-
-test('chooseScript supports an empty script list', async () => {
+test('chooseProject shows recent projects first, under a heading', async () => {
+  const projects = ['api', 'docs', 'web'].map(name => ({
+    name,
+    directory: `/projects/${name}`,
+  }))
   const { calls, prompts } = createPromptMocks({ select: null })
 
-  const result = await prompts.chooseScript([])
+  await prompts.chooseProject(projects, { recent: [projects[2], projects[0]] })
 
-  assert.equal(result, null)
-  assert.deepEqual(calls.select[0].choices, [
-    { name: '↩  Back to projects', value: null },
-  ])
-})
-
-test('waitForBack uses its default message', async () => {
-  const { calls, prompts } = createPromptMocks({ select: true })
-
-  const result = await prompts.waitForBack()
-
-  assert.equal(result, true)
-  assert.deepEqual(calls.select[0], {
-    message: 'Return to projects',
-    choices: [{ name: '↩  Back', value: true }],
-  })
-})
-
-test('waitForBack accepts a custom message', async () => {
-  const { calls, prompts } = createPromptMocks({ select: true })
-
-  await prompts.waitForBack('Return to scripts')
-
-  assert.equal(calls.select[0].message, 'Return to scripts')
-})
-
-test('waitAfterCommand offers a return to project scripts', async () => {
-  const { calls, prompts } = createPromptMocks({ select: true })
-
-  const result = await prompts.waitAfterCommand()
-
-  assert.equal(result, true)
-  assert.deepEqual(calls.select[0], {
-    message: 'What next?',
-    choices: [{ name: '↩  Return to project scripts', value: true }],
-  })
-})
-
-test('chooseProject returns the selected project object', async () => {
-  const project = {
-    name: 'foo',
-    directory: '/projects/foo',
-  }
-
-  const prompts = createPrompts({
-    select: async ({ choices }) => choices[0].value,
-  })
-
-  assert.equal(await prompts.chooseProject([project]), project)
+  assert.deepEqual(
+    calls.select[0].items.map(item => item.separator ?? item.label),
+    ['Recent', 'web', 'api', 'Projects', 'docs', 'Change workspace', 'Exit'],
+  )
 })
 
 test('chooseProject disables folders without a package.json', async () => {
@@ -203,10 +124,140 @@ test('chooseProject disables folders without a package.json', async () => {
 
   await prompts.chooseProject(projects)
 
-  assert.deepEqual(calls.select[0].choices.slice(0, 2), [
-    { name: '📁  web', value: projects[0] },
-    { name: '📁  notes', value: projects[1], disabled: '(no package.json)' },
+  assert.deepEqual(calls.select[0].items.slice(0, 2), [
+    { icon: '📁', label: 'web', value: projects[0] },
+    {
+      icon: '📁',
+      label: 'notes',
+      value: projects[1],
+      disabled: '(no package.json)',
+    },
   ])
+})
+
+test('chooseScript lists scripts with their command, then the actions', async () => {
+  const scripts = [
+    { name: 'dev', command: 'nuxt dev' },
+    { name: 'build', command: 'nuxt build' },
+  ]
+  const { calls, prompts } = createPromptMocks({ select: scripts[0] })
+
+  const result = await prompts.chooseScript(scripts)
+
+  assert.equal(result, scripts[0])
+  assert.deepEqual(calls.select[0], {
+    message: 'Select a script',
+    items: [
+      {
+        icon: '▶',
+        label: 'dev',
+        value: scripts[0],
+        description: 'nuxt dev',
+      },
+      {
+        icon: '▶',
+        label: 'build',
+        value: scripts[1],
+        description: 'nuxt build',
+      },
+      {
+        icon: '…',
+        label: 'Run with arguments…',
+        value: RUN_WITH_ARGUMENTS,
+        action: true,
+      },
+      { icon: '↩', label: 'Back to projects', value: null, action: true },
+    ],
+    default: undefined,
+  })
+})
+
+test('chooseScript starts on the last script run', async () => {
+  const scripts = [
+    { name: 'dev', command: 'nuxt dev' },
+    { name: 'build', command: 'nuxt build' },
+  ]
+  const { calls, prompts } = createPromptMocks({ select: null })
+
+  await prompts.chooseScript(scripts, { lastScript: 'build' })
+
+  assert.equal(calls.select[0].default, scripts[1])
+  assert.equal(calls.select[0].items[1].hint, '(last run)')
+  assert.equal(calls.select[0].items[0].hint, undefined)
+})
+
+test('chooseScript asks which script to run with arguments', async () => {
+  const scripts = [{ name: 'dev', command: 'nuxt dev' }]
+  const { calls, prompts } = createPromptMocks({ select: null })
+
+  await prompts.chooseScript(scripts, { forArguments: true })
+
+  assert.equal(calls.select[0].message, 'Run which script with arguments?')
+  assert.deepEqual(
+    calls.select[0].items.map(item => item.label),
+    ['dev', 'Back to scripts'],
+  )
+})
+
+test('chooseScript supports an empty script list', async () => {
+  const { calls, prompts } = createPromptMocks({ select: null })
+
+  const result = await prompts.chooseScript([])
+
+  assert.equal(result, null)
+  assert.deepEqual(calls.select[0].items, [
+    { icon: '↩', label: 'Back to projects', value: null, action: true },
+  ])
+})
+
+test('askForArguments splits the answer and validates quotes', async () => {
+  const { calls, prompts } = createPromptMocks({
+    input: '--port 4000 "two words"',
+  })
+
+  const result = await prompts.askForArguments('dev')
+
+  assert.deepEqual(result, ['--port', '4000', 'two words'])
+  assert.equal(calls.input[0].message, 'Arguments for dev')
+  assert.equal(calls.input[0].validate('--port 4000'), true)
+  assert.equal(calls.input[0].validate('"open'), 'Close the " quote.')
+})
+
+test('waitForBack uses its default message', async () => {
+  const { calls, prompts } = createPromptMocks({ select: true })
+
+  const result = await prompts.waitForBack()
+
+  assert.equal(result, true)
+  assert.deepEqual(calls.select[0], {
+    message: 'Return to projects',
+    items: [{ icon: '↩', label: 'Back', value: true }],
+    searchable: false,
+  })
+})
+
+test('waitForBack accepts a custom message', async () => {
+  const { calls, prompts } = createPromptMocks({ select: true })
+
+  await prompts.waitForBack('Return to scripts')
+
+  assert.equal(calls.select[0].message, 'Return to scripts')
+})
+
+test('waitAfterCommand offers to run again first', async () => {
+  const { calls, prompts } = createPromptMocks({ select: true })
+
+  const result = await prompts.waitAfterCommand()
+
+  assert.equal(result, true)
+  assert.deepEqual(calls.select[0], {
+    message: 'What next?',
+    items: [
+      { icon: '↻', label: 'Run again', value: true },
+      { icon: '↩', label: 'Back to scripts', value: false },
+    ],
+    searchable: false,
+  })
 })
 
 test('chooseScript fits the command to the terminal width', async () => {
@@ -218,9 +269,9 @@ test('chooseScript fits the command to the terminal width', async () => {
   const long = `node ${'x'.repeat(200)}.js`
 
   for (const [columns, expectedLength] of [
-    [40, 38],
-    [120, 118],
-    [undefined, 78],
+    [40, 37],
+    [120, 117],
+    [undefined, 77],
     [5, 20],
   ]) {
     calls.length = 0
@@ -229,7 +280,7 @@ test('chooseScript fits the command to the terminal width', async () => {
       { name: 'build', command: long },
     ])
 
-    const { description } = calls[0].choices[0]
+    const { description } = calls[0].items[0]
 
     assert.equal(description.length, expectedLength, String(columns))
     assert.ok(description.endsWith('…'))
@@ -239,7 +290,7 @@ test('chooseScript fits the command to the terminal width', async () => {
   await createPrompts({ select, columns: () => 40 }).chooseScript([
     { name: 'dev', command: 'node server.js' },
   ])
-  assert.equal(calls[0].choices[0].description, 'node server.js')
+  assert.equal(calls[0].items[0].description, 'node server.js')
 })
 
 test('chooseScript keeps the hooks note when shortening the command', async () => {
@@ -257,8 +308,8 @@ test('chooseScript keeps the hooks note when shortening the command', async () =
     },
   ])
 
-  const { description } = calls[0].choices[0]
+  const { description } = calls[0].items[0]
 
-  assert.equal(description.length, 48)
+  assert.equal(description.length, 47)
   assert.ok(description.endsWith('…  (+ prebuild, postbuild)'), description)
 })

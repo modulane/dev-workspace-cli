@@ -3,8 +3,9 @@ import path from 'node:path'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { createCli } from '../lib/cli.js'
-import { CHANGE_WORKSPACE } from '../lib/prompts.js'
+import { createCli, findProject } from '../lib/cli.js'
+import { CHANGE_WORKSPACE, RUN_WITH_ARGUMENTS } from '../lib/prompts.js'
+import { emptyState } from '../lib/state.js'
 import { resolveDirectoryInput } from '../lib/workspace.js'
 
 const { version } = createRequire(import.meta.url)('../package.json')
@@ -15,6 +16,7 @@ function createDependencies(overrides = {}) {
   const calls = {
     savedWorkspaces: [],
     discoveredWorkspaces: [],
+    savedStates: [],
     errors: [],
     logs: [],
   }
@@ -41,6 +43,14 @@ function createDependencies(overrides = {}) {
       },
     },
 
+    history: {
+      readState: async () => emptyState(),
+      saveState: async (file, state) => {
+        calls.savedStates.push({ file, state })
+      },
+      clearState: async () => false,
+    },
+
     workspace: {
       isDirectory: async () => true,
       getProjects: async root => {
@@ -56,6 +66,7 @@ function createDependencies(overrides = {}) {
     },
 
     prompts: {
+      askForArguments: async () => [],
       askForWorkspace: async () => WORKSPACE,
       chooseProject: async () => null,
       chooseScript: async () => null,
@@ -600,7 +611,7 @@ test('CLI rejects unknown options with a pointer to --help', async () => {
   )
 })
 
-test('CLI --reset deletes the current and legacy configuration', async () => {
+test('CLI --reset deletes the configuration, legacy file and history', async () => {
   let requested
 
   const { dependencies, calls } = createDependencies({
@@ -617,6 +628,7 @@ test('CLI --reset deletes the current and legacy configuration', async () => {
   assert.deepEqual(requested, [
     '/fake/home/.dev-workspace-cli/config.json',
     '/fake/home/.legacy/config.json',
+    path.join('/fake/home/.dev-workspace-cli', 'state.json'),
   ])
   assert.match(
     loggedText(calls),
@@ -853,5 +865,486 @@ test('CLI groups hooks only when the package manager runs them', async () => {
     await createCli(dependencies).run()
 
     assert.deepEqual(scriptOptions, { groupHooks: runsHooks })
+  }
+})
+
+// A workspace with a few projects, for direct mode and history tests.
+function projectFixtures() {
+  return ['web', 'web-admin', 'api', 'Docs'].map(name => ({
+    name,
+    directory: path.join(WORKSPACE, name),
+    hasPackageJson: true,
+  }))
+}
+
+function directDependencies(overrides = {}) {
+  const runs = []
+  const result = createDependencies({
+    workspace: {
+      getProjects: async () => projectFixtures(),
+      getScripts: async () => [
+        { name: 'dev', command: 'vite' },
+        { name: 'prebuild', command: 'node clean.js' },
+        { name: 'build', command: 'vite build' },
+      ],
+      detectPackageManager: async () => ({
+        name: 'pnpm',
+        source: 'pnpm-lock.yaml',
+        runsHooks: true,
+      }),
+      ...overrides.workspace,
+    },
+    commands: {
+      runCommand: async (...args) => {
+        runs.push(args)
+        return { code: 0 }
+      },
+      ...overrides.commands,
+    },
+    config: { ...overrides.config },
+    prompts: {
+      chooseProject: async () => {
+        throw new Error('direct mode must not show the project list')
+      },
+      ...overrides.prompts,
+    },
+    ui: {
+      clearScreen: () => {
+        throw new Error('direct mode must not clear the screen')
+      },
+    },
+  })
+
+  return { ...result, runs }
+}
+
+test('findProject matches exactly, then ignoring case, then by unique prefix', () => {
+  const projects = projectFixtures()
+  const find = name => findProject(projects, name, WORKSPACE).name
+
+  assert.equal(find('web'), 'web')
+  assert.equal(find('docs'), 'Docs')
+  assert.equal(find('web-'), 'web-admin')
+  assert.equal(find('a'), 'api')
+  assert.throws(
+    () => find('we'),
+    /"we" matches several projects: web, web-admin\. Type more of the name\./,
+  )
+  assert.throws(() => find('mobile'), /No project named "mobile" in /)
+})
+
+test('CLI runs a script directly and returns its exit code', async () => {
+  const { dependencies, calls, runs } = directDependencies()
+
+  const code = await createCli(dependencies).start(['web', 'dev'])
+
+  assert.equal(code, 0)
+  assert.deepEqual(runs, [
+    ['dev', path.join(WORKSPACE, 'web'), { packageManager: 'pnpm' }],
+  ])
+  assert.match(
+    calls.errors.map(args => args.join(' ')).join('\n'),
+    /Running pnpm run dev in .*web$/,
+  )
+  assert.deepEqual(calls.savedStates.at(-1).state.lastScripts, {
+    [path.join(WORKSPACE, 'web')]: 'dev',
+  })
+})
+
+test('CLI passes on the exit code or signal of a script run directly', async () => {
+  for (const [result, expected] of [
+    [{ code: 7 }, 7],
+    [{ code: null, signal: 'SIGINT' }, 130],
+    [{ code: null, signal: 'SIGTERM' }, 143],
+    [{ code: null }, 1],
+  ]) {
+    const { dependencies } = directDependencies({
+      commands: { runCommand: async () => result },
+    })
+
+    assert.equal(
+      await createCli(dependencies).start(['api', 'build']),
+      expected,
+      JSON.stringify(result),
+    )
+  }
+})
+
+test('CLI passes script arguments in direct mode', async () => {
+  const cases = [
+    [
+      { name: 'npm', source: 'default', runsHooks: true },
+      { packageManager: 'npm', args: ['--port', '4000', 'two words'] },
+      'npm run dev -- --port 4000 "two words"',
+    ],
+    [
+      { name: 'yarn', source: 'yarn.lock', runsHooks: true },
+      {
+        packageManager: 'yarn',
+        args: ['--port', '4000', 'two words'],
+        classicYarn: true,
+      },
+      'yarn run dev --port 4000 "two words"',
+    ],
+    [
+      { name: 'yarn', source: 'yarn.lock', runsHooks: false },
+      { packageManager: 'yarn', args: ['--port', '4000', 'two words'] },
+      'yarn run dev --port 4000 "two words"',
+    ],
+  ]
+
+  for (const [detected, options, shown] of cases) {
+    const { dependencies, calls, runs } = directDependencies({
+      workspace: { detectPackageManager: async () => detected },
+    })
+
+    await createCli(dependencies).start([
+      'web',
+      'dev',
+      '--',
+      '--port',
+      '4000',
+      'two words',
+    ])
+
+    assert.deepEqual(runs[0][2], options)
+    assert.ok(calls.errors[0].join(' ').includes(shown), calls.errors[0][0])
+  }
+})
+
+test('CLI runs hooks by name in direct mode', async () => {
+  let scriptOptions
+  const { dependencies, runs } = directDependencies({
+    workspace: {
+      getScripts: async (directory, options) => {
+        scriptOptions = options
+        return [{ name: 'prebuild', command: 'node clean.js' }]
+      },
+    },
+  })
+
+  await createCli(dependencies).start(['web', 'prebuild'])
+
+  assert.deepEqual(scriptOptions, { groupHooks: false })
+  assert.equal(runs[0][0], 'prebuild')
+})
+
+test('CLI explains a direct run that cannot start', async () => {
+  const unknown = directDependencies()
+
+  await assert.rejects(
+    createCli(unknown.dependencies).start(['web', 'deploy']),
+    /No script named "deploy" in web\. Available scripts: dev, prebuild, build\./,
+  )
+  assert.equal(unknown.runs.length, 0)
+
+  const empty = directDependencies({
+    workspace: { getScripts: async () => [] },
+  })
+
+  await assert.rejects(
+    createCli(empty.dependencies).start(['web', 'dev']),
+    /web has no scripts\./,
+  )
+
+  const broken = directDependencies({
+    workspace: {
+      getScripts: async () => {
+        throw new Error('Invalid JSON')
+      },
+    },
+  })
+
+  await assert.rejects(
+    createCli(broken.dependencies).start(['web', 'dev']),
+    /Could not read package\.json: Invalid JSON/,
+  )
+
+  const ambiguous = directDependencies()
+
+  await assert.rejects(
+    createCli(ambiguous.dependencies).start(['we', 'dev']),
+    /matches several projects/,
+  )
+})
+
+test('CLI never prompts for a workspace when running a script directly', async () => {
+  const prompts = {
+    askForWorkspace: async () => {
+      throw new Error('must not prompt')
+    },
+    confirmWorkspaceChange: async () => {
+      throw new Error('must not prompt')
+    },
+  }
+
+  const missing = directDependencies({
+    config: { readWorkspaceConfig: async () => null },
+    prompts,
+  })
+
+  await assert.rejects(
+    createCli(missing.dependencies).start(['web', 'dev']),
+    /No workspace is configured yet\. Run dev-workspace once to choose one, or pass --workspace <path>\./,
+  )
+
+  const unavailable = directDependencies({ prompts })
+  unavailable.dependencies.workspace.isDirectory = async () => false
+
+  await assert.rejects(
+    createCli(unavailable.dependencies).start(['web', 'dev']),
+    /Saved workspace is unavailable: .*Pass another one with --workspace/,
+  )
+
+  const invalid = directDependencies({
+    config: {
+      readWorkspaceConfig: async () => {
+        throw new Error('Invalid configuration JSON')
+      },
+    },
+    prompts,
+  })
+
+  await assert.rejects(
+    createCli(invalid.dependencies).start(['web', 'dev']),
+    /Invalid configuration JSON/,
+  )
+})
+
+test('CLI opens a project given without a script, then the project list', async () => {
+  const steps = []
+  const { dependencies } = createDependencies({
+    workspace: {
+      getProjects: async () => projectFixtures(),
+      getScripts: async directory => {
+        steps.push(`scripts of ${path.basename(directory)}`)
+        return [{ name: 'dev', command: 'vite' }]
+      },
+    },
+    prompts: {
+      chooseProject: async () => {
+        steps.push('project list')
+        return null
+      },
+    },
+  })
+
+  await createCli(dependencies).start(['doc'])
+
+  assert.deepEqual(steps, ['scripts of Docs', 'project list'])
+})
+
+test('CLI shows recent projects first and remembers opened ones', async () => {
+  const projects = projectFixtures()
+  const offered = []
+  let selections = 0
+
+  const { dependencies, calls } = createDependencies({
+    history: {
+      readState: async () => ({
+        ...emptyState(),
+        recentProjects: [projects[2].directory, '/elsewhere'],
+      }),
+    },
+    workspace: {
+      getProjects: async () => projects,
+      getScripts: async () => [{ name: 'dev', command: 'vite' }],
+    },
+    prompts: {
+      chooseProject: async (list, options) => {
+        offered.push(options.recent.map(project => project.name))
+        return ++selections === 1 ? projects[1] : null
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.deepEqual(offered, [['api'], ['web-admin', 'api']])
+  assert.deepEqual(calls.savedStates[0].state.recentProjects, [
+    projects[1].directory,
+    projects[2].directory,
+    '/elsewhere',
+  ])
+  assert.equal(
+    calls.savedStates[0].file,
+    path.join('/fake/home/.dev-workspace-cli', 'state.json'),
+  )
+})
+
+test('CLI starts the script list on the last script run', async () => {
+  const project = projectFixtures()[0]
+  let projectSelections = 0
+  let scriptOptions
+
+  const { dependencies } = createDependencies({
+    history: {
+      readState: async () => ({
+        ...emptyState(),
+        lastScripts: { [project.directory]: 'build' },
+      }),
+    },
+    workspace: {
+      getProjects: async () => [project],
+      getScripts: async () => [{ name: 'build', command: 'vite build' }],
+    },
+    prompts: {
+      chooseProject: async () => (++projectSelections === 1 ? project : null),
+      chooseScript: async (scripts, options) => {
+        scriptOptions = options
+        return null
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.deepEqual(scriptOptions, { lastScript: 'build' })
+})
+
+test('CLI keeps going when the history cannot be saved', async () => {
+  const project = projectFixtures()[0]
+  const script = { name: 'dev', command: 'vite' }
+  let projectSelections = 0
+  let scriptSelections = 0
+  let runs = 0
+
+  const { dependencies } = createDependencies({
+    history: {
+      saveState: async () => {
+        throw new Error('Disk full')
+      },
+    },
+    workspace: {
+      getProjects: async () => [project],
+      getScripts: async () => [script],
+    },
+    commands: {
+      runCommand: async () => {
+        runs++
+        return { code: 0 }
+      },
+    },
+    prompts: {
+      chooseProject: async () => (++projectSelections === 1 ? project : null),
+      chooseScript: async () => (++scriptSelections === 1 ? script : null),
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.equal(runs, 1)
+})
+
+test('CLI runs a script with arguments typed in the menu', async () => {
+  const project = projectFixtures()[0]
+  const dev = { name: 'dev', command: 'vite' }
+  const answers = [RUN_WITH_ARGUMENTS, RUN_WITH_ARGUMENTS, null]
+  const forArguments = [null, dev]
+  const runs = []
+  let projectSelections = 0
+
+  const { dependencies, calls } = createDependencies({
+    workspace: {
+      getProjects: async () => [project],
+      getScripts: async () => [dev],
+    },
+    commands: {
+      runCommand: async (...args) => {
+        runs.push(args)
+        return { code: 0 }
+      },
+    },
+    prompts: {
+      chooseProject: async () => (++projectSelections === 1 ? project : null),
+      chooseScript: async (scripts, options) =>
+        options.forArguments ? forArguments.shift() : answers.shift(),
+      askForArguments: async name => {
+        assert.equal(name, 'dev')
+        return ['--port', '4000']
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  // Back from the first "which script" list returned to the script list.
+  assert.deepEqual(forArguments, [])
+  assert.deepEqual(answers, [])
+  assert.deepEqual(runs, [
+    [
+      'dev',
+      project.directory,
+      { packageManager: 'npm', args: ['--port', '4000'] },
+    ],
+  ])
+  assert.match(loggedText(calls), /Running: npm run dev -- --port 4000/)
+})
+
+test('CLI runs the same script again when asked', async () => {
+  const project = projectFixtures()[0]
+  const script = { name: 'test', command: 'vitest' }
+  const again = [true, true, false]
+  const runs = []
+  let projectSelections = 0
+  let scriptSelections = 0
+
+  const { dependencies } = createDependencies({
+    workspace: {
+      getProjects: async () => [project],
+      getScripts: async () => [script],
+    },
+    commands: {
+      runCommand: async (...args) => {
+        runs.push(args)
+        return { code: 1 }
+      },
+    },
+    prompts: {
+      chooseProject: async () => (++projectSelections === 1 ? project : null),
+      chooseScript: async () => (++scriptSelections === 1 ? script : null),
+      waitAfterCommand: async () => again.shift(),
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.equal(runs.length, 3)
+  assert.equal(scriptSelections, 2)
+  assert.ok(runs.every(([name]) => name === 'test'))
+})
+
+test('CLI --clear-history deletes only the history', async () => {
+  for (const [existed, expected] of [
+    [true, /Deleted the history at .*state\.json/],
+    [false, /No history found at .*state\.json/],
+  ]) {
+    let cleared
+    let configReset = false
+
+    const { dependencies, calls } = createDependencies({
+      history: {
+        clearState: async file => {
+          cleared = file
+          return existed
+        },
+      },
+      config: {
+        resetWorkspaceConfig: async () => {
+          configReset = true
+          return []
+        },
+      },
+    })
+
+    await createCli(dependencies).start(['--clear-history'])
+
+    assert.equal(
+      cleared,
+      path.join('/fake/home/.dev-workspace-cli', 'state.json'),
+    )
+    assert.match(loggedText(calls), expected)
+    assert.equal(configReset, false)
+    assert.equal(calls.discoveredWorkspaces.length, 0)
   }
 })

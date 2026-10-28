@@ -23,7 +23,7 @@ These apply to every milestone:
 | Interface refresh               | Released in 0.2.0, since removed from npm | New header, prompt formatting, screen clearing                            |
 | Foundations                     | Released in 0.3.0                         | Platform config location, CLI flags, aliases, Ctrl+C fix                  |
 | Works with every project        | Released in 0.5.0                         | Package manager detection, project filtering, lifecycle scripts           |
-| Fast navigation                 | Planned                                   | Fuzzy search, recent items, direct mode, script arguments                 |
+| Fast navigation                 | Complete, in the next release             | Fuzzy search, recent items, direct mode, script arguments                 |
 | A polished interface            | Planned                                   | Mouse support, correct layout, themes, project details, first run         |
 | Bigger workspaces               | Planned                                   | Monorepos, nested projects, multiple named workspaces                     |
 | Configuration and scripts       | Planned                                   | Versioned config schema, `config` command, JSON output                    |
@@ -87,17 +87,27 @@ The project list currently shows every subfolder of the workspace, including fol
 
 The CLI should be faster than typing `cd` and `npm run`.
 
-- [ ] **Own list prompt:** replace Inquirer's `select` with a small list component that the CLI controls fully: rendering, scrolling, key handling and the row position of every item. It is the base for fuzzy search here and for mouse support in [A polished interface](#a-polished-interface).
-- [ ] **Fuzzy search** in the project and script lists: typing filters the list (subsequence matching, best matches first) and Escape clears the filter.
-- [ ] **Recent items:** the five most recently used projects appear at the top of the list, and each project remembers its last script. Stored in a separate `state.json` next to the config, so clearing history never touches settings.
-- [ ] **Direct mode:** `dev-workspace <project> [script]` skips the menus.
+- [x] **Own list prompt:** replace Inquirer's `select` with a small list component that the CLI controls fully: rendering, scrolling, key handling and the row position of every item. It is the base for fuzzy search here and for mouse support in [A polished interface](#a-polished-interface).
+  - [x] It decodes raw terminal input itself, so escape sequences it does not use yet, such as mouse reports, are recognised and ignored instead of being typed into the search.
+  - [x] Raw mode is switched off and the cursor shown again on every exit path, including Ctrl+C and the process exiting while a list is open.
+- [x] **Fuzzy search** in the project and script lists: typing filters the list (subsequence matching, best matches first) and Escape clears the filter.
+  - [x] Matches at the start of the name or of a word, and consecutive characters, rank first; matched characters are underlined.
+  - [x] "Back", "Exit" and "Change workspace" are hidden while searching, so Enter never picks one by accident.
+- [x] **Recent items:** the five most recently used projects appear at the top of the list, and each project remembers its last script. Stored in a separate `state.json` next to the config, so clearing history never touches settings.
+  - [x] `--clear-history` deletes it; `--reset` deletes it with the configuration.
+  - [x] A missing or damaged `state.json` means an empty history, never an error, and it is written through a temporary file.
+- [x] **Direct mode:** `dev-workspace <project> [script]` skips the menus.
   - The project name is matched exactly first, then by unique prefix.
   - Without a script, open that project's script menu.
   - With a script, run it and exit with the script's exit code.
-- [ ] **Script arguments:** `dev-workspace web dev -- --port 4000` passes everything after `--` to the script. In the menu, a "Run with arguments…" option asks for them.
-- [ ] **Re-run:** after a script finishes, offer "Run again" as the default choice next to "Back".
+  - [x] With a script it never prompts or clears the screen: a missing workspace is an error (exit code 1), and a script stopped by a signal exits with 128 plus the signal number, as shells do.
+- [x] **Script arguments:** `dev-workspace web dev -- --port 4000` passes everything after `--` to the script. In the menu, a "Run with arguments…" option asks for them.
+  - [x] Each package manager gets them the way it expects (after `--` for npm, Yarn 1 only when they contain a `--`, otherwise directly). CI runs a real script with every tool, including Yarn 4, to check that the script receives them unchanged.
+- [x] **Re-run:** after a script finishes, offer "Run again" as the default choice next to "Back".
 
 **Done when:** opening and running a known script takes one command, and finding any project in a 50-project workspace takes at most three keystrokes plus Enter.
+
+Both are met: `dws <project> <script>` runs a script in one command, and a test checks the keystroke goal on a 50-project workspace of deliberately similar names (`web`, `web-app`, `web-ui`, …), counting typed characters and Down presses.
 
 ## A polished interface
 

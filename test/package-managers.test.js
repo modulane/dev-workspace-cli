@@ -300,6 +300,53 @@ for (const name of Object.keys(PACKAGE_MANAGERS)) {
   )
 }
 
+// Script arguments, including a literal --, must reach the script unchanged
+// whatever the tool; each one wants them passed differently.
+const SCRIPT_ARGS = ['--port', '4000', 'two words', '--', '-w']
+const SHOW_ARGS = {
+  'show.js':
+    "require('fs').writeFileSync('args.json', JSON.stringify(process.argv.slice(2)))\n",
+}
+
+async function readShownArgs(directory) {
+  return JSON.parse(await readFile(path.join(directory, 'args.json'), 'utf8'))
+}
+
+for (const name of Object.keys(PACKAGE_MANAGERS)) {
+  const installed = await findCommand(name)
+  const required = process.env.REQUIRE_ALL_PACKAGE_MANAGERS === '1'
+
+  test(
+    `runCommand passes arguments to a real script with ${name}`,
+    { skip: !installed && !required && `${name} is not installed` },
+    async () => {
+      await withProject(
+        {
+          'package.json': packageJson({ scripts: { show: 'node show.js' } }),
+          ...SHOW_ARGS,
+        },
+        async directory => {
+          const result = await runCommand('show', directory, {
+            packageManager: name,
+            args: SCRIPT_ARGS,
+            // Without a Yarn 2+ lockfile, the installed yarn is Yarn 1.
+            classicYarn: name === 'yarn',
+            spawnProcess: (command, args, options) =>
+              spawn(command, args, {
+                ...options,
+                env: cleanEnv,
+                stdio: 'ignore',
+              }),
+          })
+
+          assert.deepEqual(result, { code: 0 })
+          assert.deepEqual(await readShownArgs(directory), SCRIPT_ARGS)
+        },
+      )
+    },
+  )
+}
+
 // Yarn 2 and later never run pre/post hooks. The installed `yarn` (Yarn 1 in
 // CI) hands over to the Yarn 4 devDependency named by yarnPath, which needs
 // the project installed first; with no dependencies, that is offline. CI sets
@@ -331,12 +378,14 @@ test(
             prerecord: 'node hook.js pre',
             record: 'node record.js',
             postrecord: 'node hook.js post',
+            show: 'node show.js',
           },
         }),
         'record.js':
           "require('fs').writeFileSync('agent.txt', String(process.env.npm_config_user_agent))\n",
         'hook.js':
           "require('fs').writeFileSync(process.argv[2] + '.txt', '')\n",
+        ...SHOW_ARGS,
         // A JSON string is also a valid YAML string, backslashes included.
         '.yarnrc.yml': `yarnPath: ${JSON.stringify(YARN_BERRY)}\n`,
         'yarn.lock': '',
@@ -380,6 +429,21 @@ test(
             `Yarn 2+ ran the ${hook}record hook`,
           )
         }
+
+        // Yarn 2+ passes on everything after the script name, -- included.
+        const shown = await runCommand('show', directory, {
+          packageManager: detected.name,
+          args: SCRIPT_ARGS,
+          spawnProcess: (command, args, options) =>
+            spawn(command, args, {
+              ...options,
+              env: yarnBerryEnv,
+              stdio: 'ignore',
+            }),
+        })
+
+        assert.deepEqual(shown, { code: 0 })
+        assert.deepEqual(await readShownArgs(directory), SCRIPT_ARGS)
       },
     )
   },

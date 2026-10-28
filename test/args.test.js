@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { HELP_TEXT, parseCliArgs } from '../lib/args.js'
+import { HELP_TEXT, parseCliArgs, splitArguments } from '../lib/args.js'
 
 test('parseCliArgs returns no options for an empty command line', () => {
   assert.deepEqual({ ...parseCliArgs([]) }, {})
@@ -30,7 +30,7 @@ test('parseCliArgs reads alias options', () => {
 })
 
 test('parseCliArgs explains how to get help for invalid input', () => {
-  for (const args of [['--nope'], ['extra'], ['--workspace']]) {
+  for (const args of [['--nope'], ['--workspace'], ['-x', 'web']]) {
     assert.throws(
       () => parseCliArgs(args),
       error => {
@@ -46,6 +46,7 @@ test('HELP_TEXT documents every option', () => {
   for (const flag of [
     '--workspace',
     '--config-path',
+    '--clear-history',
     '--add-alias',
     '--remove-alias',
     '--list-aliases',
@@ -56,4 +57,52 @@ test('HELP_TEXT documents every option', () => {
   ]) {
     assert.ok(HELP_TEXT.includes(flag), flag)
   }
+})
+
+test('parseCliArgs reads a project and a script for direct mode', () => {
+  assert.deepEqual({ ...parseCliArgs(['web']) }, { project: 'web' })
+  assert.deepEqual(
+    { ...parseCliArgs(['-w', '/projects', 'web', 'dev']) },
+    { workspace: '/projects', project: 'web', script: 'dev' },
+  )
+})
+
+test('parseCliArgs keeps everything after -- as script arguments', () => {
+  assert.deepEqual(
+    { ...parseCliArgs(['web', 'dev', '--', '--port', '4000', '--', '-w']) },
+    {
+      project: 'web',
+      script: 'dev',
+      scriptArgs: ['--port', '4000', '--', '-w'],
+    },
+  )
+  assert.deepEqual(
+    { ...parseCliArgs(['web', 'dev', '--']) },
+    { project: 'web', script: 'dev', scriptArgs: [] },
+  )
+})
+
+test('parseCliArgs explains where script arguments go', () => {
+  assert.throws(
+    () => parseCliArgs(['web', 'dev', '4000']),
+    /Unexpected argument "4000"[\s\S]*dws web dev -- 4000[\s\S]*--help/,
+  )
+  assert.throws(
+    () => parseCliArgs(['web', '--', '--port']),
+    /need a project and a script/,
+  )
+})
+
+test('splitArguments splits on whitespace and honours quotes', () => {
+  assert.deepEqual(splitArguments(''), [])
+  assert.deepEqual(splitArguments('  --port   4000 '), ['--port', '4000'])
+  assert.deepEqual(splitArguments(`--name "two words" 'it"s'`), [
+    '--name',
+    'two words',
+    'it"s',
+  ])
+  assert.deepEqual(splitArguments('--title= "" a""b'), ['--title=', '', 'ab'])
+  // No shell is involved, so backslashes are kept, as in Windows paths.
+  assert.deepEqual(splitArguments('C:\\dir\\file.txt'), ['C:\\dir\\file.txt'])
+  assert.throws(() => splitArguments('"open'), /Close the " quote/)
 })
