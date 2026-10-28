@@ -31,9 +31,7 @@ jobs:
           - windows-latest
           - macos-latest
         # The even-numbered (LTS) lines that package.json "engines" allows.
-        # 20 is end-of-life but stays as long as "engines" includes it.
         node-version:
-          - 20
           - 22
           - 24
           - 26

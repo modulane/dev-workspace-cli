@@ -14,7 +14,7 @@ These apply to every milestone:
 - **Never surprise the user.** No silent data loss, and no prompts in non-interactive use. A failure always exits with a non-zero code.
 - **Keep it small.** Add a dependency only when it replaces substantial, tricky code (for example, terminal width or fuzzy matching).
 - **Every feature ships with tests and documentation.** Coverage stays at or above 90% of lines, and the README is updated in the same pull request.
-- **Cross-platform by default.** Every change is checked by CI on Windows, macOS and Linux with Node 20, 22, 24 and 26.
+- **Cross-platform by default.** Every change is checked by CI on Windows, macOS and Linux with Node 22, 24 and 26.
 
 ## Overview
 

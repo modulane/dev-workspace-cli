@@ -33,11 +33,11 @@ Dev Workspace CLI detects each project's package manager (npm, pnpm, Yarn or Bun
 - **Stays out of the way:** scripts run in the project folder with full terminal output. Pressing Ctrl+C stops the script and brings you back to the menu.
 - **Short commands:** start it with `dev-workspace`, `dws`, or an alias of your choice.
 - **Remembers your workspace:** the workspace, recent projects and last scripts are stored in your user profile and survives updates and reinstalls.
-- **Cross-platform:** tested on Windows, macOS and Linux with Node.js 20, 22, 24 and 26.
+- **Cross-platform:** tested on Windows, macOS and Linux with Node.js 22, 24 and 26.
 
 ## Installation
 
-Dev Workspace CLI requires [Node.js](https://nodejs.org/) 20.17 or newer in the 20.x line, 22.13 or newer in the 22.x line, or 23.5 and later.
+Dev Workspace CLI requires [Node.js](https://nodejs.org/) 22.13 or newer in the 22.x line, or 23.5 and later. Node.js 20 is no longer supported: it reached its end of life in April 2026.
 
 ```bash
 npm install --global @modulane/dev-workspace-cli
