@@ -1,0 +1,47 @@
+name: Bug
+description: Something doesn't work as expected
+labels: ['bug', 'needs-triage']
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, with any error message.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Run `dws …`
+        2. Choose …
+        3. See …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Dev Workspace CLI version
+      description: The output of `dws --version`.
+      placeholder: 0.6.0
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Operating system, terminal and Node.js version
+      placeholder: Windows 11, Windows Terminal, Node.js 24.15
+    validations:
+      required: true
+  - type: input
+    id: package-manager
+    attributes:
+      label: Package manager of the affected project
+      placeholder: npm 11, pnpm 10, Yarn 1, Yarn 4, Bun

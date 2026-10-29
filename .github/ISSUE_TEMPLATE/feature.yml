@@ -1,0 +1,29 @@
+name: Feature
+description: Propose a new feature or an improvement
+labels: ['enhancement', 'needs-triage']
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What do you want to do that the CLI makes slow or impossible today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: The flags, menus or behaviour you have in mind, with examples.
+    validations:
+      required: true
+  - type: dropdown
+    id: milestone
+    attributes:
+      label: Roadmap milestone
+      options:
+        - 'A polished interface'
+        - 'Bigger workspaces'
+        - 'Configuration and scripts'
+        - 'Hardening and release candidate'
+        - 'After 1.0.0'
+        - 'Not on the roadmap yet'

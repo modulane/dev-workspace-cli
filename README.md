@@ -224,7 +224,7 @@ Scripts run with your user account's permissions, exactly as if you ran them you
 
 ## Contributing
 
-Bug reports and feature ideas are welcome in the [issue tracker](https://github.com/modulane/dev-workspace-cli/issues). See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup, workflow, labels and release process, and the [roadmap](ROADMAP.md) for what is planned before 1.0.0.
+Bug reports, feature ideas and pull requests are welcome. Issues labelled [`good first issue`](https://github.com/modulane/dev-workspace-cli/labels/good%20first%20issue) and [`help wanted`](https://github.com/modulane/dev-workspace-cli/labels/help%20wanted) are ready to pick up. See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup, workflow, labels and release process, and the [roadmap](ROADMAP.md) for what is planned before 1.0.0.
 
 ## License
 

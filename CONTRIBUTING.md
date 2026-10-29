@@ -1,6 +1,14 @@
 # Contributing
 
-Thank you for helping improve Dev Workspace CLI. This guide covers the development setup, the code layout, the change workflow and how releases are published.
+Thank you for helping improve Dev Workspace CLI. This guide covers finding something to work on, the development setup, the code layout, the change workflow and how releases are published.
+
+By contributing, you agree that your contribution is licensed under the [MIT licence](LICENSE), like the rest of the project. Everyone taking part follows the [code of conduct](https://github.com/modulane/.github/blob/main/CODE_OF_CONDUCT.md). Report security vulnerabilities privately, as the [security policy](https://github.com/modulane/.github/blob/main/SECURITY.md) describes, never in a public issue.
+
+## Finding something to work on
+
+Every open item of the [roadmap](ROADMAP.md) has an issue, grouped in one [milestone](https://github.com/modulane/dev-workspace-cli/milestones) per roadmap milestone. Issues labelled [`good first issue`](https://github.com/modulane/dev-workspace-cli/labels/good%20first%20issue) are small and self-contained; issues labelled [`help wanted`](https://github.com/modulane/dev-workspace-cli/labels/help%20wanted) are larger but ready to start. Issues with neither label are led by the maintainer.
+
+Comment on an issue before starting it, so nobody works on the same thing twice, and wait for the maintainer to assign it to you. For a change with no issue, open one first, unless it is a small fix.
 
 ## Development setup
 
@@ -77,6 +85,8 @@ Keep the summary lowercase and in the imperative: `feat: add project search`, no
 **Do not mark changes as breaking before 1.0.0.** A `!` after the type (`feat!:`) or a `BREAKING CHANGE:` footer makes a major release, which would publish 1.0.0 early. Until then, describe incompatible changes in the pull request and release them as `feat:`.
 
 ### Labels and reviews
+
+Issues are opened from a form (bug, feature or question), which adds its kind label and `needs-triage`. The maintainer removes `needs-triage` once the issue is reviewed, and adds `good first issue` or `help wanted` when it is ready to pick up. Pull requests start from the [pull request template](.github/PULL_REQUEST_TEMPLATE.md), whose checklist lists what to check before asking for review.
 
 The **Pull request labels** workflow labels each pull request from its title, and updates the labels when the title is edited:
 

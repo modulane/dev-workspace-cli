@@ -1,0 +1,17 @@
+name: Question
+description: Ask how to use Dev Workspace CLI
+labels: ['question', 'needs-triage']
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What are you trying to do, and what have you tried? Check the [README](https://github.com/modulane/dev-workspace-cli#readme) first.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Dev Workspace CLI version
+      description: The output of `dws --version`.
+      placeholder: 0.6.0

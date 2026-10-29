@@ -190,10 +190,10 @@ No new features; this milestone makes the existing ones dependable, then freezes
   - [x] give the publish job only the permissions it needs, with no git credential on disk and no dependency install scripts while it can request an OIDC token;
   - [x] require the `CI passed` and `Conventional Commit title` checks in the `main` ruleset, so a pull request with failing CI cannot be merged;
   - publish a `CHANGELOG.md` with `@semantic-release/changelog`.
-- [ ] **Contributor files:**
+- [x] **Contributor files:**
   - [x] `CONTRIBUTING.md` with the development setup, workflow and release process;
   - [x] labels defined in `.github/labels.json`, applied to pull requests from their title, with reviews requested through `CODEOWNERS`;
-  - issue and pull request templates.
+  - [x] issue forms (bug, feature, question) and a pull request template ([#50](https://github.com/modulane/dev-workspace-cli/issues/50)).
 
 ### Release candidate
 
