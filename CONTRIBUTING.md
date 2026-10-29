@@ -20,13 +20,14 @@ cd dev-workspace-cli
 npm install
 ```
 
-| Command            | Purpose                                                     |
-| ------------------ | ----------------------------------------------------------- |
-| `npm start`        | Run the CLI from the working copy                           |
-| `npm test`         | Run the test suite                                          |
-| `npm run coverage` | Run the tests with a coverage report (minimum 90% of lines) |
-| `npm run format`   | Format every file with Prettier                             |
-| `npm run check`    | Check formatting and run the tests, as CI does              |
+| Command            | Purpose                                                        |
+| ------------------ | -------------------------------------------------------------- |
+| `npm start`        | Run the CLI from the working copy                              |
+| `npm test`         | Run the test suite                                             |
+| `npm run coverage` | Run the tests with a coverage report (minimum 90% of lines)    |
+| `npm run format`   | Format every file with Prettier                                |
+| `npm run lint`     | Check code quality and common errors with ESLint               |
+| `npm run check`    | Check formatting, run the linter and run the tests, as CI does |
 
 Some tests run a real script with each supported package manager. Package managers that are not installed are skipped locally; CI installs all of them and sets `REQUIRE_ALL_PACKAGE_MANAGERS=1` so none is skipped there. These tests also check whether each tool runs `pre`/`post` hooks, and that script arguments reach the script unchanged. Yarn 2+, which does not run hooks, is tested with the `@yarnpkg/cli-dist` devDependency: the installed `yarn` (Yarn 1 is enough) hands over to it through `yarnPath`, so Corepack is not needed.
 

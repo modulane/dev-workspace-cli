@@ -176,7 +176,7 @@ No new features; this milestone makes the existing ones dependable, then freezes
 
 ### Hardening
 
-- [ ] **ESLint** with a recommended config, enforced in `npm run check`.
+- [x] **ESLint** with a recommended config, enforced in `npm run check`.
 - [ ] **Type checking:** JSDoc types and `tsc --noEmit --checkJs` in CI, without converting to TypeScript.
 - [ ] **End-to-end tests:** spawn the real binary on every operating system in CI, covering flags, direct mode, exit codes and non-TTY behaviour.
 - [ ] **Signal handling:** SIGINT and SIGTERM are forwarded correctly, and no child process is left behind when the terminal closes.
