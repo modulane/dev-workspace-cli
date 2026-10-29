@@ -588,7 +588,7 @@ test('CLI saves the absolute path behind a quoted, ~-prefixed prompt answer', as
 test('CLI prints help, version and config path without starting', async () => {
   const cases = [
     [['--help'], /Usage: dev-workspace/],
-    [['-v'], new RegExp(`^${version.replaceAll('.', '\.')}$`)],
+    [['-v'], new RegExp(`^${version.replaceAll('.', '\\.')}$`)],
     [['--config-path'], /^\/fake\/home\/\.dev-workspace-cli\/config\.json$/],
   ]
 
