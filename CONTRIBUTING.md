@@ -24,7 +24,7 @@ npm install
 | ------------------ | ----------------------------------------------------------- |
 | `npm start`        | Run the CLI from the working copy                           |
 | `npm test`         | Run the test suite                                          |
-| `npm run coverage` | Run the tests with a coverage report (minimum 80% of lines) |
+| `npm run coverage` | Run the tests with a coverage report (minimum 90% of lines) |
 | `npm run format`   | Format every file with Prettier                             |
 | `npm run check`    | Check formatting and run the tests, as CI does              |
 
