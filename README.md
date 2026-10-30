@@ -98,7 +98,7 @@ This installs two equivalent commands, `dev-workspace` and the shorter `dws`.
 
 Each list also has entries to go **Back**, **Exit**, or **Change workspace**.
 
-The screens follow the width of your terminal, down to 40 columns: the header grows up to 72 columns, long workspace paths and script commands are cut to fit, and emoji or CJK characters in folder names never break the layout. Resizing the terminal while a list is open redraws it in place.
+The screens fit terminals down to 40 columns: the header is 44 columns wide and narrows in a smaller terminal, long workspace paths and script commands are cut to fit, and emoji or CJK characters in folder names never break the layout. Resizing the terminal while a list is open draws the screen again at the new width.
 
 ### Searching
 

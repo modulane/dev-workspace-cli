@@ -84,10 +84,11 @@ function headerLines(workspace, columns) {
   return lines.filter(Boolean)
 }
 
-test('printHeader fits the terminal, up to 72 columns', () => {
+test('printHeader is 44 columns wide, narrower in a smaller terminal', () => {
+  // Indented by two columns, and leaving the terminal's last column free.
   for (const [columns, expected] of [
-    [120, 2 + 72],
-    [60, 60 - 1],
+    [120, 2 + 44],
+    [44, 44 - 1],
     // Narrower terminals are treated as 40 columns wide.
     [30, 40 - 1],
   ]) {
@@ -98,19 +99,19 @@ test('printHeader fits the terminal, up to 72 columns', () => {
 })
 
 test('printHeader keeps its border aligned around wide characters', () => {
-  const lines = headerLines('/projets/日本語/📦-app', 60)
+  const lines = headerLines('/projets/日本語/📦-app', 40)
 
   assert.ok(lines.some(line => line.includes('日本語/📦-app')))
 
   for (const line of lines) {
-    assert.equal(textWidth(line), 59, line)
+    assert.equal(textWidth(line), 39, line)
   }
 })
 
 test('printHeader cuts a long workspace path to fit', () => {
-  const lines = headerLines(`/${'very-long-folder/'.repeat(10)}`, 50)
+  const lines = headerLines(`/${'very-long-folder/'.repeat(10)}`, 120)
 
   for (const line of lines) {
-    assert.equal(textWidth(line), 49, line)
+    assert.equal(textWidth(line), 46, line)
   }
 })

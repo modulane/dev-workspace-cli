@@ -75,11 +75,12 @@ test('chooseProject lists projects, then workspace and exit actions', async () =
   assert.equal(result, projects[0])
   assert.deepEqual(calls.select[0], {
     message: 'Select a project',
+    redraw: undefined,
     items: [
       { icon: '📁', label: 'project-a', value: projects[0] },
       { icon: '📁', label: 'project-b', value: projects[1] },
       {
-        icon: '⚙',
+        icon: '⚙️',
         label: 'Change workspace',
         value: CHANGE_WORKSPACE,
         action: true,
@@ -148,6 +149,7 @@ test('chooseScript lists scripts with their command, then the actions', async ()
   assert.equal(result, scripts[0])
   assert.deepEqual(calls.select[0], {
     message: 'Select a script',
+    redraw: undefined,
     items: [
       {
         icon: '▶',
