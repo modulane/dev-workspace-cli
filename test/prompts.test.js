@@ -5,6 +5,7 @@ import {
   RUN_WITH_ARGUMENTS,
   createPrompts,
 } from '../lib/prompts.js'
+import { textWidth } from '../lib/width.js'
 
 function createPromptMocks(results = {}) {
   const calls = {
@@ -78,7 +79,7 @@ test('chooseProject lists projects, then workspace and exit actions', async () =
       { icon: '📁', label: 'project-a', value: projects[0] },
       { icon: '📁', label: 'project-b', value: projects[1] },
       {
-        icon: '⚙',
+        icon: '⚙️',
         label: 'Change workspace',
         value: CHANGE_WORKSPACE,
         action: true,
@@ -312,4 +313,22 @@ test('chooseScript keeps the hooks note when shortening the command', async () =
 
   assert.equal(description.length, 47)
   assert.ok(description.endsWith('…  (+ prebuild, postbuild)'), description)
+})
+
+test('chooseScript measures the command in columns, not characters', async () => {
+  const calls = []
+  const select = async options => {
+    calls.push(options)
+    return null
+  }
+
+  // Each 日 takes two columns.
+  await createPrompts({ select, columns: () => 40 }).chooseScript([
+    { name: 'build', command: `echo ${'日'.repeat(40)}` },
+  ])
+
+  const { description } = calls[0].items[0]
+
+  assert.equal(textWidth(description), 36)
+  assert.ok(description.endsWith('…'))
 })

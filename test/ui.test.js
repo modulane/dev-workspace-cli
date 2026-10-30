@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createUi } from '../lib/ui.js'
+import { textWidth } from '../lib/width.js'
 
 test('color returns plain text when colors are disabled', () => {
   const { color } = createUi({ useColors: false })
@@ -67,4 +68,39 @@ test('printHeader applies colors when enabled', () => {
 
   assert.ok(lines.some(line => line.includes('\x1b[36m')))
   assert.ok(lines.some(line => line.includes('\x1b[0m')))
+})
+
+// The header lines, without the blank line before them.
+function headerLines(workspace) {
+  const lines = []
+  const { printHeader } = createUi({
+    useColors: false,
+    log: (...args) => lines.push(args.join(' ')),
+  })
+
+  printHeader(workspace)
+
+  return lines.filter(Boolean)
+}
+
+// The 44-column box, indented by two columns.
+const HEADER_LINE_WIDTH = 2 + 44
+
+test('printHeader keeps its border aligned around wide characters', () => {
+  const lines = headerLines('/projets/日本語/📦-app')
+
+  assert.ok(lines.some(line => line.includes('日本語/📦-app')))
+  assert.ok(lines.some(line => line.includes('⚙️  DEVELOPER TOOLKIT')))
+
+  for (const line of lines) {
+    assert.equal(textWidth(line), HEADER_LINE_WIDTH, line)
+  }
+})
+
+test('printHeader cuts a long workspace path to fit', () => {
+  const lines = headerLines(`/${'very-long-folder/'.repeat(10)}`)
+
+  for (const line of lines) {
+    assert.equal(textWidth(line), HEADER_LINE_WIDTH, line)
+  }
 })

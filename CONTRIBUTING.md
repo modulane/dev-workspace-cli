@@ -56,6 +56,7 @@ DEV_WORKSPACE_CONFIG=/tmp/dws-test/config.json npm start -- web dev
 | `prompts.js`          | The questions and menus shown by `cli.js`                      |
 | `list.js`             | The list used by every menu: keys, drawing, search             |
 | `fuzzy.js`            | Fuzzy matching and ranking for the list search                 |
+| `width.js`            | Measuring and cutting text by its terminal width               |
 | `ui.js`               | Colours, the header and screen clearing                        |
 
 Menus use the list in `list.js`, which owns the terminal while it is open; free-text and yes/no questions still use `@inquirer/prompts`. Test the list through `createList()` with fake input and output streams, as `test/list.test.js` does, rather than in a real terminal.

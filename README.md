@@ -98,6 +98,8 @@ This installs two equivalent commands, `dev-workspace` and the shorter `dws`.
 
 Each list also has entries to go **Back**, **Exit**, or **Change workspace**.
 
+Long workspace paths and script commands are cut to fit, and emoji or CJK characters in folder names never break the layout.
+
 ### Searching
 
 Start typing in the project or script list to filter it. The characters you type must appear in the name in the same order, but not necessarily next to each other: `dsy` finds `design-system`. The best matches come first, preferring names that start with what you typed and matches at the start of words, and the matched characters are underlined. While you search, the **Back**, **Exit** and **Change workspace** entries are hidden, so Enter never picks one by accident.
