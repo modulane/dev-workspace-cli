@@ -424,26 +424,6 @@ test('select redraws from its first line after the terminal gets narrower', asyn
   await result
 })
 
-test('select draws the whole screen again on resize when given redraw', async () => {
-  const terminal = createTerminal({ columns: 40 })
-  const result = terminal.select({
-    message: 'Pick',
-    items: projects,
-    redraw: () => terminal.output.write('[header]\n'),
-  })
-
-  terminal.written = ''
-  terminal.output.columns = 20
-  terminal.output.emit('resize')
-
-  // The screen above is drawn first, then the list below it, without moving
-  // the cursor back over lines that are gone.
-  assert.ok(terminal.written.startsWith('[header]\n\x1b[J  Pick'))
-
-  terminal.type(KEYS.enter)
-  await result
-})
-
 test('select highlights matched characters when colours are on', async () => {
   const terminal = createTerminal()
   const select = createList({

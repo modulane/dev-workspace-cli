@@ -141,8 +141,7 @@ The classic Windows console was the riskiest case, so mouse support is confirmed
 
 - [x] **Correct layout:** measure text by its terminal width (`string-width`) so emoji and wide characters never break the header border.
 - [ ] **Path truncation:** shorten long workspace paths in the middle (`C:/Users/…/projects/web`) instead of cutting off the end.
-- [x] **Responsive width:** fit the header and descriptions to `process.stdout.columns`, with a minimum width of 40 columns. The header keeps its 44 columns and only narrows in a smaller terminal.
-  - [x] Redraw cleanly when the terminal is resized, without leftover lines from the previous drawing.
+- [ ] **Alternate screen:** show the menus on the terminal's alternate screen, as `less` and `vim` do, leaving it before a script runs and on every exit path. Resizing the window can then redraw the whole screen, header included, without leaving broken lines or duplicate headers in the scrollback.
 - [ ] **Compact header:** a one-line header by default after the first screen; the large header only on the main screen.
 - [ ] **Consistent theme:** apply one theme to every prompt, with all colours going through `color()` so `NO_COLOR` and non-TTY output are always respected. Support `FORCE_COLOR`.
 - [ ] **Project details:** show package manager, script count and Git branch (if any) next to each project, without slowing down the list (read lazily, cache per session).
@@ -151,7 +150,7 @@ The classic Windows console was the riskiest case, so mouse support is confirmed
 - [ ] **Non-interactive guard:** when stdin is not a TTY and no direct-mode arguments are given, exit with a clear message instead of a prompt error.
 - [ ] **Coloured `--help`.**
 
-**Done when:** screenshots of the main screens look correct in Windows Terminal, PowerShell, macOS Terminal, iTerm2 and a Linux terminal, at 40 and 120 columns, with and without `NO_COLOR`.
+**Done when:** screenshots of the main screens look correct in Windows Terminal, PowerShell, macOS Terminal, iTerm2 and a Linux terminal, at 80 and 120 columns, with and without `NO_COLOR`.
 
 ## Bigger workspaces
 

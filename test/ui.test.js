@@ -70,13 +70,12 @@ test('printHeader applies colors when enabled', () => {
   assert.ok(lines.some(line => line.includes('\x1b[0m')))
 })
 
-// The header lines, as printHeader draws them in a terminal `columns` wide.
-function headerLines(workspace, columns) {
+// The header lines, without the blank line before them.
+function headerLines(workspace) {
   const lines = []
   const { printHeader } = createUi({
     useColors: false,
     log: (...args) => lines.push(args.join(' ')),
-    columns: () => columns,
   })
 
   printHeader(workspace)
@@ -84,34 +83,24 @@ function headerLines(workspace, columns) {
   return lines.filter(Boolean)
 }
 
-test('printHeader is 44 columns wide, narrower in a smaller terminal', () => {
-  // Indented by two columns, and leaving the terminal's last column free.
-  for (const [columns, expected] of [
-    [120, 2 + 44],
-    [44, 44 - 1],
-    // Narrower terminals are treated as 40 columns wide.
-    [30, 40 - 1],
-  ]) {
-    for (const line of headerLines('/projects', columns)) {
-      assert.equal(textWidth(line), expected, `${columns}: ${line}`)
-    }
-  }
-})
+// The 44-column box, indented by two columns.
+const HEADER_LINE_WIDTH = 2 + 44
 
 test('printHeader keeps its border aligned around wide characters', () => {
-  const lines = headerLines('/projets/日本語/📦-app', 40)
+  const lines = headerLines('/projets/日本語/📦-app')
 
   assert.ok(lines.some(line => line.includes('日本語/📦-app')))
+  assert.ok(lines.some(line => line.includes('⚙️  DEVELOPER TOOLKIT')))
 
   for (const line of lines) {
-    assert.equal(textWidth(line), 39, line)
+    assert.equal(textWidth(line), HEADER_LINE_WIDTH, line)
   }
 })
 
 test('printHeader cuts a long workspace path to fit', () => {
-  const lines = headerLines(`/${'very-long-folder/'.repeat(10)}`, 120)
+  const lines = headerLines(`/${'very-long-folder/'.repeat(10)}`)
 
   for (const line of lines) {
-    assert.equal(textWidth(line), 46, line)
+    assert.equal(textWidth(line), HEADER_LINE_WIDTH, line)
   }
 })

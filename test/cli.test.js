@@ -1226,51 +1226,7 @@ test('CLI starts the script list on the last script run', async () => {
 
   await createCli(dependencies).run()
 
-  assert.equal(scriptOptions.lastScript, 'build')
-})
-
-test('CLI gives each menu a redraw that draws its screen again', async () => {
-  const project = projectFixtures()[0]
-  const screen = []
-  let projectSelections = 0
-  let projectOptions
-  let scriptOptions
-
-  const { dependencies, calls } = createDependencies({
-    workspace: {
-      getProjects: async () => [project],
-      getScripts: async () => [{ name: 'build', command: 'vite build' }],
-    },
-    prompts: {
-      chooseProject: async (projects, options) => {
-        projectOptions = options
-        return ++projectSelections === 1 ? project : null
-      },
-      chooseScript: async (scripts, options) => {
-        scriptOptions = options
-        return null
-      },
-    },
-    ui: {
-      clearScreen: () => screen.push('clear'),
-      printHeader: (root, section = 'PROJECT EXPLORER') =>
-        screen.push(`header ${section}`),
-    },
-  })
-
-  await createCli(dependencies).run()
-
-  screen.length = 0
-  calls.logs.length = 0
-  projectOptions.redraw()
-
-  assert.deepEqual(screen, ['clear', 'header PROJECT EXPLORER'])
-
-  screen.length = 0
-  scriptOptions.redraw()
-
-  assert.deepEqual(screen, ['clear', `header PROJECT / ${project.name}`])
-  assert.match(loggedText(calls), /Package manager: npm \(default\)/)
+  assert.deepEqual(scriptOptions, { lastScript: 'build' })
 })
 
 test('CLI keeps going when the history cannot be saved', async () => {
