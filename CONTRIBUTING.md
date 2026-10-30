@@ -31,7 +31,7 @@ npm install
 
 Some tests run a real script with each supported package manager. Package managers that are not installed are skipped locally; CI installs all of them and sets `REQUIRE_ALL_PACKAGE_MANAGERS=1` so none is skipped there. These tests also check whether each tool runs `pre`/`post` hooks, and that script arguments reach the script unchanged. Yarn 2+, which does not run hooks, is tested with the `@yarnpkg/cli-dist` devDependency: the installed `yarn` (Yarn 1 is enough) hands over to it through `yarnPath`, so Corepack is not needed.
 
-When testing the real command by hand, point it at a temporary configuration so your own settings are not changed. The history (`state.json`) is written next to it, so give it a folder of its own:
+When testing the real command by hand, point it at a temporary configuration so your own settings are not changed. The history is written next to it, named after it (`config.state.json` here), so give it a folder of its own:
 
 ```bash
 DEV_WORKSPACE_CONFIG=/tmp/dws-test/config.json npm start

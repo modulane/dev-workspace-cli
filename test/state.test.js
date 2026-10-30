@@ -32,6 +32,16 @@ test('getStatePath puts state.json next to the configuration', () => {
   )
 })
 
+test('getStatePath names the history after a custom configuration file', () => {
+  // A state.json in the user's own folder could belong to something else.
+  assert.equal(
+    getStatePath(path.join('/home', 'me', 'dotfiles', 'dws.json'), {
+      custom: true,
+    }),
+    path.join('/home', 'me', 'dotfiles', 'dws.state.json'),
+  )
+})
+
 test('saveState and readState round-trip the history', async () => {
   await withDirectory(async directory => {
     const file = path.join(directory, 'nested', 'state.json')
