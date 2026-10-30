@@ -206,7 +206,8 @@ test('typing filters the list, best match first, and hides actions', async () =>
   assert.equal(await result, 'billing-api')
 })
 
-test('Backspace edits the search and Escape clears it', async () => {
+test('Backspace edits the search and Escape clears it', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
   const terminal = createTerminal()
   const result = terminal.select({
     message: 'Pick',
@@ -224,6 +225,7 @@ test('Backspace edits the search and Escape clears it', async () => {
 
   // Enter does nothing while nothing matches.
   terminal.type('x', KEYS.enter, KEYS.escape)
+  t.mock.timers.tick(50)
 
   // The full list is back, actions included, with the cursor kept.
   assert.equal(terminal.screen().length, 9)
@@ -233,15 +235,49 @@ test('Backspace edits the search and Escape clears it', async () => {
   assert.equal(await result, 'api')
 })
 
-test('Escape keeps the selected item when clearing the search', async () => {
+test('Escape keeps the selected item when clearing the search', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
   const terminal = createTerminal()
   const result = terminal.select({ message: 'Pick', items: projects })
 
   terminal.type('w', 'e', KEYS.escape)
+  t.mock.timers.tick(50)
   assert.ok(terminal.screen().includes('  ❯ 📁  web'))
 
   terminal.type(KEYS.enter)
   assert.equal(await result, 'web')
+})
+
+test('an arrow key split over two chunks is not read as Escape', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const terminal = createTerminal()
+  const result = terminal.select({ message: 'Pick', items: projects })
+
+  terminal.type('a', '\x1b')
+  t.mock.timers.tick(49)
+  terminal.type('[B')
+
+  // The search is kept, and Down moved to the second match.
+  assert.ok(terminal.screen()[0].includes('Pick  a'))
+  assert.ok(terminal.screen().includes('  ❯ 📁  billing-api'))
+
+  terminal.type(KEYS.enter)
+  assert.equal(await result, 'billing-api')
+})
+
+test('a lone Escape is read once no sequence follows it', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const terminal = createTerminal()
+  const result = terminal.select({ message: 'Pick', items: projects })
+
+  terminal.type('a', '\x1b')
+  assert.ok(terminal.screen()[0].includes('Pick  a'))
+
+  t.mock.timers.tick(50)
+  assert.ok(terminal.screen()[0].includes('type to search'))
+
+  terminal.type(KEYS.enter)
+  assert.equal(await result, 'api')
 })
 
 test('select skips disabled items and separators', async () => {

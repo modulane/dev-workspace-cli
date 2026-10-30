@@ -12,6 +12,13 @@ test('fuzzyMatch accepts subsequences, ignoring case', () => {
   assert.equal(fuzzyMatch('webapp', 'web'), null)
 })
 
+test('fuzzyMatch counts positions in characters, as the list does', () => {
+  // An emoji is two UTF-16 units, and "İ" lowercases to two characters.
+  assert.deepEqual(fuzzyMatch('api', '📦api').positions, [1, 2, 3])
+  assert.deepEqual(fuzzyMatch('web', 'İweb').positions, [1, 2, 3])
+  assert.equal(fuzzyMatch('🚀', 'app🚀').score > 0, true)
+})
+
 test('fuzzyMatch matches everything with an empty query', () => {
   assert.deepEqual(fuzzyMatch('', 'web'), { score: 0, positions: [] })
 })

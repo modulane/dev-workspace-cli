@@ -207,7 +207,7 @@ The workspace path is saved in the standard configuration folder of your operati
 - To switch workspaces, choose **Change workspace** in the project list or run `dws --workspace <path>`. If the saved workspace no longer exists, the CLI asks for a new one.
 - Versions before 0.3.0 stored the file in `~/.dev-workspace-cli/config.json`. If that file exists, it is moved to the new location automatically.
 
-The history of recent projects and last scripts is kept apart from the settings, in `state.json` in the same folder as `config.json`. It is only a convenience: if it is missing or damaged, the CLI starts with an empty history. `dws --clear-history` deletes it.
+The history of recent projects and last scripts is kept apart from the settings, in `state.json` in the same folder as `config.json`. With `DEV_WORKSPACE_CONFIG`, it is named after your file instead (`dws.json` keeps it in `dws.state.json`), so it never overwrites a `state.json` of your own. It is only a convenience: if it is missing or damaged, the CLI starts with an empty history. `dws --clear-history` deletes it.
 
 ## Uninstalling
 

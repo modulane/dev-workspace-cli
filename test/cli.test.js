@@ -637,6 +637,33 @@ test('CLI --reset deletes the configuration, legacy file and history', async () 
   assert.equal(calls.discoveredWorkspaces.length, 0)
 })
 
+test('CLI --reset leaves a state.json next to a custom configuration alone', async () => {
+  let requested
+
+  const { dependencies } = createDependencies({
+    config: {
+      getConfigPaths: () => ({
+        directory: '/home/me/dotfiles',
+        file: '/home/me/dotfiles/dws.json',
+        legacyFile: null,
+        custom: true,
+      }),
+      resetWorkspaceConfig: async files => {
+        requested = files
+        return []
+      },
+    },
+  })
+
+  await createCli(dependencies).start(['--reset'])
+
+  assert.deepEqual(requested, [
+    '/home/me/dotfiles/dws.json',
+    null,
+    path.join('/home/me/dotfiles', 'dws.state.json'),
+  ])
+})
+
 test('CLI --reset reports when there is nothing to delete', async () => {
   const { dependencies, calls } = createDependencies()
 

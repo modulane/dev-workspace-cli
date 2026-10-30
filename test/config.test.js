@@ -80,6 +80,7 @@ test('getConfigPaths uses DEV_WORKSPACE_CONFIG when set', () => {
   assert.equal(paths.file, path.resolve('custom/settings.json'))
   assert.equal(paths.directory, path.resolve('custom'))
   assert.equal(paths.legacyFile, null)
+  assert.equal(paths.custom, true)
 })
 
 test('migrateLegacyConfig moves the old configuration', async () => {
