@@ -106,6 +106,7 @@ test('runCommand provides an actionable error when npm cannot be found', async (
 
   const resultPromise = runCommand('dev', '/projects/example', {
     spawnProcess: spawnMock,
+    directoryExists: async () => true,
   })
 
   const originalError = Object.assign(new Error('spawn npm ENOENT'), {
@@ -116,6 +117,32 @@ test('runCommand provides an actionable error when npm cannot be found', async (
 
   await assert.rejects(resultPromise, error => {
     assert.match(error.message, /Could not find npm/)
+    assert.equal(error.cause, originalError)
+    return true
+  })
+})
+
+test('runCommand reports a project folder that no longer exists', async () => {
+  const child = createFakeProcess()
+  const { spawnMock } = createSpawnMock(child)
+
+  const resultPromise = runCommand('dev', '/projects/removed', {
+    spawnProcess: spawnMock,
+    directoryExists: async directory => directory !== '/projects/removed',
+  })
+
+  // Node.js reports a missing working directory as a missing command.
+  const originalError = Object.assign(new Error('spawn npm ENOENT'), {
+    code: 'ENOENT',
+  })
+
+  child.emit('error', originalError)
+
+  await assert.rejects(resultPromise, error => {
+    assert.equal(
+      error.message,
+      'The project folder no longer exists: /projects/removed',
+    )
     assert.equal(error.cause, originalError)
     return true
   })
@@ -187,6 +214,7 @@ test('runCommand explains how to install a missing package manager', async () =>
       spawnProcess: spawnMock,
       packageManager,
       nodeVersion,
+      directoryExists: async () => true,
     })
 
     child.emit('error', Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))
