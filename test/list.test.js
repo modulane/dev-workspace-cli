@@ -2,7 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
 
-import { createList, parseKeys, textWidth } from '../lib/list.js'
+import { createList, parseKeys } from '../lib/list.js'
+import { textWidth } from '../lib/width.js'
 
 const KEYS = {
   up: '\x1b[A',
@@ -106,13 +107,6 @@ test('parseKeys tells Escape apart from escape sequences', () => {
     { name: 'char', text: 'é' },
     { name: 'char', text: '😀' },
   ])
-})
-
-test('textWidth counts emoji and wide characters as two columns', () => {
-  assert.equal(textWidth('web'), 3)
-  assert.equal(textWidth('📁 web'), 6)
-  assert.equal(textWidth('日本'), 4)
-  assert.equal(textWidth('é'), 1)
 })
 
 test('select draws the list and returns the chosen value', async () => {
@@ -400,6 +394,31 @@ test('select redraws in place, and never wider than the terminal', async () => {
   terminal.output.columns = 40
   terminal.output.emit('resize')
   assert.ok(terminal.screen()[1].endsWith('a-very-long-project-name'))
+
+  terminal.type(KEYS.enter)
+  await result
+})
+
+test('select redraws from its first line after the terminal gets narrower', async () => {
+  const terminal = createTerminal({ columns: 40 })
+  const result = terminal.select({
+    message: 'Pick',
+    items: [{ label: 'a-very-long-project-name', value: 1, icon: '📁' }],
+  })
+
+  // The three lines are 22, 32 and 24 columns wide. At 20 columns the
+  // terminal rewraps each of them onto two rows: six rows, so back up five.
+  terminal.written = ''
+  terminal.output.columns = 20
+  terminal.output.emit('resize')
+
+  assert.ok(terminal.written.startsWith('\x1b[5A\r\x1b[J'))
+
+  // The new drawing fits, so the next one backs up its own lines only.
+  terminal.written = ''
+  terminal.type('a')
+
+  assert.ok(terminal.written.startsWith('\x1b[2A\r\x1b[J'))
 
   terminal.type(KEYS.enter)
   await result

@@ -139,10 +139,10 @@ The classic Windows console was the riskiest case, so mouse support is confirmed
 
 ### Layout and appearance
 
-- [ ] **Correct layout:** measure text by its terminal width (`string-width`) so emoji and wide characters never break the header border.
+- [x] **Correct layout:** measure text by its terminal width (`string-width`) so emoji and wide characters never break the header border.
 - [ ] **Path truncation:** shorten long workspace paths in the middle (`C:/Users/…/projects/web`) instead of cutting off the end.
-- [ ] **Responsive width:** fit the header and descriptions to `process.stdout.columns`, with a minimum width of 40 columns.
-  - [ ] Redraw cleanly when the terminal is resized, without leftover lines from the previous drawing.
+- [x] **Responsive width:** fit the header and descriptions to `process.stdout.columns`, with a minimum width of 40 columns. The header grows up to 72 columns.
+  - [x] Redraw cleanly when the terminal is resized, without leftover lines from the previous drawing.
 - [ ] **Compact header:** a one-line header by default after the first screen; the large header only on the main screen.
 - [ ] **Consistent theme:** apply one theme to every prompt, with all colours going through `color()` so `NO_COLOR` and non-TTY output are always respected. Support `FORCE_COLOR`.
 - [ ] **Project details:** show package manager, script count and Git branch (if any) next to each project, without slowing down the list (read lazily, cache per session).

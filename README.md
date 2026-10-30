@@ -98,6 +98,8 @@ This installs two equivalent commands, `dev-workspace` and the shorter `dws`.
 
 Each list also has entries to go **Back**, **Exit**, or **Change workspace**.
 
+The screens follow the width of your terminal, down to 40 columns: the header grows up to 72 columns, long workspace paths and script commands are cut to fit, and emoji or CJK characters in folder names never break the layout. Resizing the terminal while a list is open redraws it in place.
+
 ### Searching
 
 Start typing in the project or script list to filter it. The characters you type must appear in the name in the same order, but not necessarily next to each other: `dsy` finds `design-system`. The best matches come first, preferring names that start with what you typed and matches at the start of words, and the matched characters are underlined. While you search, the **Back**, **Exit** and **Change workspace** entries are hidden, so Enter never picks one by accident.
