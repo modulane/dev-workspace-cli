@@ -1,7 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { HELP_TEXT, parseCliArgs, splitArguments } from '../lib/args.js'
+import { formatHelp, parseCliArgs, splitArguments } from '../lib/args.js'
+import { createUi } from '../lib/ui.js'
 
 test('parseCliArgs returns no options for an empty command line', () => {
   assert.deepEqual({ ...parseCliArgs([]) }, {})
@@ -42,7 +43,7 @@ test('parseCliArgs explains how to get help for invalid input', () => {
   }
 })
 
-test('HELP_TEXT documents every option', () => {
+test('formatHelp documents every option', () => {
   for (const flag of [
     '--workspace',
     '--config-path',
@@ -55,8 +56,67 @@ test('HELP_TEXT documents every option', () => {
     '--help',
     'DEV_WORKSPACE_CONFIG',
   ]) {
-    assert.ok(HELP_TEXT.includes(flag), flag)
+    assert.ok(formatHelp().includes(flag), flag)
   }
+})
+
+test('formatHelp defaults to plain text', () => {
+  assert.equal(
+    formatHelp(),
+    `
+  Usage: dev-workspace [options] [project [script] [-- arguments]]
+         dws [options] [project [script] [-- arguments]]
+
+  Browse the projects in your workspace and run their scripts.
+
+  With a project, open its scripts directly; with a script too, run it and
+  exit with its exit code. The project can be shortened to any prefix that
+  matches only one project. Arguments after -- are passed to the script.
+
+  Examples:
+    dws web                  Open the scripts of the "web" project
+    dws web dev              Run the "dev" script of "web"
+    dws web dev -- --port 4000
+
+  Options:
+    -w, --workspace <path>   Use <path> as the workspace and save it
+        --config-path        Print the configuration file location
+        --clear-history      Forget recently used projects and scripts
+        --add-alias <name>   Create another command that starts the CLI
+        --remove-alias <name>
+                             Delete an alias created with --add-alias
+        --list-aliases       List the available commands
+        --reset              Delete the saved configuration, history and
+                             aliases
+    -v, --version            Print the version
+    -h, --help               Show this help
+
+  Environment:
+    DEV_WORKSPACE_CONFIG     Use a custom configuration file path
+`,
+  )
+})
+
+test('formatHelp stays plain when colors are disabled', () => {
+  const { color } = createUi({ useColors: false })
+
+  assert.equal(formatHelp(color), formatHelp())
+  assert.ok(!formatHelp(color).includes('\x1b['))
+})
+
+test('formatHelp applies colors to headings, commands, options and environment', () => {
+  const colored = formatHelp((value, shade) => `[${shade}]${value}[/${shade}]`)
+
+  assert.ok(colored.includes('[bold]Usage:[/bold]'))
+  assert.ok(colored.includes('[cyan]dev-workspace[/cyan]'))
+  assert.ok(colored.includes('[cyan]dws[/cyan]'))
+  assert.ok(colored.includes('[bold]Examples:[/bold]'))
+  assert.ok(colored.includes('[cyan]dws web[/cyan]'))
+  assert.ok(colored.includes('[bold]Options:[/bold]'))
+  assert.ok(colored.includes('[cyan]-w, --workspace[/cyan] [dim]<path>[/dim]'))
+  assert.ok(colored.includes('Use <path> as the workspace'))
+  assert.ok(colored.includes('[bold]Environment:[/bold]'))
+  assert.ok(colored.includes('[cyan]DEV_WORKSPACE_CONFIG[/cyan]'))
 })
 
 test('parseCliArgs reads a project and a script for direct mode', () => {

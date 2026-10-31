@@ -602,6 +602,21 @@ test('CLI prints help, version and config path without starting', async () => {
   }
 })
 
+test('CLI colors help text through ui.color', async () => {
+  const { dependencies, calls } = createDependencies({
+    ui: {
+      color: (value, shade) => `[${shade}]${value}[/${shade}]`,
+    },
+  })
+
+  await createCli(dependencies).start(['--help'])
+
+  const text = loggedText(calls)
+  assert.match(text, /\[bold\]Usage:\[\/bold\]/)
+  assert.match(text, /\[cyan\]dev-workspace\[\/cyan\]/)
+  assert.match(text, /\[cyan\]-w, --workspace\[\/cyan\]/)
+})
+
 test('CLI rejects unknown options with a pointer to --help', async () => {
   const { dependencies } = createDependencies()
 
