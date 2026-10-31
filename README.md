@@ -164,17 +164,17 @@ dws web dev -- --port 4000     # pass everything after -- to the script
 dev-workspace [options] [project [script] [-- arguments]]
 ```
 
-| Option                   | Description                                          |
-| ------------------------ | ---------------------------------------------------- |
-| `-w, --workspace <path>` | Use `<path>` as the workspace and save it            |
-| `--config-path`          | Print the location of the configuration file         |
-| `--clear-history`        | Forget the recent projects and last scripts          |
-| `--add-alias <name>`     | Create another command that starts the CLI           |
-| `--remove-alias <name>`  | Delete an alias created with `--add-alias`           |
-| `--list-aliases`         | List the commands that start the CLI                 |
-| `--reset`                | Delete the configuration, history and custom aliases |
-| `-v, --version`          | Print the version                                    |
-| `-h, --help`             | Show the help                                        |
+| Option                   | Description                                                 |
+| ------------------------ | ----------------------------------------------------------- |
+| `-w, --workspace <path>` | Use `<path>` as the workspace and save it                   |
+| `--config-path`          | Print the location of the configuration file                |
+| `--clear-history`        | Forget the recent projects and last scripts                 |
+| `--add-alias <name>`     | Create another command that starts the CLI                  |
+| `--remove-alias <name>`  | Delete an alias created with `--add-alias`                  |
+| `--list-aliases`         | List the commands that start the CLI                        |
+| `--reset`                | Delete the configuration, history and custom aliases        |
+| `-v, --version`          | Print the version                                           |
+| `-h, --help`             | Show the help (coloured in a terminal; supports `NO_COLOR`) |
 
 ## Aliases
 

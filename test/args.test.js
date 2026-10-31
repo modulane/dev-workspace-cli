@@ -1,7 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { HELP_TEXT, parseCliArgs, splitArguments } from '../lib/args.js'
+import {
+  HELP_TEXT,
+  formatHelp,
+  parseCliArgs,
+  splitArguments,
+} from '../lib/args.js'
 
 test('parseCliArgs returns no options for an empty command line', () => {
   assert.deepEqual({ ...parseCliArgs([]) }, {})
@@ -57,6 +62,24 @@ test('HELP_TEXT documents every option', () => {
   ]) {
     assert.ok(HELP_TEXT.includes(flag), flag)
   }
+})
+
+test('formatHelp defaults to uncolored text matching HELP_TEXT', () => {
+  assert.equal(formatHelp(), HELP_TEXT)
+})
+
+test('formatHelp applies colors to headings, commands, options and environment', () => {
+  const colored = formatHelp((value, shade) => `[${shade}]${value}[/${shade}]`)
+
+  assert.ok(colored.includes('[bold]Usage:[/bold]'))
+  assert.ok(colored.includes('[cyan]dev-workspace[/cyan]'))
+  assert.ok(colored.includes('[cyan]dws[/cyan]'))
+  assert.ok(colored.includes('[bold]Examples:[/bold]'))
+  assert.ok(colored.includes('[cyan]dws web[/cyan]'))
+  assert.ok(colored.includes('[bold]Options:[/bold]'))
+  assert.ok(colored.includes('[cyan]-w, --workspace[/cyan] [dim]<path>[/dim]'))
+  assert.ok(colored.includes('[bold]Environment:[/bold]'))
+  assert.ok(colored.includes('[cyan]DEV_WORKSPACE_CONFIG[/cyan]'))
 })
 
 test('parseCliArgs reads a project and a script for direct mode', () => {
