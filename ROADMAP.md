@@ -117,7 +117,7 @@ The CLI should look clean, and stay correct, in every terminal.
 
 Terminals can report mouse events as escape sequences (SGR mouse mode, `\x1b[?1000h` and `\x1b[?1006h`). Each click arrives on stdin with its row and column, which the list prompt from [Fast navigation](#fast-navigation) maps to the item drawn there.
 
-- [ ] Click an item to select it; click the selected item again (or double-click) to open it.
+- [ ] Click an item to select it; click the selected item again (or double-click) to open it. Terminals send a double-click as two separate presses, so clicks are ignored for about 300 ms after an item opens; otherwise the second press lands on the next screen.
 - [ ] Hover highlights the item under the pointer, in terminals that report motion.
 - [ ] The scroll wheel moves through long lists.
 - [ ] Clickable "Back" and "Exit" entries on every screen.
@@ -127,15 +127,18 @@ Terminals can report mouse events as escape sequences (SGR mouse mode, `\x1b[?10
 
 **Terminal support**, checked with `node scripts/mouse-check.js` (clicks, hover and wheel):
 
-| Terminal                       | Result                      |
-| ------------------------------ | --------------------------- |
-| Classic Windows console        | Works: clicks, hover, wheel |
-| Windows Terminal               | Not recorded yet            |
-| VS Code integrated terminal    | Not recorded yet            |
-| macOS Terminal, iTerm2         | Not recorded yet            |
-| Linux (GNOME Terminal, others) | Not recorded yet            |
+| Terminal                       | Result                                                    |
+| ------------------------------ | --------------------------------------------------------- |
+| Classic Windows console        | Works: clicks, hover, wheel                               |
+| Windows Terminal               | Not recorded yet                                          |
+| VS Code integrated terminal    | Not recorded yet                                          |
+| macOS Terminal                 | Partial: hover and wheel work, clicks register off-centre |
+| iTerm2                         | Not recorded yet                                          |
+| Linux (GNOME Terminal, others) | Not recorded yet                                          |
 
 The classic Windows console was the riskiest case, so mouse support is confirmed as feasible. The remaining terminals must be checked before this milestone is complete.
+
+In macOS Terminal a click only lands on a row when the bottom of the I-beam pointer is over it. The terminal reports whole character cells, not pixels, so the CLI cannot correct this; the hover highlight shows which row a click will hit.
 
 ### Layout and appearance
 
