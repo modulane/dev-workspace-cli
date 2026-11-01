@@ -129,16 +129,18 @@ Terminals can report mouse events as escape sequences (SGR mouse mode, `\x1b[?10
 
 | Terminal                       | Result                                                    |
 | ------------------------------ | --------------------------------------------------------- |
-| Classic Windows console        | Not recorded yet                                          |
+| Classic Windows console        | Works: clicks, hover, wheel                               |
 | Windows Terminal               | Works: clicks, hover, wheel                               |
-| VS Code integrated terminal    | Not recorded yet                                          |
+| VS Code integrated terminal    | Works: clicks, hover, wheel                               |
 | macOS Terminal                 | Partial: hover and wheel work, clicks register off-centre |
 | iTerm2                         | Not recorded yet                                          |
 | Linux (GNOME Terminal, others) | Not recorded yet                                          |
 
-Windows Terminal works fully, so mouse support is confirmed as feasible on Windows. The classic Windows console is the riskiest case left; it and the remaining terminals must be checked before this milestone is complete.
+Windows Terminal and the classic Windows console both work fully, so mouse support is confirmed as feasible on Windows. The remaining terminals must be checked before this milestone is complete.
 
 In macOS Terminal a click only lands on a row when the bottom of the I-beam pointer is over it. The terminal reports whole character cells, not pixels, so the CLI cannot correct this; the hover highlight shows which row a click will hit.
+
+A click maps to a row only while the whole screen fits in the window: once it scrolls, every row is offset (seen in the VS Code terminal when the panel is shorter than the check script). The mouse therefore depends on the **Alternate screen** item below, with menus that never grow taller than the window.
 
 ### Layout and appearance
 
