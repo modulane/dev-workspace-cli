@@ -132,6 +132,7 @@ Terminals can report mouse events as escape sequences (SGR mouse mode, `\x1b[?10
 | Classic Windows console        | Works: clicks, hover, wheel                               |
 | Windows Terminal               | Works: clicks, hover, wheel                               |
 | VS Code integrated terminal    | Works: clicks, hover, wheel                               |
+| Git Bash (mintty)              | No mouse events reported                                  |
 | macOS Terminal                 | Partial: hover and wheel work, clicks register off-centre |
 | iTerm2                         | Not recorded yet                                          |
 | Linux (GNOME Terminal, others) | Not recorded yet                                          |
