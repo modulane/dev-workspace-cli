@@ -129,14 +129,14 @@ Terminals can report mouse events as escape sequences (SGR mouse mode, `\x1b[?10
 
 | Terminal                       | Result                                                    |
 | ------------------------------ | --------------------------------------------------------- |
-| Classic Windows console        | Works: clicks, hover, wheel                               |
-| Windows Terminal               | Not recorded yet                                          |
+| Classic Windows console        | Not recorded yet                                          |
+| Windows Terminal               | Works: clicks, hover, wheel                               |
 | VS Code integrated terminal    | Not recorded yet                                          |
 | macOS Terminal                 | Partial: hover and wheel work, clicks register off-centre |
 | iTerm2                         | Not recorded yet                                          |
 | Linux (GNOME Terminal, others) | Not recorded yet                                          |
 
-The classic Windows console was the riskiest case, so mouse support is confirmed as feasible. The remaining terminals must be checked before this milestone is complete.
+Windows Terminal works fully, so mouse support is confirmed as feasible on Windows. The classic Windows console is the riskiest case left; it and the remaining terminals must be checked before this milestone is complete.
 
 In macOS Terminal a click only lands on a row when the bottom of the I-beam pointer is over it. The terminal reports whole character cells, not pixels, so the CLI cannot correct this; the hover highlight shows which row a click will hit.
 
