@@ -48,18 +48,19 @@ DEV_WORKSPACE_CONFIG=/tmp/dws-test/config.json npm start -- web dev
 | `args.js`             | Command-line parsing, the `--help` text, splitting arguments   |
 | `config.js`           | Configuration file location, reading, writing and migration    |
 | `state.js`            | The history of recent projects and last scripts (`state.json`) |
+| `terminal.js`         | Recognising the terminal and its mouse support, the mouse note |
 | `workspace.js`        | Listing projects, reading their scripts, resolving typed paths |
 | `package-managers.js` | Detecting each project's package manager                       |
 | `commands.js`         | Running a script with that package manager                     |
 | `json.js`             | Parsing JSON files, ignoring a leading byte order mark         |
 | `aliases.js`          | Creating, listing and removing custom aliases                  |
 | `prompts.js`          | The questions and menus shown by `cli.js`                      |
-| `list.js`             | The list used by every menu: keys, drawing, search             |
+| `list.js`             | The list used by every menu: keys, mouse, drawing, search      |
 | `fuzzy.js`            | Fuzzy matching and ranking for the list search                 |
-| `width.js`            | Measuring and cutting text by its terminal width               |
+| `width.js`            | Measuring, cutting and wrapping text by its terminal width     |
 | `ui.js`               | Colours, the header and screen clearing                        |
 
-Menus use the list in `list.js`, which owns the terminal while it is open; free-text and yes/no questions still use `@inquirer/prompts`. Test the list through `createList()` with fake input and output streams, as `test/list.test.js` does, rather than in a real terminal.
+Menus use the list in `list.js`, which owns the terminal while it is open; free-text and yes/no questions still use `@inquirer/prompts`. Test the list through `createList()` with fake input and output streams, as `test/list.test.js` does, rather than in a real terminal. With `mouse: true`, the list asks for the cursor position after each drawing; a test answers with a reply such as `[20;1R` (the last line is on row 20) before sending clicks. To see how a real terminal reports the mouse, run `node scripts/mouse-check.js` in it, and record the result in the roadmap's terminal support table and in `detectTerminal()`.
 
 Each file in `lib/` starts with a comment describing what it contains and how it is used. Keep that comment accurate when you change the file.
 

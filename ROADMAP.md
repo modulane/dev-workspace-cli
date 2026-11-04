@@ -145,7 +145,7 @@ Windows Terminal and the classic Windows console both work fully, so mouse suppo
 
 In macOS Terminal a click only lands on a row when the bottom of the I-beam pointer is over it. The terminal reports whole character cells, not pixels, so the CLI cannot correct this; the hover highlight shows which row a click will hit.
 
-A click maps to a row only while the whole screen fits in the window: once it scrolls, every row is offset (seen in the VS Code terminal when the panel is shorter than the check script). The mouse therefore depends on the **Alternate screen** item below, with menus that never grow taller than the window.
+The check script draws its items on fixed rows, so its clicks are offset once the window scrolls (seen in the VS Code terminal when the panel is shorter than the script). The list does not rely on fixed rows: after each drawing it asks the terminal for the cursor position (`[6n`) and maps each click from the row of its last line, so the mouse does not depend on the **Alternate screen** item below.
 
 ### Layout and appearance
 

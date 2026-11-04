@@ -16,6 +16,7 @@ import path from 'node:path'
 import {
   getConfigPaths,
   migrateLegacyConfig,
+  readMouseSetting,
   readWorkspaceConfig,
   resetWorkspaceConfig,
   saveWorkspaceConfig,
@@ -271,5 +272,55 @@ test('readWorkspaceConfig reads a file that starts with a byte order mark', asyn
     )
 
     assert.equal(await readWorkspaceConfig(file), '/projects')
+  })
+})
+
+test('readMouseSetting is false only when the file turns the mouse off', async () => {
+  await withTempHome(async home => {
+    const { directory, file } = pathsIn(home)
+
+    assert.equal(await readMouseSetting(file), true)
+
+    await mkdir(directory, { recursive: true })
+
+    for (const [content, expected] of [
+      [{ workspace: '/projects', mouse: false }, false],
+      [{ workspace: '/projects', mouse: true }, true],
+      [{ workspace: '/projects' }, true],
+      [null, true],
+    ]) {
+      await writeFile(file, JSON.stringify(content), 'utf8')
+      assert.equal(await readMouseSetting(file), expected)
+    }
+
+    await writeFile(file, '{ not json', 'utf8')
+    assert.equal(await readMouseSetting(file), true)
+  })
+})
+
+test('saveWorkspaceConfig keeps the other settings', async () => {
+  await withTempHome(async home => {
+    const { directory, file } = pathsIn(home)
+
+    await mkdir(directory, { recursive: true })
+    await writeFile(
+      file,
+      JSON.stringify({ workspace: '/old', mouse: false }),
+      'utf8',
+    )
+    await saveWorkspaceConfig('/projects', file)
+
+    assert.deepEqual(JSON.parse(await readFile(file, 'utf8')), {
+      workspace: '/projects',
+      mouse: false,
+    })
+
+    // A file that is not an object is replaced.
+    await writeFile(file, '[1, 2]', 'utf8')
+    await saveWorkspaceConfig('/projects', file)
+
+    assert.deepEqual(JSON.parse(await readFile(file, 'utf8')), {
+      workspace: '/projects',
+    })
   })
 })

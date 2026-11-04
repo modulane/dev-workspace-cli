@@ -17,6 +17,7 @@ function createDependencies(overrides = {}) {
     savedWorkspaces: [],
     discoveredWorkspaces: [],
     savedStates: [],
+    mouse: [],
     errors: [],
     logs: [],
   }
@@ -36,6 +37,7 @@ function createDependencies(overrides = {}) {
         legacyFile: '/fake/home/.legacy/config.json',
       }),
       migrateLegacyConfig: async () => null,
+      readMouseSetting: async () => true,
       readWorkspaceConfig: async () => WORKSPACE,
       resetWorkspaceConfig: async () => [],
       saveWorkspaceConfig: async (workspace, file) => {
@@ -49,6 +51,14 @@ function createDependencies(overrides = {}) {
         calls.savedStates.push({ file, state })
       },
       clearState: async () => false,
+    },
+
+    terminal: {
+      detectTerminal: () => ({
+        id: 'windows-terminal',
+        name: 'Windows Terminal',
+        support: 'full',
+      }),
     },
 
     workspace: {
@@ -71,6 +81,7 @@ function createDependencies(overrides = {}) {
       chooseProject: async () => null,
       chooseScript: async () => null,
       confirmWorkspaceChange: async () => true,
+      useMouse: (enabled, note = null) => calls.mouse.push({ enabled, note }),
       waitAfterCommand: async () => undefined,
       waitForBack: async () => undefined,
     },
@@ -1389,4 +1400,93 @@ test('CLI --clear-history deletes only the history', async () => {
     assert.equal(configReset, false)
     assert.equal(calls.discoveredWorkspaces.length, 0)
   }
+})
+
+test('CLI turns the mouse on in a terminal that supports it, without a note', async () => {
+  const { dependencies, calls } = createDependencies()
+
+  await createCli(dependencies).run()
+
+  assert.deepEqual(calls.mouse, [{ enabled: true, note: null }])
+  assert.equal(calls.savedStates.length, 0)
+})
+
+test('CLI shows the mouse note once per terminal', async () => {
+  const { dependencies, calls } = createDependencies({
+    terminal: {
+      detectTerminal: () => ({
+        id: 'iterm2',
+        name: 'iTerm2',
+        support: 'unknown',
+      }),
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.equal(calls.mouse[0].enabled, true)
+  assert.match(calls.mouse[0].note, /not been checked in iTerm2/)
+  assert.deepEqual(calls.savedStates[0].state.mouseNotes, ['iterm2'])
+
+  dependencies.history.readState = async () => calls.savedStates[0].state
+  await createCli(dependencies).run()
+
+  assert.deepEqual(calls.mouse[1], { enabled: true, note: null })
+})
+
+test('CLI keeps the mouse off where the terminal reports no mouse events', async () => {
+  const { dependencies, calls } = createDependencies({
+    terminal: {
+      detectTerminal: () => ({
+        id: 'git-bash',
+        name: 'Git Bash',
+        support: 'none',
+      }),
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.equal(calls.mouse[0].enabled, false)
+  assert.match(calls.mouse[0].note, /PowerShell in Windows Terminal/)
+})
+
+test('CLI keeps the mouse off, with no note, with --no-mouse or the setting', async () => {
+  const unchecked = {
+    detectTerminal: () => ({
+      id: 'iterm2',
+      name: 'iTerm2',
+      support: 'unknown',
+    }),
+  }
+  const flag = createDependencies({ terminal: unchecked })
+
+  await createCli(flag.dependencies).start(['--no-mouse'])
+
+  const setting = createDependencies({
+    terminal: unchecked,
+    config: { readMouseSetting: async () => false },
+  })
+
+  await createCli(setting.dependencies).run()
+
+  for (const { calls } of [flag, setting]) {
+    assert.deepEqual(calls.mouse, [{ enabled: false, note: null }])
+    assert.equal(calls.savedStates.length, 0)
+  }
+})
+
+test('CLI leaves the mouse alone when running a script directly', async () => {
+  const { dependencies, calls } = createDependencies({
+    workspace: {
+      getProjects: async () => [
+        { name: 'web', directory: '/w/web', hasPackageJson: true },
+      ],
+      getScripts: async () => [{ name: 'dev', command: 'vite' }],
+    },
+  })
+
+  await createCli(dependencies).start(['web', 'dev'])
+
+  assert.deepEqual(calls.mouse, [])
 })

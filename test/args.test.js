@@ -17,6 +17,7 @@ test('parseCliArgs reads long and short flags', () => {
     { ...parseCliArgs(['--workspace=/projects', '--config-path', '--reset']) },
     { workspace: '/projects', 'config-path': true, reset: true },
   )
+  assert.deepEqual({ ...parseCliArgs(['--no-mouse']) }, { 'no-mouse': true })
 })
 
 test('parseCliArgs reads alias options', () => {
@@ -46,6 +47,7 @@ test('parseCliArgs explains how to get help for invalid input', () => {
 test('formatHelp documents every option', () => {
   for (const flag of [
     '--workspace',
+    '--no-mouse',
     '--config-path',
     '--clear-history',
     '--add-alias',
@@ -80,6 +82,7 @@ test('formatHelp defaults to plain text', () => {
 
   Options:
     -w, --workspace <path>   Use <path> as the workspace and save it
+        --no-mouse           Use only the keyboard in menus
         --config-path        Print the configuration file location
         --clear-history      Forget recently used projects and scripts
         --add-alias <name>   Create another command that starts the CLI

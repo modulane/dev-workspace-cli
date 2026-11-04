@@ -29,7 +29,7 @@ Dev Workspace CLI detects each project's package manager (npm, pnpm, Yarn or Bun
 
 - **One menu for every project:** lists the projects in your workspace folder and the scripts defined in each `package.json`.
 - **The right package manager:** runs each project's scripts with npm, pnpm, Yarn or Bun, detected from the project itself.
-- **Fast to navigate:** type a few letters to find a project or script, recently used projects come first, and `dws web dev` runs a script in one command.
+- **Fast to navigate:** type a few letters to find a project or script, recently used projects come first, and `dws web dev` runs a script in one command. Menus also work with the mouse.
 - **Stays out of the way:** scripts run in the project folder with full terminal output. Pressing Ctrl+C stops the script and brings you back to the menu.
 - **Short commands:** start it with `dev-workspace`, `dws`, or an alias of your choice.
 - **Remembers your workspace:** the workspace, recent projects and last scripts are stored in your user profile and survives updates and reinstalls.
@@ -104,6 +104,23 @@ Long workspace paths and script commands are cut to fit, and emoji or CJK charac
 
 Start typing in the project or script list to filter it. The characters you type must appear in the name in the same order, but not necessarily next to each other: `dsy` finds `design-system`. The best matches come first, preferring names that start with what you typed and matches at the start of words, and the matched characters are underlined. While you search, the **Back**, **Exit** and **Change workspace** entries are hidden, so Enter never picks one by accident.
 
+### Mouse
+
+In terminals that report the mouse, you can also use it in every menu: click an entry to select it, and click it again, or double-click, to open it. The entry under the pointer is marked `›`, and the scroll wheel moves through the list. The keyboard works exactly as before.
+
+While a menu is open, the mouse is used by the menu instead of selecting text; hold Shift or Option, depending on the terminal, and drag to select text anyway. Mouse reporting is switched off before a script runs and whenever the CLI exits. To use only the keyboard, run `dws --no-mouse`, or add `"mouse": false` to the configuration file (see [Configuration](#configuration)).
+
+| Terminal                        | Mouse                                                                        |
+| ------------------------------- | ---------------------------------------------------------------------------- |
+| Windows Terminal                | Works                                                                        |
+| Classic Windows console         | Works                                                                        |
+| VS Code integrated terminal     | Works                                                                        |
+| macOS Terminal                  | Partial: clicks land slightly off-centre; `›` shows which entry a click hits |
+| Git Bash                        | Off: Git Bash reports no mouse events                                        |
+| iTerm2, Linux terminals, others | Not checked yet                                                              |
+
+In a terminal without full support, the first menu shows a short note, once: what does not work and how to get full mouse support, or, in a terminal not checked yet, a request for help in [#26](https://github.com/modulane/dev-workspace-cli/issues/26).
+
 ### Recent projects and scripts
 
 The five projects you used most recently are listed first, under **Recent**. In a project's script list, the cursor starts on the script you ran last, marked `(last run)`. This history is kept in a separate `state.json` file next to the configuration (see [Configuration](#configuration)); `dws --clear-history` deletes it without touching your settings.
@@ -167,6 +184,7 @@ dev-workspace [options] [project [script] [-- arguments]]
 | Option                   | Description                                                 |
 | ------------------------ | ----------------------------------------------------------- |
 | `-w, --workspace <path>` | Use `<path>` as the workspace and save it                   |
+| `--no-mouse`             | Use only the keyboard in menus                              |
 | `--config-path`          | Print the location of the configuration file                |
 | `--clear-history`        | Forget the recent projects and last scripts                 |
 | `--add-alias <name>`     | Create another command that starts the CLI                  |
@@ -206,10 +224,11 @@ The workspace path is saved in the standard configuration folder of your operati
 - `dws --config-path` prints the exact path on your machine.
 - The `DEV_WORKSPACE_CONFIG` environment variable points the CLI at a different file.
 - If you edit the file by hand, an editor that saves it with a UTF-8 byte order mark does no harm.
+- Add `"mouse": false` to the file to use only the keyboard in menus, as `--no-mouse` does: `{ "workspace": "…", "mouse": false }`. Changing the workspace keeps this setting.
 - To switch workspaces, choose **Change workspace** in the project list or run `dws --workspace <path>`. If the saved workspace no longer exists, the CLI asks for a new one.
 - Versions before 0.3.0 stored the file in `~/.dev-workspace-cli/config.json`. If that file exists, it is moved to the new location automatically.
 
-The history of recent projects and last scripts is kept apart from the settings, in `state.json` in the same folder as `config.json`. With `DEV_WORKSPACE_CONFIG`, it is named after your file instead (`dws.json` keeps it in `dws.state.json`), so it never overwrites a `state.json` of your own. It is only a convenience: if it is missing or damaged, the CLI starts with an empty history. `dws --clear-history` deletes it.
+The history of recent projects and last scripts, and which mouse notes were shown, is kept apart from the settings, in `state.json` in the same folder as `config.json`. With `DEV_WORKSPACE_CONFIG`, it is named after your file instead (`dws.json` keeps it in `dws.state.json`), so it never overwrites a `state.json` of your own. It is only a convenience: if it is missing or damaged, the CLI starts with an empty history. `dws --clear-history` deletes it.
 
 ## Uninstalling
 
