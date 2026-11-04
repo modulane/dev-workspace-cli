@@ -716,6 +716,11 @@ test('pressing the wheel opens the selected item, wherever the pointer is', asyn
     mouse: true,
   })
 
+  assert.equal(
+    terminal.screen()[6],
+    '  ↑↓ move · Enter select · Middle-click select',
+  )
+
   terminal.reply(10)
   // Scroll twice, then press the wheel over the help line.
   terminal.type('\x1b[<65;8;7M', '\x1b[<65;8;7M')
