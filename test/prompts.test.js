@@ -339,9 +339,13 @@ test('useMouse turns the mouse on for every menu and shows the note once', async
   await prompts.chooseProject([])
   assert.equal(calls.select[0].mouse, undefined)
 
-  prompts.useMouse(true, 'A note.')
+  let shown = 0
+
+  prompts.useMouse(true, 'A note.', () => shown++)
+  assert.equal(shown, 0)
   await prompts.chooseProject([])
   await prompts.waitAfterCommand()
+  assert.equal(shown, 1)
   prompts.useMouse(false)
   await prompts.waitForBack()
 

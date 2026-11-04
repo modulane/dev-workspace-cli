@@ -121,7 +121,7 @@ Terminals can report mouse events as escape sequences (SGR mouse mode, `\x1b[?10
 - [ ] Hover marks the item under the pointer with `›`, in terminals that report motion.
 - [ ] The scroll wheel moves through long lists, and pressing the wheel (the middle button) opens the selected item.
 - [ ] Clickable "Back" and "Exit" entries on every screen.
-- [ ] Mouse reporting is switched on only while a menu is shown. It is switched off before a script starts, and on every exit path: normal exit, Ctrl+C, errors and crashes. A terminal must never be left in mouse mode.
+- [ ] Mouse reporting is switched on only while a menu is shown. It is switched off before a script starts, and on every exit path: normal exit, Ctrl+C, errors and crashes. A terminal must never be left in mouse mode. Signals such as `kill` or a closing window count too: on macOS and Linux the list restores the terminal, then lets the signal end the process. Windows ends a process killed from outside (Task Manager, `taskkill /f`) at once, so nothing can run then.
 - [ ] Turned off automatically in terminals that do not report mouse events. Users can also disable it for one run with `--no-mouse`, or for good with `--set-mouse off`, because it replaces the terminal's normal text selection while a menu is open (Shift or Option + drag still selects text).
 - [ ] Keyboard navigation keeps working exactly as before; the mouse is an addition, never a requirement.
 - [ ] Terminals without full support say so. The CLI recognises the terminal from its environment (`TERM_PROGRAM`, `WT_SESSION`, `MSYSTEM`, …) and looks it up in the table below:

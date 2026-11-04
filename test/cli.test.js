@@ -63,6 +63,7 @@ function createDependencies(overrides = {}) {
         name: 'Windows Terminal',
         support: 'full',
       }),
+      isTerminal: () => true,
     },
 
     workspace: {
@@ -85,7 +86,10 @@ function createDependencies(overrides = {}) {
       chooseProject: async () => null,
       chooseScript: async () => null,
       confirmWorkspaceChange: async () => true,
-      useMouse: (enabled, note = null) => calls.mouse.push({ enabled, note }),
+      useMouse: (enabled, note = null, onNoteShown = null) => {
+        calls.mouse.push({ enabled, note })
+        calls.showNote = onNoteShown
+      },
       waitAfterCommand: async () => undefined,
       waitForBack: async () => undefined,
     },
@@ -1430,6 +1434,10 @@ test('CLI shows the mouse note once per terminal', async () => {
 
   assert.equal(calls.mouse[0].enabled, true)
   assert.match(calls.mouse[0].note, /not been checked in iTerm2/)
+  // Recorded only once a menu shows it.
+  assert.equal(calls.savedStates.length, 0)
+
+  await calls.showNote()
   assert.deepEqual(calls.savedStates[0].state.mouseNotes, ['iterm2'])
 
   dependencies.history.readState = async () => calls.savedStates[0].state
@@ -1510,4 +1518,21 @@ test('CLI --set-mouse saves the setting and exits', async () => {
     assert.match(calls.logs.at(-1)[0], message)
     assert.equal(calls.discoveredWorkspaces.length, 0)
   }
+})
+
+test('CLI keeps the mouse off, with no note, without a terminal on both sides', async () => {
+  const { dependencies, calls } = createDependencies({
+    terminal: {
+      detectTerminal: () => ({
+        id: 'iterm2',
+        name: 'iTerm2',
+        support: 'unknown',
+      }),
+      isTerminal: () => false,
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.deepEqual(calls.mouse, [{ enabled: false, note: null }])
 })

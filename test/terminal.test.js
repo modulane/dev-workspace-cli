@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   MOUSE_CHECK_ISSUE,
   detectTerminal,
+  isTerminal,
   mouseNote,
 } from '../lib/terminal.js'
 
@@ -79,4 +80,13 @@ test('mouseNote asks for help in a terminal not checked yet', () => {
 
 test('mouseNote has nothing to say where the mouse fully works', () => {
   assert.equal(mouseNote(detect({ WT_SESSION: 'id' }, 'win32')), null)
+})
+
+test('isTerminal needs a terminal for both input and output', () => {
+  const tty = { isTTY: true }
+  const pipe = {}
+
+  assert.equal(isTerminal({ input: tty, output: tty }), true)
+  assert.equal(isTerminal({ input: tty, output: pipe }), false)
+  assert.equal(isTerminal({ input: pipe, output: tty }), false)
 })

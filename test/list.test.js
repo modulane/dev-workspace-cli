@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { EventEmitter } from 'node:events'
+import { spawn } from 'node:child_process'
+import { EventEmitter, once } from 'node:events'
 
 import { createList, parseKeys } from '../lib/list.js'
 import { textWidth } from '../lib/width.js'
@@ -22,7 +23,21 @@ function createTerminal({ columns = 60, rows = 30, now } = {}) {
   const input = new EventEmitter()
   const output = new EventEmitter()
   const exitEvents = new EventEmitter()
-  const terminal = { input, output, exitEvents, written: '', rawModes: [] }
+  const terminal = {
+    input,
+    output,
+    exitEvents,
+    written: '',
+    rawModes: [],
+    killed: [],
+  }
+
+  Object.assign(exitEvents, {
+    pid: 42,
+    kill(pid, signal) {
+      terminal.killed.push([pid, signal])
+    },
+  })
 
   Object.assign(input, {
     isRaw: false,
@@ -174,6 +189,55 @@ test('select shows the cursor again if the process exits while open', () => {
   assert.equal(terminal.input.isRaw, false)
   assert.ok(terminal.written.endsWith('\x1b[?25h'))
 })
+
+test('a signal restores the terminal, then ends the process as it would have', () => {
+  for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+    const terminal = createTerminal()
+
+    terminal.select({ message: 'Pick', items: projects, mouse: true })
+    terminal.exitEvents.emit(signal, signal)
+
+    assert.equal(terminal.input.isRaw, false)
+    assert.ok(
+      terminal.written.endsWith('\x1b[?1006l\x1b[?1003l\x1b[?1000l\x1b[?25h'),
+    )
+    // Sent again with no listener left, so the default action ends the process.
+    assert.equal(terminal.exitEvents.listenerCount(signal), 0)
+    assert.deepEqual(terminal.killed, [[42, signal]])
+  }
+})
+
+// Windows ends a process killed from outside at once, without any handler.
+test(
+  'a real process killed with a signal leaves mouse mode first',
+  { skip: process.platform === 'win32' && 'signals cannot be caught' },
+  async () => {
+    const listUrl = new URL('../lib/list.js', import.meta.url).href
+    const code = `
+      import { select } from ${JSON.stringify(listUrl)}
+      select({ message: 'Pick', items: [{ label: 'a', value: 1 }], mouse: true })
+      setTimeout(() => process.stdout.write('READY'), 100)
+    `
+
+    for (const signal of ['SIGTERM', 'SIGHUP']) {
+      const child = spawn(process.execPath, ['--input-type=module', '-e', code])
+      let written = ''
+
+      child.stdout.on('data', data => {
+        written += data
+        if (written.endsWith('READY')) child.kill(signal)
+      })
+
+      const [, exitSignal] = await once(child, 'exit')
+
+      assert.equal(exitSignal, signal)
+      assert.ok(
+        written.includes('\x1b[?1006l\x1b[?1003l\x1b[?1000l\x1b[?25h'),
+        JSON.stringify(written),
+      )
+    }
+  },
+)
 
 test('select rejects with an ExitPromptError on Ctrl+C', async () => {
   const terminal = createTerminal()
