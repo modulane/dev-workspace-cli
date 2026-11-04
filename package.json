@@ -27,7 +27,14 @@
     "workspace",
     "npm-scripts",
     "project-manager",
-    "terminal"
+    "terminal",
+    "nodejs",
+    "npm",
+    "pnpm",
+    "yarn",
+    "bun",
+    "interactive",
+    "cross-platform"
   ],
   "engines": {
     "node": "^22.13.0 || >=23.5.0"
