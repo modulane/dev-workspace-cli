@@ -18,6 +18,7 @@ function createDependencies(overrides = {}) {
     discoveredWorkspaces: [],
     savedStates: [],
     mouse: [],
+    mouseSettings: [],
     errors: [],
     logs: [],
   }
@@ -40,6 +41,9 @@ function createDependencies(overrides = {}) {
       readMouseSetting: async () => true,
       readWorkspaceConfig: async () => WORKSPACE,
       resetWorkspaceConfig: async () => [],
+      saveMouseSetting: async (enabled, file) => {
+        calls.mouseSettings.push({ enabled, file })
+      },
       saveWorkspaceConfig: async (workspace, file) => {
         calls.savedWorkspaces.push({ workspace, file })
       },
@@ -1489,4 +1493,21 @@ test('CLI leaves the mouse alone when running a script directly', async () => {
   await createCli(dependencies).start(['web', 'dev'])
 
   assert.deepEqual(calls.mouse, [])
+})
+
+test('CLI --set-mouse saves the setting and exits', async () => {
+  for (const [value, enabled, message] of [
+    ['off', false, /only the keyboard.*dws --set-mouse on/],
+    ['on', true, /use the mouse again/],
+  ]) {
+    const { dependencies, calls } = createDependencies()
+
+    await createCli(dependencies).start(['--set-mouse', value])
+
+    assert.deepEqual(calls.mouseSettings, [
+      { enabled, file: '/fake/home/.dev-workspace-cli/config.json' },
+    ])
+    assert.match(calls.logs.at(-1)[0], message)
+    assert.equal(calls.discoveredWorkspaces.length, 0)
+  }
 })

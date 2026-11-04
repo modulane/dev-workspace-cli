@@ -108,7 +108,7 @@ Start typing in the project or script list to filter it. The characters you type
 
 In terminals that report the mouse, you can also use it in every menu: click an entry to select it, and click it again, or double-click, to open it. The entry under the pointer is marked `›`, and the scroll wheel moves through the list. The keyboard works exactly as before.
 
-While a menu is open, the mouse is used by the menu instead of selecting text; hold Shift or Option, depending on the terminal, and drag to select text anyway. Mouse reporting is switched off before a script runs and whenever the CLI exits. To use only the keyboard, run `dws --no-mouse`, or add `"mouse": false` to the configuration file (see [Configuration](#configuration)).
+While a menu is open, the mouse is used by the menu instead of selecting text; hold Shift or Option, depending on the terminal, and drag to select text anyway. Mouse reporting is switched off before a script runs and whenever the CLI exits. To use only the keyboard, run `dws --no-mouse` for one run, or `dws --set-mouse off` to keep it that way; `dws --set-mouse on` turns the mouse back on.
 
 | Terminal                        | Mouse                                                                        |
 | ------------------------------- | ---------------------------------------------------------------------------- |
@@ -184,7 +184,8 @@ dev-workspace [options] [project [script] [-- arguments]]
 | Option                   | Description                                                 |
 | ------------------------ | ----------------------------------------------------------- |
 | `-w, --workspace <path>` | Use `<path>` as the workspace and save it                   |
-| `--no-mouse`             | Use only the keyboard in menus                              |
+| `--no-mouse`             | Use only the keyboard in menus, for this run                |
+| `--set-mouse <on\|off>`  | Save whether menus use the mouse                            |
 | `--config-path`          | Print the location of the configuration file                |
 | `--clear-history`        | Forget the recent projects and last scripts                 |
 | `--add-alias <name>`     | Create another command that starts the CLI                  |
@@ -224,7 +225,7 @@ The workspace path is saved in the standard configuration folder of your operati
 - `dws --config-path` prints the exact path on your machine.
 - The `DEV_WORKSPACE_CONFIG` environment variable points the CLI at a different file.
 - If you edit the file by hand, an editor that saves it with a UTF-8 byte order mark does no harm.
-- Add `"mouse": false` to the file to use only the keyboard in menus, as `--no-mouse` does: `{ "workspace": "…", "mouse": false }`. Changing the workspace keeps this setting.
+- `dws --set-mouse off` saves `"mouse": false` in the file, so menus use only the keyboard: `{ "workspace": "…", "mouse": false }`. `dws --set-mouse on` saves `true`. Changing the workspace keeps this setting, and it can be saved before any workspace is chosen.
 - To switch workspaces, choose **Change workspace** in the project list or run `dws --workspace <path>`. If the saved workspace no longer exists, the CLI asks for a new one.
 - Versions before 0.3.0 stored the file in `~/.dev-workspace-cli/config.json`. If that file exists, it is moved to the new location automatically.
 

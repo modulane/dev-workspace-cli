@@ -73,7 +73,7 @@ test('mouseNote asks for help in a terminal not checked yet', () => {
   const note = mouseNote(detect({ TERM_PROGRAM: 'iTerm.app' }, 'darwin'))
 
   assert.match(note, /not been checked in iTerm2/)
-  assert.match(note, /--no-mouse/)
+  assert.match(note, /--set-mouse off/)
   assert.ok(note.endsWith(MOUSE_CHECK_ISSUE))
 })
 

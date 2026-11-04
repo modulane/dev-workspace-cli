@@ -122,12 +122,12 @@ Terminals can report mouse events as escape sequences (SGR mouse mode, `\x1b[?10
 - [ ] The scroll wheel moves through long lists.
 - [ ] Clickable "Back" and "Exit" entries on every screen.
 - [ ] Mouse reporting is switched on only while a menu is shown. It is switched off before a script starts, and on every exit path: normal exit, Ctrl+C, errors and crashes. A terminal must never be left in mouse mode.
-- [ ] Turned off automatically in terminals that do not report mouse events. Users can also disable it with `--no-mouse` or a setting, because it replaces the terminal's normal text selection while a menu is open (Shift or Option + drag still selects text).
+- [ ] Turned off automatically in terminals that do not report mouse events. Users can also disable it for one run with `--no-mouse`, or for good with `--set-mouse off`, because it replaces the terminal's normal text selection while a menu is open (Shift or Option + drag still selects text).
 - [ ] Keyboard navigation keeps working exactly as before; the mouse is an addition, never a requirement.
 - [ ] Terminals without full support say so. The CLI recognises the terminal from its environment (`TERM_PROGRAM`, `WT_SESSION`, `MSYSTEM`, …) and looks it up in the table below:
   - **Partial or no mouse events** (macOS Terminal, Git Bash): a short note under the menu says what does not work and how to get full mouse support, for example the VS Code integrated terminal on macOS.
   - **Not recorded yet** (iTerm2, Linux terminals, anything unrecognised): the note says mouse support is untested there and asks for help checking it in [#26](https://github.com/modulane/dev-workspace-cli/issues/26).
-  - The note is shown once per terminal, not on every menu, and never with `--no-mouse`.
+  - The note is shown once per terminal, not on every menu, and never when the mouse is turned off (`--no-mouse` or `--set-mouse off`).
 
 **Terminal support**, checked with `node scripts/mouse-check.js` (clicks, hover and wheel):
 

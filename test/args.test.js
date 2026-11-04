@@ -18,6 +18,14 @@ test('parseCliArgs reads long and short flags', () => {
     { workspace: '/projects', 'config-path': true, reset: true },
   )
   assert.deepEqual({ ...parseCliArgs(['--no-mouse']) }, { 'no-mouse': true })
+  assert.deepEqual(
+    { ...parseCliArgs(['--set-mouse', 'off']) },
+    { 'set-mouse': 'off' },
+  )
+  assert.throws(
+    () => parseCliArgs(['--set-mouse', 'no']),
+    /Use --set-mouse on or --set-mouse off, not "no"\.\n.*--help/,
+  )
 })
 
 test('parseCliArgs reads alias options', () => {
@@ -48,6 +56,7 @@ test('formatHelp documents every option', () => {
   for (const flag of [
     '--workspace',
     '--no-mouse',
+    '--set-mouse',
     '--config-path',
     '--clear-history',
     '--add-alias',
@@ -82,7 +91,9 @@ test('formatHelp defaults to plain text', () => {
 
   Options:
     -w, --workspace <path>   Use <path> as the workspace and save it
-        --no-mouse           Use only the keyboard in menus
+        --no-mouse           Use only the keyboard in menus, this time
+        --set-mouse <on|off>
+                             Save whether menus use the mouse
         --config-path        Print the configuration file location
         --clear-history      Forget recently used projects and scripts
         --add-alias <name>   Create another command that starts the CLI

@@ -19,6 +19,7 @@ import {
   readMouseSetting,
   readWorkspaceConfig,
   resetWorkspaceConfig,
+  saveMouseSetting,
   saveWorkspaceConfig,
 } from '../lib/config.js'
 
@@ -226,14 +227,13 @@ test('readWorkspaceConfig rejects malformed JSON', async () => {
   })
 })
 
-test('readWorkspaceConfig rejects missing or invalid workspace values', async () => {
+test('readWorkspaceConfig rejects invalid workspace values', async () => {
   await withTempHome(async home => {
     const { directory, file } = pathsIn(home)
 
     await mkdir(directory, { recursive: true })
 
     const invalidConfigs = [
-      {},
       { workspace: '' },
       { workspace: '   ' },
       { workspace: 123 },
@@ -246,6 +246,40 @@ test('readWorkspaceConfig rejects missing or invalid workspace values', async ()
 
       await assert.rejects(readWorkspaceConfig(file), /Invalid configuration/)
     }
+  })
+})
+
+test('readWorkspaceConfig returns null when only other settings are saved', async () => {
+  await withTempHome(async home => {
+    const { directory, file } = pathsIn(home)
+
+    await mkdir(directory, { recursive: true })
+
+    for (const config of [{}, { mouse: false }]) {
+      await writeFile(file, JSON.stringify(config), 'utf8')
+      assert.equal(await readWorkspaceConfig(file), null)
+    }
+  })
+})
+
+test('saveMouseSetting saves the setting and keeps the workspace', async () => {
+  await withTempHome(async home => {
+    const { file } = pathsIn(home)
+
+    // Before any workspace is chosen, the directory may not exist yet.
+    await saveMouseSetting(false, file)
+    assert.deepEqual(JSON.parse(await readFile(file, 'utf8')), {
+      mouse: false,
+    })
+    assert.equal(await readMouseSetting(file), false)
+
+    await saveWorkspaceConfig('/projects', file)
+    await saveMouseSetting(true, file)
+
+    assert.deepEqual(JSON.parse(await readFile(file, 'utf8')), {
+      mouse: true,
+      workspace: '/projects',
+    })
   })
 })
 
