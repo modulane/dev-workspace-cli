@@ -106,7 +106,7 @@ Start typing in the project or script list to filter it. The characters you type
 
 ### Mouse
 
-In terminals that report the mouse, you can also use it in every menu: click an entry to select it, and click it again, or double-click, to open it. The entry under the pointer is marked `›`, and the scroll wheel moves through the list. The keyboard works exactly as before.
+In terminals that report the mouse, you can also use it in every menu: click an entry to select it, and click it again, or double-click, to open it. The entry under the pointer is marked `›`. The scroll wheel moves through the list, and pressing the wheel opens the selected entry, wherever the pointer is. The keyboard works exactly as before.
 
 While a menu is open, the mouse is used by the menu instead of selecting text; hold Shift or Option, depending on the terminal, and drag to select text anyway. Mouse reporting is switched off before a script runs and whenever the CLI exits. To use only the keyboard, run `dws --no-mouse` for one run, or `dws --set-mouse off` to keep it that way; `dws --set-mouse on` turns the mouse back on.
 

@@ -119,7 +119,7 @@ Terminals can report mouse events as escape sequences (SGR mouse mode, `\x1b[?10
 
 - [ ] Click an item to select it; click the selected item again (or double-click) to open it. Terminals send a double-click as two separate presses, so clicks are ignored for about 300 ms after an item opens; otherwise the second press lands on the next screen.
 - [ ] Hover marks the item under the pointer with `›`, in terminals that report motion.
-- [ ] The scroll wheel moves through long lists.
+- [ ] The scroll wheel moves through long lists, and pressing the wheel (the middle button) opens the selected item.
 - [ ] Clickable "Back" and "Exit" entries on every screen.
 - [ ] Mouse reporting is switched on only while a menu is shown. It is switched off before a script starts, and on every exit path: normal exit, Ctrl+C, errors and crashes. A terminal must never be left in mouse mode.
 - [ ] Turned off automatically in terminals that do not report mouse events. Users can also disable it for one run with `--no-mouse`, or for good with `--set-mouse off`, because it replaces the terminal's normal text selection while a menu is open (Shift or Option + drag still selects text).

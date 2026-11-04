@@ -707,6 +707,41 @@ test('hover marks the item under the pointer, and the wheel moves the cursor', a
   assert.equal(await result, 'billing-api')
 })
 
+test('pressing the wheel opens the selected item, wherever the pointer is', async () => {
+  let time = 0
+  const terminal = createTerminal({ now: () => time })
+  const first = terminal.select({
+    message: 'Pick',
+    items: projects,
+    mouse: true,
+  })
+
+  terminal.reply(10)
+  // Scroll twice, then press the wheel over the help line.
+  terminal.type('\x1b[<65;8;7M', '\x1b[<65;8;7M')
+  terminal.reply(10)
+  terminal.type('\x1b[<1;8;10M')
+
+  assert.equal(await first, 'design-system')
+
+  // Like a click, it is ignored right after an item opens.
+  const second = terminal.select({
+    message: 'Pick',
+    items: projects,
+    mouse: true,
+  })
+
+  terminal.reply(10)
+  terminal.type('\x1b[<1;8;10M')
+  terminal.reply(10)
+  assert.equal(terminal.screen()[0], '  Pick  type to search')
+
+  time += 300
+  terminal.type('\x1b[<1;8;10M')
+
+  assert.equal(await second, 'api')
+})
+
 test('clicks follow the list when it scrolls', async () => {
   const terminal = createTerminal({ rows: 8 })
   const items = Array.from({ length: 10 }, (_, index) => ({
