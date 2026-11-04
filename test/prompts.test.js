@@ -332,3 +332,29 @@ test('chooseScript measures the command in columns, not characters', async () =>
   assert.equal(textWidth(description), 36)
   assert.ok(description.endsWith('…'))
 })
+
+test('useMouse turns the mouse on for every menu and shows the note once', async () => {
+  const { calls, prompts } = createPromptMocks({ select: null })
+
+  await prompts.chooseProject([])
+  assert.equal(calls.select[0].mouse, undefined)
+
+  let shown = 0
+
+  prompts.useMouse(true, 'A note.', () => shown++)
+  assert.equal(shown, 0)
+  await prompts.chooseProject([])
+  await prompts.waitAfterCommand()
+  assert.equal(shown, 1)
+  prompts.useMouse(false)
+  await prompts.waitForBack()
+
+  assert.deepEqual(
+    calls.select.slice(1).map(({ mouse, note }) => ({ mouse, note })),
+    [
+      { mouse: true, note: 'A note.' },
+      { mouse: true, note: undefined },
+      { mouse: undefined, note: undefined },
+    ],
+  )
+})

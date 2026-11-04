@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { fitText, textWidth } from '../lib/width.js'
+import { fitText, textWidth, wrapText } from '../lib/width.js'
 
 test('textWidth counts emoji and wide characters as two columns', () => {
   assert.equal(textWidth('web'), 3)
@@ -28,4 +28,16 @@ test('fitText keeps the start that fits, without splitting a character', () => {
   assert.equal(fitText('日本', 3), '日')
   assert.equal(fitText('a👨‍👩‍👧b', 3), 'a👨‍👩‍👧')
   assert.equal(fitText('a👨‍👩‍👧b', 2), 'a')
+})
+
+test('wrapText breaks between words and cuts words wider than a line', () => {
+  assert.deepEqual(wrapText('the quick brown fox', 9), [
+    'the quick',
+    'brown fox',
+  ])
+  assert.deepEqual(wrapText('  spaced   out  ', 20), ['spaced out'])
+  assert.deepEqual(wrapText('abcdefgh ij', 3), ['abc', 'def', 'gh', 'ij'])
+  // A wide character never splits, even in a single column.
+  assert.deepEqual(wrapText('日本', 1), ['日', '本'])
+  assert.deepEqual(wrapText('', 10), [])
 })

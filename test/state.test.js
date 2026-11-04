@@ -10,6 +10,7 @@ import {
   getStatePath,
   readState,
   recentProjects,
+  rememberMouseNote,
   rememberProject,
   rememberScript,
   saveState,
@@ -79,6 +80,7 @@ test('readState keeps only valid entries, and ignores a byte order mark', async 
         JSON.stringify({
           recentProjects: ['/projects/web', 42, '', null],
           lastScripts: { '/projects/web': 'dev', '/projects/api': 7 },
+          mouseNotes: ['iterm2', 3],
         }),
     )
 
@@ -86,11 +88,12 @@ test('readState keeps only valid entries, and ignores a byte order mark', async 
       version: 1,
       recentProjects: ['/projects/web'],
       lastScripts: { '/projects/web': 'dev' },
+      mouseNotes: ['iterm2'],
     })
 
     await writeFile(
       file,
-      JSON.stringify({ recentProjects: 'x', lastScripts: [] }),
+      JSON.stringify({ recentProjects: 'x', lastScripts: [], mouseNotes: {} }),
     )
     assert.deepEqual(await readState(file), emptyState())
   })
@@ -173,4 +176,15 @@ test('recentProjects returns up to five existing projects, most recent first', (
     recentProjects(state, projects).map(project => project.name),
     ['f', 'a', 'b', 'c', 'd'],
   )
+})
+
+test('rememberMouseNote records each terminal once', () => {
+  const once = rememberMouseNote(emptyState(), 'iterm2')
+
+  assert.deepEqual(once.mouseNotes, ['iterm2'])
+  assert.equal(rememberMouseNote(once, 'iterm2'), once)
+  assert.deepEqual(rememberMouseNote(once, 'git-bash').mouseNotes, [
+    'iterm2',
+    'git-bash',
+  ])
 })
