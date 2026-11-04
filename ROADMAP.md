@@ -118,7 +118,7 @@ The CLI should look clean, and stay correct, in every terminal.
 Terminals can report mouse events as escape sequences (SGR mouse mode, `\x1b[?1000h` and `\x1b[?1006h`). Each click arrives on stdin with its row and column, which the list prompt from [Fast navigation](#fast-navigation) maps to the item drawn there.
 
 - [ ] Click an item to select it; click the selected item again (or double-click) to open it. Terminals send a double-click as two separate presses, so clicks are ignored for about 300 ms after an item opens; otherwise the second press lands on the next screen.
-- [ ] Hover highlights the item under the pointer, in terminals that report motion.
+- [ ] Hover marks the item under the pointer with `›`, in terminals that report motion.
 - [ ] The scroll wheel moves through long lists.
 - [ ] Clickable "Back" and "Exit" entries on every screen.
 - [ ] Mouse reporting is switched on only while a menu is shown. It is switched off before a script starts, and on every exit path: normal exit, Ctrl+C, errors and crashes. A terminal must never be left in mouse mode.
@@ -143,7 +143,7 @@ Terminals can report mouse events as escape sequences (SGR mouse mode, `\x1b[?10
 
 Windows Terminal and the classic Windows console both work fully, so mouse support is confirmed as feasible on Windows. The remaining terminals must be checked before this milestone is complete.
 
-In macOS Terminal a click only lands on a row when the bottom of the I-beam pointer is over it. The terminal reports whole character cells, not pixels, so the CLI cannot correct this; the hover highlight shows which row a click will hit.
+In macOS Terminal a click only lands on a row when the bottom of the I-beam pointer is over it. The terminal reports whole character cells, not pixels, so the CLI cannot correct this; the `›` hover marker shows which row a click will hit.
 
 The check script draws its items on fixed rows, so its clicks are offset once the window scrolls (seen in the VS Code terminal when the panel is shorter than the script). The list does not rely on fixed rows: after each drawing it asks the terminal for the cursor position (`[6n`) and maps each click from the row of its last line, so the mouse does not depend on the **Alternate screen** item below.
 
