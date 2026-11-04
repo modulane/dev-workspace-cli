@@ -29,7 +29,7 @@ Dev Workspace CLI detects each project's package manager (npm, pnpm, Yarn or Bun
 
 - **One menu for every project:** lists the projects in your workspace folder and the scripts defined in each `package.json`.
 - **The right package manager:** runs each project's scripts with npm, pnpm, Yarn or Bun, detected from the project itself.
-- **Fast to navigate:** type a few letters to find a project or script, recently used projects come first, and `dws web dev` runs a script in one command. Menus also work with the mouse.
+- **Fast to navigate:** type a few letters to find a project or script, recently used projects come first, and `dws web dev` runs a script in one command. Menus also work with the mouse, or with the scroll wheel alone.
 - **Stays out of the way:** scripts run in the project folder with full terminal output. Pressing Ctrl+C stops the script and brings you back to the menu.
 - **Short commands:** start it with `dev-workspace`, `dws`, or an alias of your choice.
 - **Remembers your workspace:** the workspace, recent projects and last scripts are stored in your user profile and survives updates and reinstalls.
@@ -106,7 +106,9 @@ Start typing in the project or script list to filter it. The characters you type
 
 ### Mouse
 
-In terminals that report the mouse, you can also use it in every menu: click an entry to select it, and click it again, or double-click, to open it. The entry under the pointer is marked `›`. The scroll wheel moves through the list, and pressing the wheel (middle-click) opens the selected entry, wherever the pointer is; the hint under each menu says so. The keyboard works exactly as before.
+In terminals that report the mouse, you can also use it in every menu: click an entry to select it, and click it again, or double-click, to open it. The entry under the pointer is marked `›`. The keyboard works exactly as before.
+
+The scroll wheel alone is enough to get around: scrolling moves through the list, and pressing the wheel (middle-click) opens the selected entry, wherever the pointer is. Back, Exit and Change workspace are entries like any other, so you can browse projects, run scripts and go back without touching the keyboard or aiming the pointer. The hint under each menu mentions it. Only searching and the questions that ask you to type, such as the workspace path or script arguments, need the keyboard.
 
 While a menu is open, the mouse is used by the menu instead of selecting text; hold Shift or Option, depending on the terminal, and drag to select text anyway. Mouse reporting is switched off before a script runs and whenever the CLI exits. To use only the keyboard, run `dws --no-mouse` for one run, or `dws --set-mouse off` to keep it that way; `dws --set-mouse on` turns the mouse back on.
 
