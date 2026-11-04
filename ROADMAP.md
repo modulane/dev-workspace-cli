@@ -117,14 +117,14 @@ The CLI should look clean, and stay correct, in every terminal.
 
 Terminals can report mouse events as escape sequences (SGR mouse mode, `\x1b[?1000h` and `\x1b[?1006h`). Each click arrives on stdin with its row and column, which the list prompt from [Fast navigation](#fast-navigation) maps to the item drawn there.
 
-- [ ] Click an item to select it; click the selected item again (or double-click) to open it. Terminals send a double-click as two separate presses, so clicks are ignored for about 300 ms after an item opens; otherwise the second press lands on the next screen.
-- [ ] Hover marks the item under the pointer with `›`, in terminals that report motion.
-- [ ] The scroll wheel moves through long lists, and pressing the wheel (the middle button) opens the selected item.
-- [ ] Clickable "Back" and "Exit" entries on every screen.
-- [ ] Mouse reporting is switched on only while a menu is shown. It is switched off before a script starts, and on every exit path: normal exit, Ctrl+C, errors and crashes. A terminal must never be left in mouse mode. Signals such as `kill` or a closing window count too: on macOS and Linux the list restores the terminal, then lets the signal end the process. Windows ends a process killed from outside (Task Manager, `taskkill /f`) at once, so nothing can run then.
-- [ ] Turned off automatically in terminals that do not report mouse events. Users can also disable it for one run with `--no-mouse`, or for good with `--set-mouse off`, because it replaces the terminal's normal text selection while a menu is open (Shift or Option + drag still selects text).
-- [ ] Keyboard navigation keeps working exactly as before; the mouse is an addition, never a requirement.
-- [ ] Terminals without full support say so. The CLI recognises the terminal from its environment (`TERM_PROGRAM`, `WT_SESSION`, `MSYSTEM`, …) and looks it up in the table below:
+- [x] Click an item to select it; click the selected item again (or double-click) to open it. Terminals send a double-click as two separate presses, so clicks are ignored for about 300 ms after an item opens; otherwise the second press lands on the next screen.
+- [x] Hover marks the item under the pointer with `›`, in terminals that report motion.
+- [x] The scroll wheel moves through long lists, and pressing the wheel (the middle button) opens the selected item.
+- [x] Clickable "Back" and "Exit" entries on every screen.
+- [x] Mouse reporting is switched on only while a menu is shown. It is switched off before a script starts, and on every exit path: normal exit, Ctrl+C, errors and crashes. A terminal must never be left in mouse mode. Signals such as `kill` or a closing window count too: on macOS and Linux the list restores the terminal, then lets the signal end the process. Windows ends a process killed from outside (Task Manager, `taskkill /f`) at once, so nothing can run then.
+- [x] Turned off automatically in terminals that do not report mouse events. Users can also disable it for one run with `--no-mouse`, or for good with `--set-mouse off`, because it replaces the terminal's normal text selection while a menu is open (Shift or Option + drag still selects text).
+- [x] Keyboard navigation keeps working exactly as before; the mouse is an addition, never a requirement.
+- [x] Terminals without full support say so. The CLI recognises the terminal from its environment (`TERM_PROGRAM`, `WT_SESSION`, `MSYSTEM`, …) and looks it up in the table below:
   - **Partial or no mouse events** (macOS Terminal, Git Bash): a short note under the menu says what does not work and how to get full mouse support, for example the VS Code integrated terminal on macOS.
   - **Not recorded yet** (iTerm2, Linux terminals, anything unrecognised): the note says mouse support is untested there and asks for help checking it in [#26](https://github.com/modulane/dev-workspace-cli/issues/26).
   - The note is shown once per terminal, not on every menu, and never when the mouse is turned off (`--no-mouse` or `--set-mouse off`).
