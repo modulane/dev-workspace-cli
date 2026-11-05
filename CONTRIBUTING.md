@@ -69,9 +69,11 @@ node scripts/try-install.js --again -- web dev  # with arguments for dws
 | `list.js`             | The list used by every menu: keys, mouse, drawing, search      |
 | `fuzzy.js`            | Fuzzy matching and ranking for the list search                 |
 | `width.js`            | Measuring, cutting and wrapping text by its terminal width     |
-| `ui.js`               | Colours, the header box and screen clearing                    |
+| `ui.js`               | The colour theme, the header box and screen clearing           |
 
 Menus use the list in `list.js`, which owns the terminal while it is open; free-text and yes/no questions still use `@inquirer/prompts`. The list also draws the header box from `ui.js`, which `cli.js` passes as `header`, so the whole screen redraws together. Test the list through `createList()` with fake input and output streams, as `test/list.test.js` does, rather than in a real terminal. With `mouse: true`, the list asks for the cursor position after each drawing; a test answers with a reply such as `[20;1R` (the last line is on row 20) before sending clicks. To see how a real terminal reports the mouse, run `node scripts/mouse-check.js` in it, and record the result in the roadmap's terminal support table and in `detectTerminal()`.
+
+Every colour comes from the theme in `ui.js`: `color()` for plain output, `styleText()` for the list, and `inquirerTheme()` for the `@inquirer/prompts` questions. Do not write ANSI codes elsewhere, so `NO_COLOR` and `FORCE_COLOR` are always respected.
 
 Each file in `lib/` starts with a comment describing what it contains and how it is used. Keep that comment accurate when you change the file.
 

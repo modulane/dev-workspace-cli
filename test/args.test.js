@@ -107,6 +107,9 @@ test('formatHelp defaults to plain text', () => {
 
   Environment:
     DEV_WORKSPACE_CONFIG     Use a custom configuration file path
+    NO_COLOR                 Turn colours off
+    FORCE_COLOR              Turn colours on, even when output is not
+                             a terminal (0 turns them off)
 `,
   )
 })

@@ -100,6 +100,12 @@ Each list also has entries to go **Back**, **Exit**, or **Change workspace**, un
 
 Every menu opens with a small box that shows where you are: the tool's name, followed by the project you are in (`◆ dev-workspace › web-app`), the workspace folder, and in a project, its package manager on the right. Each script's command is shown next to its name, in a column of its own, and tags such as `last run` sit at the right edge. The layout stays within 100 columns on wide terminals. Long workspace paths and script commands are cut with `…` to fit, and emoji or CJK characters in folder names never break the layout.
 
+### Colours
+
+Colour marks where you are, and little else: cyan for the selected entry, the current project in the header and your search, green, red and yellow for results and warnings, and dim text for details. The workspace and arguments prompts use the same colours as the menus. Everything still reads without colour: the selected entry keeps its `❯` marker, and group titles are in capitals.
+
+Colours are on in a terminal and off when output is redirected to a file or another program. Set `NO_COLOR` to turn them off, or `FORCE_COLOR` to turn them on anyway (`FORCE_COLOR=0` turns them off). `FORCE_COLOR` wins when both are set, as in Node.js.
+
 ### Searching
 
 Start typing in the project or script list to filter it. The characters you type must appear in the name in the same order, but not necessarily next to each other: `dsy` finds `design-system`. The best matches come first, preferring names that start with what you typed and matches at the start of words, and the matched characters are underlined. While you search, the **Back**, **Exit** and **Change workspace** entries are hidden, so Enter never picks one by accident.
@@ -183,19 +189,19 @@ dws web dev -- --port 4000     # pass everything after -- to the script
 dev-workspace [options] [project [script] [-- arguments]]
 ```
 
-| Option                   | Description                                                 |
-| ------------------------ | ----------------------------------------------------------- |
-| `-w, --workspace <path>` | Use `<path>` as the workspace and save it                   |
-| `--no-mouse`             | Use only the keyboard in menus, for this run                |
-| `--set-mouse <on\|off>`  | Save whether menus use the mouse                            |
-| `--config-path`          | Print the location of the configuration file                |
-| `--clear-history`        | Forget the recent projects and last scripts                 |
-| `--add-alias <name>`     | Create another command that starts the CLI                  |
-| `--remove-alias <name>`  | Delete an alias created with `--add-alias`                  |
-| `--list-aliases`         | List the commands that start the CLI                        |
-| `--reset`                | Delete the configuration, history and custom aliases        |
-| `-v, --version`          | Print the version                                           |
-| `-h, --help`             | Show the help (coloured in a terminal; supports `NO_COLOR`) |
+| Option                   | Description                                                  |
+| ------------------------ | ------------------------------------------------------------ |
+| `-w, --workspace <path>` | Use `<path>` as the workspace and save it                    |
+| `--no-mouse`             | Use only the keyboard in menus, for this run                 |
+| `--set-mouse <on\|off>`  | Save whether menus use the mouse                             |
+| `--config-path`          | Print the location of the configuration file                 |
+| `--clear-history`        | Forget the recent projects and last scripts                  |
+| `--add-alias <name>`     | Create another command that starts the CLI                   |
+| `--remove-alias <name>`  | Delete an alias created with `--add-alias`                   |
+| `--list-aliases`         | List the commands that start the CLI                         |
+| `--reset`                | Delete the configuration, history and custom aliases         |
+| `-v, --version`          | Print the version                                            |
+| `-h, --help`             | Show the help (coloured as described in [Colours](#colours)) |
 
 ## Aliases
 

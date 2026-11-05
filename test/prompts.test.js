@@ -6,6 +6,9 @@ import {
   createPrompts,
 } from '../lib/prompts.js'
 
+// Passed through to Inquirer as it is.
+const THEME = { prefix: '>' }
+
 function createPromptMocks(results = {}) {
   const calls = {
     confirm: [],
@@ -30,6 +33,7 @@ function createPromptMocks(results = {}) {
         calls.select.push(options)
         return Object.hasOwn(results, 'select') ? results.select : 'mock-result'
       },
+      theme: THEME,
     }),
   }
 }
@@ -44,6 +48,7 @@ test('askForWorkspace passes its message and validator to input', async () => {
   assert.equal(calls.input.length, 1)
   assert.equal(calls.input[0].message, 'Workspace path')
   assert.equal(calls.input[0].validate, validate)
+  assert.equal(calls.input[0].theme, THEME)
 })
 
 test('confirmWorkspaceChange defaults to true', async () => {
@@ -56,6 +61,7 @@ test('confirmWorkspaceChange defaults to true', async () => {
     {
       message: 'Choose a new workspace directory?',
       default: true,
+      theme: THEME,
     },
   ])
 })
@@ -250,6 +256,7 @@ test('askForArguments splits the answer and validates quotes', async () => {
 
   assert.deepEqual(result, ['--port', '4000', 'two words'])
   assert.equal(calls.input[0].message, 'Arguments for dev')
+  assert.equal(calls.input[0].theme, THEME)
   assert.equal(calls.input[0].validate('--port 4000'), true)
   assert.equal(calls.input[0].validate('"open'), 'Close the " quote.')
 })
