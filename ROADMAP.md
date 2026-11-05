@@ -23,7 +23,7 @@ These apply to every milestone:
 | Interface refresh               | Released in 0.2.0, since removed from npm | New header, prompt formatting, screen clearing                            |
 | Foundations                     | Released in 0.3.0                         | Platform config location, CLI flags, aliases, Ctrl+C fix                  |
 | Works with every project        | Released in 0.5.0                         | Package manager detection, project filtering, lifecycle scripts           |
-| Fast navigation                 | Complete, in the next release             | Fuzzy search, recent items, direct mode, script arguments                 |
+| Fast navigation                 | Released in 0.6.0                         | Fuzzy search, recent items, direct mode, script arguments                 |
 | A polished interface            | Planned                                   | Mouse support, correct layout, themes, project details, first run         |
 | Bigger workspaces               | Planned                                   | Monorepos, nested projects, multiple named workspaces                     |
 | Configuration and scripts       | Planned                                   | Versioned config schema, `config` command, JSON output                    |
@@ -83,7 +83,7 @@ The project list currently shows every subfolder of the workspace, including fol
 
 **Done when:** a workspace that mixes npm, pnpm, Yarn and Bun projects runs every script with the right tool on all three operating systems in CI.
 
-## Fast navigation
+## Fast navigation _(released in 0.6.0)_
 
 The CLI should be faster than typing `cd` and `npm run`.
 
@@ -115,7 +115,7 @@ The CLI should look clean, and stay correct, in every terminal.
 
 ### Mouse support
 
-Terminals can report mouse events as escape sequences (SGR mouse mode, `\x1b[?1000h` and `\x1b[?1006h`). Each click arrives on stdin with its row and column, which the list prompt from [Fast navigation](#fast-navigation) maps to the item drawn there.
+Terminals can report mouse events as escape sequences (SGR mouse mode, `\x1b[?1000h` and `\x1b[?1006h`). Each click arrives on stdin with its row and column, which the list prompt from [Fast navigation](#fast-navigation-released-in-060) maps to the item drawn there.
 
 - [x] Click an item to select it; click the selected item again (or double-click) to open it. Terminals send a double-click as two separate presses, so clicks are ignored for about 300 ms after an item opens; otherwise the second press lands on the next screen.
 - [x] Hover marks the item under the pointer with `›`, in terminals that report motion.
