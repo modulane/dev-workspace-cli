@@ -65,6 +65,7 @@ function createDependencies(overrides = {}) {
         name: 'Windows Terminal',
         support: 'full',
       }),
+      isInteractive: () => true,
       isTerminal: () => true,
     },
 
@@ -1548,4 +1549,36 @@ test('CLI keeps the mouse off, with no note, without a terminal on both sides', 
   await createCli(dependencies).run()
 
   assert.deepEqual(calls.mouse, [{ enabled: false, note: null }])
+})
+
+test('CLI refuses to open the menus without a terminal for input', async () => {
+  const { dependencies, calls } = createDependencies({
+    terminal: { isInteractive: () => false },
+  })
+
+  for (const args of [[], ['web'], ['--workspace', WORKSPACE]]) {
+    await assert.rejects(
+      createCli(dependencies).start(args),
+      /menus need an interactive terminal.*dev-workspace <project> <script>/,
+    )
+  }
+
+  assert.equal(calls.discoveredWorkspaces.length, 0)
+  assert.equal(calls.menus.length, 0)
+  // --workspace is still saved: it needs no terminal.
+  assert.equal(calls.savedWorkspaces.length, 1)
+})
+
+test('CLI runs a script directly without a terminal for input', async () => {
+  const { dependencies } = createDependencies({
+    terminal: { isInteractive: () => false },
+    workspace: {
+      getProjects: async () => [
+        { name: 'web', directory: '/w/web', hasPackageJson: true },
+      ],
+      getScripts: async () => [{ name: 'dev', command: 'vite' }],
+    },
+  })
+
+  assert.equal(await createCli(dependencies).start(['web', 'dev']), 0)
 })

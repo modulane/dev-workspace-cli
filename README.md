@@ -98,7 +98,7 @@ This installs two equivalent commands, `dev-workspace` and the shorter `dws`.
 
 Each list also has entries to go **Back**, **Exit**, or **Change workspace**, under a line that separates them from the projects or scripts.
 
-Every menu opens with a small box that shows where you are: the tool's name, followed by the project you are in (`◆ dev-workspace › web-app`), the workspace folder, and in a project, its package manager on the right. Each script's command is shown next to its name, in a column of its own, and tags such as `last run` sit at the right edge. The layout stays within 100 columns on wide terminals. Long workspace paths and script commands are cut with `…` to fit, and emoji or CJK characters in folder names never break the layout.
+Every menu opens with a small box that shows where you are: the tool's name, followed by the project you are in (`◆ dev-workspace › web-app`), the workspace folder, and in a project, its package manager on the right. Each script's command is shown next to its name, in a column of its own, and tags such as `last run` sit at the right edge. The layout stays within 100 columns on wide terminals. Long workspace paths are shortened in the middle (`C:Users…projectsweb`), keeping the folders that tell them apart, and script commands are cut with `…` to fit, and emoji or CJK characters in folder names never break the layout.
 
 ### Colours
 
@@ -182,6 +182,7 @@ dws web dev -- --port 4000     # pass everything after -- to the script
 - The project is found by its exact name first, then ignoring case, then by the start of its name, as long as only one project starts that way: `dws des build` runs `build` in `design-system`. If several projects match, the CLI lists them.
 - Any script in `package.json` can be run by name, including `pre` and `post` hooks.
 - With a script, nothing is asked and the screen is not cleared, so direct mode also works in other scripts. The CLI exits with the script's exit code, or 128 plus the signal number if a signal stopped it, as shells do (130 after Ctrl+C). It exits with code 1 if it cannot start the script, for example when no workspace is saved yet.
+- Without a script, the CLI needs a terminal to read keys from. When its input is redirected (`dws < file`, or in a CI job), it exits with code 1 and a message saying how to run a script directly, instead of waiting for keys that never come.
 
 ## Command-line options
 
