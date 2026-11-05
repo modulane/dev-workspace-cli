@@ -1,7 +1,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { fitText, textWidth, truncateText, wrapText } from '../lib/width.js'
+import {
+  fitText,
+  textWidth,
+  truncatePath,
+  truncateText,
+  wrapText,
+} from '../lib/width.js'
 
 test('textWidth counts emoji and wide characters as two columns', () => {
   assert.equal(textWidth('web'), 3)
@@ -48,4 +54,27 @@ test('truncateText ends a shortened text with an ellipsis', () => {
   // Each 日 takes two columns, so only two fit before the ellipsis.
   assert.equal(truncateText('日本語です', 6), '日本…')
   assert.equal(truncateText('vite', 0), '')
+})
+
+test('truncatePath keeps the root and the last folders that fit', () => {
+  const windows = 'C:\\Users\\someone\\Documents\\projects\\web'
+
+  assert.equal(truncatePath(windows, 60), windows)
+  assert.equal(truncatePath(windows, 24), 'C:\\Users\\…\\projects\\web')
+  assert.equal(truncatePath(windows, 18), 'C:\\…\\projects\\web')
+  assert.equal(
+    truncatePath('/home/someone/dev/clients/acme', 20),
+    '/…/dev/clients/acme',
+  )
+  assert.equal(truncatePath('~/dev/日本語/app', 14), '~/…/日本語/app')
+  assert.equal(truncatePath('~/dev/日本語/app', 12), '~/dev/…/app')
+})
+
+test('truncatePath keeps the end of a path whose last folder is too long', () => {
+  const path = '/srv/a-very-long-folder-name'
+
+  assert.equal(truncatePath(path, 10), '…lder-name')
+  assert.equal(textWidth(truncatePath('/srv/日本語日本語', 6)), 5)
+  assert.equal(truncatePath('/srv/long-name', 0), '')
+  assert.equal(truncatePath('no-separator-at-all', 8), 'no-sepa…')
 })

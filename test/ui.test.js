@@ -180,10 +180,11 @@ test('headerLines keeps its border aligned around wide characters', () => {
   }
 })
 
-test('headerLines cuts a long workspace path to fit', () => {
-  const lines = header({ workspace: `/${'very-long-folder/'.repeat(10)}` }, 50)
+test('headerLines shortens a long workspace path in the middle', () => {
+  const workspace = `/${'very-long-folder/'.repeat(10)}web`
+  const lines = header({ workspace }, 50)
 
-  assert.ok(lines[1].endsWith('… │'), lines[1])
+  assert.ok(lines[1].includes('│  /…/very-long-folder/very-long-folder/web'))
 
   for (const line of lines) assert.equal(textWidth(line), 50, line)
 })
