@@ -4,11 +4,14 @@ import { spawn } from 'node:child_process'
 import { EventEmitter, once } from 'node:events'
 
 import { createList, parseKeys } from '../lib/list.js'
+import { createScreen } from '../lib/screen.js'
 import { textWidth } from '../lib/width.js'
 
 const KEYS = {
   up: '\x1b[A',
   down: '\x1b[B',
+  right: '\x1b[C',
+  left: '\x1b[D',
   pageDown: '\x1b[6~',
   home: '\x1b[H',
   end: '\x1b[F',
@@ -61,13 +64,18 @@ function createTerminal({ columns = 60, rows = 30, now } = {}) {
     },
   })
 
-  terminal.select = createList({
-    input,
-    output,
-    exitEvents,
-    useColors: false,
-    now,
-  })
+  terminal.screenState = createScreen({ output, exitEvents })
+  terminal.createSelect = (options = {}) =>
+    createList({
+      input,
+      output,
+      exitEvents,
+      screen: terminal.screenState,
+      useColors: false,
+      now,
+      ...options,
+    })
+  terminal.select = terminal.createSelect()
 
   terminal.type = (...keys) => {
     for (const key of keys) input.emit('data', Buffer.from(key))
@@ -75,8 +83,10 @@ function createTerminal({ columns = 60, rows = 30, now } = {}) {
 
   // Answer the last position request: the list's last line is on `row`.
   terminal.reply = row => terminal.type(`\x1b[${row};1R`)
-  terminal.click = row => terminal.type(`\x1b[<0;8;${row}M\x1b[<0;8;${row}m`)
-  terminal.hover = row => terminal.type(`\x1b[<35;8;${row}M`)
+  terminal.click = (row, column = 8) =>
+    terminal.type(`\x1b[<0;${column};${row}M\x1b[<0;${column};${row}m`)
+  terminal.hover = (row, column = 8) =>
+    terminal.type(`\x1b[<35;${column};${row}M`)
 
   // The lines of the last full drawing, without the position request.
   terminal.screen = () => {
@@ -97,10 +107,19 @@ function aligned(left, right, width = 59) {
 const projects = ['api', 'billing-api', 'design-system', 'docs', 'web'].map(
   name => ({ label: name, value: name, icon: '📁' }),
 )
-const actions = [
-  { label: 'Change workspace', value: 'change', action: true },
-  { label: 'Exit', value: null, action: true },
+const toolbar = [
+  { label: '⚙ Workspace', value: 'change' },
+  { label: '✕ Exit', value: null },
 ]
+
+// A header that draws the toolbar it is given on one line, and marks the
+// home name when asked, as the box from ui.js does.
+function testHeader(width, { toolbar = [], home = false } = {}) {
+  return [
+    [['  '], ['◆ home', ...(home ? [{ target: 'home' }] : [])], [' ']],
+    [['  '], ...toolbar],
+  ]
+}
 
 test('parseKeys decodes arrows, editing keys and text', () => {
   assert.deepEqual(parseKeys('\x1b[A\x1bOB\x1b[5~\x1b[6~\x1b[1~\x1b[4~'), [
@@ -119,6 +138,12 @@ test('parseKeys decodes arrows, editing keys and text', () => {
     { name: 'backspace' },
     { name: 'ctrl-c' },
     { name: 'ctrl-u' },
+    { name: 'tab' },
+  ])
+  assert.deepEqual(parseKeys('\x1b[C\x1bOD\x1b[Z'), [
+    { name: 'right' },
+    { name: 'left' },
+    { name: 'shift-tab' },
   ])
 })
 
@@ -128,8 +153,8 @@ test('parseKeys tells Escape apart from escape sequences', () => {
     { name: 'escape' },
     { name: 'up' },
   ])
-  // Alt+x and Left are recognised and ignored.
-  assert.deepEqual(parseKeys('\x1bx\x1b[D'), [])
+  // Alt+x and F5 are recognised and ignored.
+  assert.deepEqual(parseKeys('\x1bx\x1b[15~'), [])
   assert.deepEqual(parseKeys('é😀'), [
     { name: 'char', text: 'é' },
     { name: 'char', text: '😀' },
@@ -140,7 +165,7 @@ test('select draws the list and returns the chosen value', async () => {
   const terminal = createTerminal()
   const result = terminal.select({
     message: 'Select a project',
-    items: [...projects, ...actions],
+    items: projects,
   })
 
   assert.deepEqual(terminal.screen(), [
@@ -151,11 +176,8 @@ test('select draws the list and returns the chosen value', async () => {
     '    📁 design-system',
     '    📁 docs',
     '    📁 web',
-    `  ${'─'.repeat(57)}`,
-    '    Change workspace',
-    '    Exit',
     '',
-    '  ↑↓ move · Enter select',
+    '  ↑↓ move · enter select',
   ])
 
   terminal.type(KEYS.down, KEYS.down, KEYS.enter)
@@ -164,7 +186,7 @@ test('select draws the list and returns the chosen value', async () => {
   // The list is replaced by a one-line summary of the answer.
   assert.ok(
     terminal.written.endsWith(
-      '\x1b[11A\r\x1b[J  Select a project  design-system\n\x1b[?25h',
+      '\x1b[8A\r\x1b[J  Select a project  design-system\n\x1b[?25h',
     ),
   )
 })
@@ -258,22 +280,25 @@ test('select rejects with an ExitPromptError on Ctrl+C', async () => {
   assert.equal(terminal.input.isRaw, false)
 })
 
-test('typing filters the list, best match first, and hides actions', async () => {
+test('typing filters the list, best match first', async () => {
   const terminal = createTerminal()
   const result = terminal.select({
     message: 'Select a project',
-    items: [...projects, ...actions],
+    items: projects,
+    toolbar,
+    header: testHeader,
   })
 
   terminal.type('a', 'p', 'i')
 
-  assert.deepEqual(terminal.screen(), [
+  // Buttons never match a search.
+  assert.deepEqual(terminal.screen().slice(3), [
     '  Select a project  api',
     '',
     '  ❯ 📁 api',
     '    📁 billing-api',
     '',
-    '  ↑↓ move · Enter select · Esc clear search',
+    '  ↑↓ move · enter select · tab buttons · esc clear search',
   ])
 
   terminal.type(KEYS.down, KEYS.enter)
@@ -286,7 +311,7 @@ test('Backspace edits the search and Escape clears it', async t => {
   const terminal = createTerminal()
   const result = terminal.select({
     message: 'Pick',
-    items: [...projects, ...actions],
+    items: projects,
   })
 
   terminal.type('d', 's', 'x')
@@ -302,8 +327,8 @@ test('Backspace edits the search and Escape clears it', async t => {
   terminal.type('x', KEYS.enter, KEYS.escape)
   t.mock.timers.tick(50)
 
-  // The full list is back, actions included, with the cursor kept.
-  assert.equal(terminal.screen().length, 12)
+  // The full list is back, with the cursor kept.
+  assert.equal(terminal.screen().length, 9)
 
   terminal.type(KEYS.escape, KEYS.up, KEYS.enter)
 
@@ -396,7 +421,6 @@ test('select starts on the default value and lines up the details', async () => 
         detail: 'vite build',
         hint: 'last run',
       },
-      { label: 'Back', value: null, action: true },
     ],
     default: 'build',
   })
@@ -406,10 +430,8 @@ test('select starts on the default value and lines up the details', async () => 
     '',
     '    dev    vite',
     aligned('  ❯ build  vite build', 'last run'),
-    `  ${'─'.repeat(57)}`,
-    '    Back',
     '',
-    '  ↑↓ move · Enter select',
+    '  ↑↓ move · enter select',
   ])
 
   terminal.type(KEYS.enter)
@@ -486,7 +508,7 @@ test('a header and a body are drawn above the message, and the header stays', as
 
   // 14 rows: the header, body, message, help and blank lines take 9, and one
   // row stays free, which leaves room for 4 items.
-  assert.match(terminal.screen().at(-1), /1\/5$/)
+  assert.equal(terminal.screen().at(-2), '  ▼ 1 more')
 
   // 13 lines ending on row 20: api is on row 15.
   terminal.reply(20)
@@ -501,12 +523,7 @@ test('a header and a body are drawn above the message, and the header stays', as
 
 test('hover gives the whole row a grey background when colours are on', async () => {
   const terminal = createTerminal()
-  const select = createList({
-    input: terminal.input,
-    output: terminal.output,
-    exitEvents: terminal.exitEvents,
-    useColors: true,
-  })
+  const select = terminal.createSelect({ useColors: true })
   const result = select({ message: 'Pick', items: projects, mouse: true })
 
   // 9 lines ending on row 10: billing-api is on row 5.
@@ -552,16 +569,21 @@ test('a long list scrolls to keep the cursor visible', async () => {
   const result = terminal.select({ message: 'Pick', items })
 
   // 10 rows leave room for 5 items next to the message, the help line and
-  // the blank lines between them.
+  // the hint lines around the items.
   assert.equal(terminal.screen().length, 9)
-  assert.match(terminal.screen().at(-1), /1\/40$/)
+  assert.equal(terminal.screen()[1], '')
+  assert.equal(terminal.screen().at(-2), '  ▼ 35 more')
 
   terminal.type(KEYS.pageDown)
   assert.ok(terminal.screen().includes('  ❯ project-5'))
-  assert.match(terminal.screen().at(-1), /5\/40$/)
+
+  terminal.type(KEYS.down)
+  assert.equal(terminal.screen()[1], '  ▲ 1 more')
+  assert.equal(terminal.screen().at(-2), '  ▼ 34 more')
 
   terminal.type(KEYS.end)
   assert.equal(terminal.screen().at(-3), '  ❯ project-40')
+  assert.equal(terminal.screen().at(-2), '')
 
   terminal.type(KEYS.home)
   assert.equal(terminal.screen()[2], '  ❯ project-1')
@@ -623,12 +645,7 @@ test('select redraws from its first line after the terminal gets narrower', asyn
 
 test('select highlights matched characters when colours are on', async () => {
   const terminal = createTerminal()
-  const select = createList({
-    input: terminal.input,
-    output: terminal.output,
-    exitEvents: terminal.exitEvents,
-    useColors: true,
-  })
+  const select = terminal.createSelect({ useColors: true })
   const result = select({ message: 'Pick', items: projects })
 
   terminal.type('d', 'c')
@@ -762,45 +779,44 @@ test('a click selects an item and a second click opens it', async () => {
   const terminal = createTerminal()
   const result = terminal.select({
     message: 'Pick',
-    items: [...projects, ...actions],
+    items: projects,
     mouse: true,
   })
 
-  // 12 lines (message, 5 items, rule, 2 actions, help and the blank lines)
-  // ending on row 20: api is on row 11, the rule on row 16.
+  // 9 lines (message, 5 items, help and the blank lines) ending on row 20:
+  // the message is on row 12, api on row 14.
   terminal.reply(20)
-  terminal.click(13)
+  terminal.click(16)
 
   assert.equal(terminal.screen()[4], '  ❯ 📁 design-system')
 
-  // The help line, the rule, blank lines and rows outside the list do nothing.
+  // The help line, blank lines and rows outside the list do nothing.
   terminal.reply(20)
   terminal.click(20)
-  terminal.click(16)
-  terminal.click(10)
+  terminal.click(19)
+  terminal.click(13)
   terminal.click(8)
 
   assert.equal(terminal.screen()[4], '  ❯ 📁 design-system')
 
-  terminal.click(13)
+  terminal.click(16)
 
   assert.equal(await result, 'design-system')
 })
 
-test('Back and Exit entries can be clicked', async () => {
+test('with clickOpens, one click opens an item', async () => {
   const terminal = createTerminal()
   const result = terminal.select({
     message: 'Pick',
-    items: [...projects, ...actions],
+    items: projects,
     mouse: true,
+    clickOpens: true,
   })
 
   terminal.reply(20)
-  terminal.click(18)
-  terminal.reply(20)
-  terminal.click(18)
+  terminal.click(15)
 
-  assert.equal(await result, null)
+  assert.equal(await result, 'billing-api')
 })
 
 test('clicks are ignored briefly after an item opens', async () => {
@@ -915,7 +931,7 @@ test('pressing the wheel opens the selected item, wherever the pointer is', asyn
 
   assert.equal(
     terminal.screen()[8],
-    '  ↑↓ move · Enter select · Middle-click select',
+    '  ↑↓ move · enter select · middle-click select',
   )
 
   terminal.reply(10)
@@ -999,7 +1015,7 @@ test('a note is shown under the list, wrapped to its width', async () => {
     '',
     '  ❯ 📁 api',
     '',
-    '  ↑↓ move · Enter select',
+    '  ↑↓ move · enter select',
     '',
     '  Mouse support has not been',
     '  checked here yet.',
@@ -1007,4 +1023,338 @@ test('a note is shown under the list, wrapped to its width', async () => {
 
   terminal.type(KEYS.enter)
   await result
+})
+
+test('Escape clears the search, then goes back with an empty search', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const terminal = createTerminal()
+  const result = terminal.select({
+    message: 'Pick',
+    items: projects,
+    escape: { value: 'back', label: 'back' },
+  })
+
+  assert.equal(terminal.screen().at(-1), '  ↑↓ move · enter select · esc back')
+
+  terminal.type('w', KEYS.escape)
+  t.mock.timers.tick(50)
+
+  // Only the search was cleared.
+  assert.ok(terminal.screen()[0].includes('type to search'))
+  assert.ok(terminal.screen().includes('  ❯ 📁 web'))
+
+  // An arrow key split over two chunks is still not Escape.
+  terminal.type('\x1b')
+  t.mock.timers.tick(49)
+  terminal.type('[A')
+  assert.ok(terminal.screen().includes('  ❯ 📁 docs'))
+
+  terminal.type(KEYS.escape)
+  t.mock.timers.tick(50)
+
+  assert.equal(await result, 'back')
+})
+
+test('without an escape value, Escape on an empty search does nothing', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const terminal = createTerminal()
+  const result = terminal.select({ message: 'Pick', items: projects })
+
+  terminal.type(KEYS.escape)
+  t.mock.timers.tick(50)
+  terminal.type(KEYS.enter)
+
+  assert.equal(await result, 'api')
+})
+
+test('toolbar buttons sit in the header and are clicked by column', async () => {
+  const terminal = createTerminal({ columns: 80 })
+  const result = terminal.select({
+    message: 'Pick',
+    items: projects,
+    toolbar,
+    header: testHeader,
+    mouse: true,
+    fullscreen: true,
+  })
+
+  assert.deepEqual(terminal.screen().slice(0, 4), [
+    '  ◆ home ',
+    '   ⚙ Workspace  ✕ Exit ',
+    '',
+    aligned('  Pick', 'type to search', 79),
+  ])
+  assert.equal(
+    terminal.screen().at(-1),
+    '  ↑↓ move · enter select · middle-click select · tab buttons',
+  )
+  // On the alternate screen, rows count from the top: nothing to ask.
+  assert.ok(!terminal.written.includes('\x1b[6n'))
+
+  // The margin and the columns past the last button do nothing.
+  terminal.click(2, 2)
+  terminal.click(2, 24)
+  assert.equal(terminal.screen()[5], '  ❯ 📁 api')
+
+  terminal.click(2, 18)
+
+  assert.equal(await result, null)
+})
+
+test('the home name in the header is a button', async () => {
+  const terminal = createTerminal()
+  const result = terminal.select({
+    message: 'Pick',
+    items: projects,
+    header: testHeader,
+    home: { value: 'home' },
+    mouse: true,
+    fullscreen: true,
+  })
+
+  terminal.click(1, 4)
+
+  assert.equal(await result, 'home')
+  // The summary keeps the header, then names the button.
+  assert.ok(
+    terminal.written.endsWith(
+      '  Pick  ◆ dev-workspace\n\x1b[?1006l\x1b[?1003l\x1b[?1000l\x1b[?25h',
+    ),
+  )
+})
+
+test('Tab and the arrow keys move the focus between buttons', async () => {
+  const terminal = createTerminal()
+  const result = terminal.select({
+    message: 'Pick',
+    items: projects,
+    toolbar,
+    header: testHeader,
+    home: { value: 'home' },
+  })
+  const header = () => terminal.screen().slice(0, 2)
+
+  terminal.type('\t')
+  // Without colours, brackets replace the spaces around a focused button.
+  assert.deepEqual(header(), [' [◆ home]', '   ⚙ Workspace  ✕ Exit '])
+  assert.match(terminal.screen().at(-1), /enter press/)
+
+  terminal.type('\t')
+  assert.deepEqual(header(), ['  ◆ home ', '  [⚙ Workspace] ✕ Exit '])
+
+  terminal.type(KEYS.right)
+  assert.equal(header()[1], '   ⚙ Workspace [✕ Exit]')
+
+  // At the last button, → stays; ← goes back, and Shift+Tab too.
+  terminal.type(KEYS.right, KEYS.left, '\x1b[Z', '\x1b[Z')
+  assert.deepEqual(header(), ['  ◆ home ', '   ⚙ Workspace  ✕ Exit '])
+
+  // From the list, Shift+Tab goes round to the last button.
+  terminal.type('\x1b[Z')
+  assert.equal(header()[1], '   ⚙ Workspace [✕ Exit]')
+
+  // An arrow key returns to the list.
+  terminal.type(KEYS.down)
+  assert.equal(header()[1], '   ⚙ Workspace  ✕ Exit ')
+  assert.ok(terminal.screen().includes('  ❯ 📁 billing-api'))
+
+  terminal.type('\t', '\t', KEYS.enter)
+
+  assert.equal(await result, 'change')
+})
+
+test('typing returns the focus to the list and searches', async () => {
+  const terminal = createTerminal()
+  const result = terminal.select({
+    message: 'Pick',
+    items: projects,
+    toolbar,
+    header: testHeader,
+  })
+
+  terminal.type('\t', 'w', KEYS.enter)
+
+  assert.equal(await result, 'web')
+})
+
+test('a focused button is drawn in reverse, and a hovered one in grey', async () => {
+  const terminal = createTerminal()
+  const select = terminal.createSelect({ useColors: true })
+  const result = select({
+    message: 'Pick',
+    items: projects,
+    toolbar,
+    header: testHeader,
+    mouse: true,
+    fullscreen: true,
+  })
+
+  terminal.type('\t')
+  assert.ok(terminal.screen()[1].includes('\x1b[7m ⚙ Workspace \x1b[27m'))
+
+  terminal.hover(2, 18)
+  assert.ok(terminal.screen()[1].includes('\x1b[100m ✕ Exit \x1b[49m'))
+
+  terminal.type(KEYS.enter)
+  assert.equal(await result, 'change')
+})
+
+const scripts = [
+  { label: 'dev', value: 'dev', detail: 'vite', hint: 'last run' },
+  { label: 'build', value: 'build', detail: 'vite build' },
+]
+const rowButtons = [
+  { label: '▶ run', value: value => `run ${value}` },
+  { label: '… args', value: value => `args ${value}`, right: true },
+]
+
+test('the hovered item shows its row buttons in place of its tag', async () => {
+  const terminal = createTerminal()
+  const result = terminal.select({
+    message: 'Pick',
+    items: scripts,
+    rowButtons,
+    mouse: true,
+    fullscreen: true,
+  })
+
+  assert.equal(terminal.screen()[2], aligned('  ❯ dev    vite', 'last run'))
+  assert.equal(
+    terminal.screen().at(-1),
+    '  ↑↓ move · enter select · middle-click select · → args',
+  )
+
+  terminal.hover(4)
+  assert.equal(terminal.screen()[2], aligned('  ❯ dev    vite', 'last run'))
+  assert.equal(
+    terminal.screen()[3],
+    aligned('  › build  vite build', ' ▶ run  … args '),
+  )
+
+  // ▶ run covers columns 45 to 51 of the row.
+  terminal.click(4, 47)
+
+  assert.equal(await result, 'run build')
+})
+
+test('→ presses the right row button of the selected item', async () => {
+  const terminal = createTerminal()
+  const result = terminal.select({
+    message: 'Pick',
+    items: scripts,
+    rowButtons,
+  })
+
+  // Without the mouse, the buttons never show.
+  assert.ok(!terminal.screen().join('\n').includes('▶ run'))
+
+  terminal.type(KEYS.down, KEYS.left, KEYS.right)
+
+  assert.equal(await result, 'args build')
+})
+
+test('a click on a scroll hint moves a page', async () => {
+  const terminal = createTerminal({ rows: 10 })
+  const items = Array.from({ length: 40 }, (_, index) => ({
+    label: `project-${index + 1}`,
+    value: index + 1,
+  }))
+  const result = terminal.select({
+    message: 'Pick',
+    items,
+    mouse: true,
+    fullscreen: true,
+  })
+
+  // On the alternate screen no row stays free: 6 items, from row 3.
+  assert.equal(terminal.screen().length, 10)
+  assert.equal(terminal.screen()[8], '  ▼ 34 more')
+
+  terminal.click(9, 4)
+  terminal.click(9, 4)
+  assert.equal(terminal.screen()[1], '  ▲ 5 more')
+  assert.equal(terminal.screen()[7], '  ❯ project-11')
+
+  terminal.click(2, 4)
+  assert.equal(terminal.screen()[2], '  ❯ project-6')
+
+  terminal.type(KEYS.enter)
+  assert.equal(await result, 6)
+})
+
+test('a list of buttons starts on the first one, and keys press them', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const terminal = createTerminal()
+  const options = {
+    body: [['No scripts.', 'yellow']],
+    buttons: [
+      { label: '↻ Run again', value: 'again', key: 'r' },
+      { label: '← Back', value: 'back' },
+    ],
+    escape: { value: 'back', label: 'back' },
+    searchable: false,
+  }
+  const first = terminal.select(options)
+
+  assert.deepEqual(terminal.screen(), [
+    '  No scripts.',
+    '',
+    ' [↻ Run again] ← Back ',
+    '',
+    '  enter press · ←→ move · esc back',
+  ])
+
+  terminal.type(KEYS.right)
+  assert.equal(terminal.screen()[2], '  ↻ Run again [← Back]')
+
+  terminal.type('x', 'R')
+  assert.equal(await first, 'again')
+
+  const second = terminal.select(options)
+
+  terminal.type(KEYS.escape)
+  t.mock.timers.tick(50)
+  assert.equal(await second, 'back')
+
+  const third = terminal.select(options)
+
+  terminal.type('\t', KEYS.enter)
+  assert.equal(await third, 'back')
+})
+
+test('a fullscreen list draws on the alternate screen, from the top', async () => {
+  const terminal = createTerminal({ rows: 6 })
+  const result = terminal.select({
+    message: 'Pick',
+    items: projects,
+    header: testHeader,
+    note: 'A note.',
+    fullscreen: true,
+  })
+
+  assert.ok(terminal.written.startsWith('\x1b[?1049h'))
+  assert.equal(terminal.screenState.active, true)
+  // Never taller than the window.
+  assert.equal(terminal.screen().length, 6)
+
+  // A resize redraws everything from the top-left corner, header included.
+  terminal.written = ''
+  terminal.output.columns = 30
+  terminal.output.emit('resize')
+  assert.ok(terminal.written.startsWith('\x1b[H\x1b[J  ◆ home'))
+
+  terminal.type(KEYS.enter)
+  assert.equal(await result, 'api')
+  // The next screen draws over it.
+  assert.equal(terminal.screenState.active, true)
+
+  // An inline list leaves the alternate screen first.
+  terminal.written = ''
+  const next = terminal.select({ message: 'Pick', items: projects })
+
+  assert.ok(terminal.written.startsWith('\x1b[?1049l'))
+  assert.equal(terminal.screenState.active, false)
+
+  terminal.type(KEYS.enter)
+  await next
 })

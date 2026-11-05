@@ -66,12 +66,13 @@ node scripts/try-install.js --again -- web dev  # with arguments for dws
 | `json.js`             | Parsing JSON files, ignoring a leading byte order mark         |
 | `aliases.js`          | Creating, listing and removing custom aliases                  |
 | `prompts.js`          | The questions and menus shown by `cli.js`                      |
-| `list.js`             | The list used by every menu: keys, mouse, drawing, search      |
+| `list.js`             | The list used by every menu: keys, mouse, buttons, drawing     |
+| `screen.js`           | Entering and leaving the terminal's alternate screen           |
 | `fuzzy.js`            | Fuzzy matching and ranking for the list search                 |
 | `width.js`            | Measuring, cutting and wrapping text by its terminal width     |
-| `ui.js`               | The colour theme, the header box and screen clearing           |
+| `ui.js`               | The colour theme and the header box                            |
 
-Menus use the list in `list.js`, which owns the terminal while it is open; free-text and yes/no questions still use `@inquirer/prompts`. The list also draws the header box from `ui.js`, which `cli.js` passes as `header`, so the whole screen redraws together. Test the list through `createList()` with fake input and output streams, as `test/list.test.js` does, rather than in a real terminal. With `mouse: true`, the list asks for the cursor position after each drawing; a test answers with a reply such as `[20;1R` (the last line is on row 20) before sending clicks. To see how a real terminal reports the mouse, run `node scripts/mouse-check.js` in it, and record the result in the roadmap's terminal support table and in `detectTerminal()`.
+Menus use the list in `list.js`, which owns the terminal while it is open; free-text and yes/no questions still use `@inquirer/prompts`. The list also draws the header box from `ui.js`, which `cli.js` passes as `header`, so the whole screen redraws together. Actions such as Back or Exit are buttons, never list items: segments that carry a `{ target }`, whose columns the list records so clicks are mapped by row and column, and which Tab reaches from the keyboard. Menus with `fullscreen: true` are drawn on the alternate screen from `screen.js`, from its top row; pass a screen from `createScreen()` to `createList()` in tests. Test the list through `createList()` with fake input and output streams, as `test/list.test.js` does, rather than in a real terminal. With `mouse: true`, the list asks for the cursor position after each drawing; a test answers with a reply such as `[20;1R` (the last line is on row 20) before sending clicks. To see how a real terminal reports the mouse, run `node scripts/mouse-check.js` in it, and record the result in the roadmap's terminal support table and in `detectTerminal()`.
 
 Every colour comes from the theme in `ui.js`: `color()` for plain output, `styleText()` for the list, and `inquirerTheme()` for the `@inquirer/prompts` questions. Do not write ANSI codes elsewhere, so `NO_COLOR` and `FORCE_COLOR` are always respected.
 

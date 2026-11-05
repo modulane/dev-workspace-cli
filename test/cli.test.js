@@ -100,13 +100,15 @@ function createDependencies(overrides = {}) {
         calls.showNote = onNoteShown
       },
       waitAfterCommand: async () => undefined,
-      waitForBack: async (message, options) => {
+      waitForBack: async options => {
         calls.menus.push(options)
       },
     },
 
     ui: {
-      clearScreen: () => undefined,
+      leaveScreen: () => {
+        calls.leftScreen = (calls.leftScreen ?? 0) + 1
+      },
       color: value => String(value),
       headerLines,
     },
@@ -296,7 +298,7 @@ test('CLI runs a selected script and reports success', async () => {
     },
     prompts: {
       chooseProject: async () => project,
-      chooseScript: async () => script,
+      chooseScript: async () => ({ script, withArguments: false }),
       waitAfterCommand: async () => undefined,
     },
     commands: {
@@ -313,7 +315,7 @@ test('CLI runs a selected script and reports success', async () => {
   let scriptSelections = 0
   dependencies.prompts.chooseScript = async () => {
     scriptSelections++
-    return scriptSelections === 1 ? script : null
+    return scriptSelections === 1 ? { script, withArguments: false } : null
   }
 
   await createCli(dependencies).run()
@@ -348,7 +350,7 @@ test('CLI reports a non-zero script exit code', async () => {
 
   let scriptSelections = 0
   dependencies.prompts.chooseScript = async () =>
-    ++scriptSelections === 1 ? script : null
+    ++scriptSelections === 1 ? { script, withArguments: false } : null
 
   await createCli(dependencies).run()
 
@@ -385,7 +387,7 @@ test('CLI reports a command interrupted by a signal', async () => {
 
   let scriptSelections = 0
   dependencies.prompts.chooseScript = async () =>
-    ++scriptSelections === 1 ? script : null
+    ++scriptSelections === 1 ? { script, withArguments: false } : null
 
   await createCli(dependencies).run()
 
@@ -449,7 +451,7 @@ test('CLI handles errors when starting a command', async () => {
 
   let scriptSelections = 0
   dependencies.prompts.chooseScript = async () =>
-    ++scriptSelections === 1 ? script : null
+    ++scriptSelections === 1 ? { script, withArguments: false } : null
 
   await createCli(dependencies).run()
 
@@ -483,16 +485,17 @@ test('CLI treats prompt abortion as a normal exit', async () => {
   assert.ok(calls.logs.some(args => args.join(' ').includes('Goodbye!')))
 })
 
-test('CLI propagates unexpected errors', async () => {
-  const { dependencies } = createDependencies({
-    ui: {
-      clearScreen: () => {
+test('CLI propagates unexpected errors, after leaving the alternate screen', async () => {
+  const { dependencies, calls } = createDependencies({
+    prompts: {
+      chooseProject: async () => {
         throw new Error('Unexpected UI failure')
       },
     },
   })
 
   await assert.rejects(createCli(dependencies).start(), /Unexpected UI failure/)
+  assert.equal(calls.leftScreen, 1)
 })
 
 function loggedText(calls) {
@@ -863,7 +866,8 @@ test('CLI runs scripts with the detected package manager', async () => {
     },
     prompts: {
       chooseProject: async () => (++projectSelections === 1 ? project : null),
-      chooseScript: async () => (++scriptSelections === 1 ? script : null),
+      chooseScript: async () =>
+        ++scriptSelections === 1 ? { script, withArguments: false } : null,
     },
     commands: {
       runCommand: async (...args) => {
@@ -983,8 +987,8 @@ function directDependencies(overrides = {}) {
       ...overrides.prompts,
     },
     ui: {
-      clearScreen: () => {
-        throw new Error('direct mode must not clear the screen')
+      leaveScreen: () => {
+        throw new Error('direct mode never uses the alternate screen')
       },
     },
   })
@@ -1302,7 +1306,8 @@ test('CLI keeps going when the history cannot be saved', async () => {
     },
     prompts: {
       chooseProject: async () => (++projectSelections === 1 ? project : null),
-      chooseScript: async () => (++scriptSelections === 1 ? script : null),
+      chooseScript: async () =>
+        ++scriptSelections === 1 ? { script, withArguments: false } : null,
     },
   })
 
@@ -1315,7 +1320,7 @@ test('CLI runs a script with arguments typed in the menu', async () => {
   const project = projectFixtures()[0]
   const dev = { name: 'dev', command: 'vite' }
   const answers = [RUN_WITH_ARGUMENTS, RUN_WITH_ARGUMENTS, null]
-  const forArguments = [null, dev]
+  const forArguments = [null, { script: dev, withArguments: true }]
   const runs = []
   let projectSelections = 0
 
@@ -1377,7 +1382,8 @@ test('CLI runs the same script again when asked', async () => {
     },
     prompts: {
       chooseProject: async () => (++projectSelections === 1 ? project : null),
-      chooseScript: async () => (++scriptSelections === 1 ? script : null),
+      chooseScript: async () =>
+        ++scriptSelections === 1 ? { script, withArguments: false } : null,
       waitAfterCommand: async () => again.shift(),
     },
   })
@@ -1581,4 +1587,80 @@ test('CLI runs a script directly without a terminal for input', async () => {
   })
 
   assert.equal(await createCli(dependencies).start(['web', 'dev']), 0)
+})
+
+test('CLI asks for arguments when a script is picked with its args button', async () => {
+  const project = projectFixtures()[0]
+  const dev = { name: 'dev', command: 'vite' }
+  const answers = [{ script: dev, withArguments: true }, null]
+  const runs = []
+  let projectSelections = 0
+
+  const { dependencies, calls } = createDependencies({
+    workspace: {
+      getProjects: async () => [project],
+      getScripts: async () => [dev],
+    },
+    commands: {
+      runCommand: async (...args) => {
+        // The script's output goes to the normal screen.
+        runs.push({ args, leftScreen: calls.leftScreen })
+        return { code: 0 }
+      },
+    },
+    prompts: {
+      chooseProject: async () => (++projectSelections === 1 ? project : null),
+      chooseScript: async () => answers.shift(),
+      askForArguments: async () => ['--open'],
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.deepEqual(runs, [
+    {
+      args: [
+        'dev',
+        project.directory,
+        { packageManager: 'npm', args: ['--open'] },
+      ],
+      leftScreen: 1,
+    },
+  ])
+  // Once more when the menus end.
+  assert.equal(calls.leftScreen, 2)
+})
+
+test('CLI draws the header on the list that asks which script takes arguments', async () => {
+  const project = projectFixtures()[0]
+  const dev = { name: 'dev', command: 'vite' }
+  const answers = [RUN_WITH_ARGUMENTS, null]
+  const headers = []
+  let projectSelections = 0
+
+  const { dependencies } = createDependencies({
+    workspace: {
+      getProjects: async () => [project],
+      getScripts: async () => [dev],
+    },
+    prompts: {
+      chooseProject: async () => (++projectSelections === 1 ? project : null),
+      chooseScript: async (scripts, options) => {
+        headers.push(options.header)
+        return options.forArguments ? null : answers.shift()
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.equal(headers.length, 3)
+  assert.ok(headers.every(header => header === headers[0]))
+
+  // The header passes the list's buttons on to the box.
+  const [, path] = headers[0](60, {
+    toolbar: [[' ← Back ', { target: 'toolbar:0' }]],
+  })
+
+  assert.ok(path.some(([text]) => text === ' ← Back '))
 })

@@ -188,3 +188,49 @@ test('headerLines shortens a long workspace path in the middle', () => {
 
   for (const line of lines) assert.equal(textWidth(line), 50, line)
 })
+
+test('headerLines puts the toolbar on the workspace line', () => {
+  const toolbar = [
+    [' ⚙ Workspace ', { target: 'toolbar:0' }],
+    [' ✕ Exit ', { target: 'toolbar:1' }],
+  ]
+  const workspace = `/${'folder/'.repeat(8)}projects`
+  const lines = header({ workspace, toolbar }, 60)
+
+  assert.ok(lines[1].endsWith(' ⚙ Workspace  ✕ Exit │'), lines[1])
+  // The path is shortened to fit next to the buttons.
+  assert.ok(
+    lines[1].includes('│  /…/folder/folder/folder/projects  ⚙'),
+    lines[1],
+  )
+
+  for (const line of lines) assert.equal(textWidth(line), 60, line)
+
+  // The buttons keep their targets.
+  const [, path] = headerLines({ workspace, toolbar }, 60)
+
+  assert.ok(path.includes(toolbar[1]))
+})
+
+test('headerLines leaves the toolbar out when the path would get too short', () => {
+  const toolbar = [[' … Run with args ', { target: 'toolbar:0' }]]
+  const [, path] = header({ workspace: '/projects', toolbar }, 26)
+
+  assert.equal(path, '  │  /projects           │')
+})
+
+test('headerLines marks the name as the home button when asked', () => {
+  const [plain] = headerLines({ workspace: '/p' }, 40)
+  const [top] = headerLines({ workspace: '/p', home: true }, 40)
+  const [cut] = headerLines(
+    { workspace: '/p', crumbs: ['a-very-long-project-name'], home: true },
+    30,
+  )
+
+  assert.ok(!plain.some(segment => segment.length > 2))
+  assert.deepEqual(top.slice(2, 4), [
+    ['◆', 'cyan', { target: 'home' }],
+    [' dev-workspace', 'bold', { target: 'home' }],
+  ])
+  assert.deepEqual(cut[3], [' dev-workspace', 'bold', { target: 'home' }])
+})

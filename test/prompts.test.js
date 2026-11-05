@@ -66,7 +66,7 @@ test('confirmWorkspaceChange defaults to true', async () => {
   ])
 })
 
-test('chooseProject lists projects, then workspace and exit actions', async () => {
+test('chooseProject lists projects, with workspace and exit buttons', async () => {
   const projects = [
     { name: 'project-a', directory: '/projects/a' },
     { name: 'project-b', directory: '/projects/b' },
@@ -83,14 +83,16 @@ test('chooseProject lists projects, then workspace and exit actions', async () =
     items: [
       { label: 'project-a', value: projects[0] },
       { label: 'project-b', value: projects[1] },
-      {
-        icon: '⚙',
-        label: 'Change workspace',
-        value: CHANGE_WORKSPACE,
-        action: true,
-      },
-      { icon: '✕', label: 'Exit', value: null, action: true },
     ],
+    toolbar: [
+      { label: '⚙ Workspace', value: CHANGE_WORKSPACE },
+      { label: '✕ Exit', value: null },
+    ],
+    // Escape exits, and one click opens a project.
+    escape: { value: null, label: 'exit' },
+    enter: 'open',
+    clickOpens: true,
+    fullscreen: true,
   })
 })
 
@@ -114,10 +116,8 @@ test('chooseProject supports an empty project list', async () => {
   const result = await prompts.chooseProject([])
 
   assert.equal(result, null)
-  assert.deepEqual(
-    calls.select[0].items.map(item => item.value),
-    [CHANGE_WORKSPACE, null],
-  )
+  assert.deepEqual(calls.select[0].items, [])
+  assert.equal(calls.select[0].toolbar.length, 2)
 })
 
 test('chooseProject shows recent projects first, under a heading', async () => {
@@ -131,15 +131,7 @@ test('chooseProject shows recent projects first, under a heading', async () => {
 
   assert.deepEqual(
     calls.select[0].items.map(item => item.separator ?? item.label),
-    [
-      'Recent',
-      'web',
-      'api',
-      'All projects',
-      'docs',
-      'Change workspace',
-      'Exit',
-    ],
+    ['Recent', 'web', 'api', 'All projects', 'docs'],
   )
 })
 
@@ -158,7 +150,7 @@ test('chooseProject disables folders without a package.json', async () => {
   ])
 })
 
-test('chooseScript lists scripts with their command, then the actions', async () => {
+test('chooseScript lists scripts with their command, with back and args buttons', async () => {
   const scripts = [
     { name: 'dev', command: 'nuxt dev' },
     { name: 'build', command: 'nuxt build' },
@@ -166,23 +158,56 @@ test('chooseScript lists scripts with their command, then the actions', async ()
   const { calls, prompts } = createPromptMocks({ select: scripts[0] })
 
   const result = await prompts.chooseScript(scripts)
+  const { rowButtons, ...options } = calls.select[0]
 
-  assert.equal(result, scripts[0])
-  assert.deepEqual(calls.select[0], {
+  // Enter or a click on the selected script runs it without arguments.
+  assert.deepEqual(result, { script: scripts[0], withArguments: false })
+  assert.deepEqual(options, {
     message: 'Select a script',
     items: [
       { label: 'dev', value: scripts[0], detail: 'nuxt dev' },
       { label: 'build', value: scripts[1], detail: 'nuxt build' },
-      {
-        icon: '…',
-        label: 'Run with arguments',
-        value: RUN_WITH_ARGUMENTS,
-        action: true,
-      },
-      { icon: '←', label: 'Back to projects', value: null, action: true },
     ],
+    toolbar: [
+      { label: '← Back', value: null },
+      { label: '… Run with args', value: RUN_WITH_ARGUMENTS },
+    ],
+    escape: { value: null, label: 'back' },
+    enter: 'run',
+    // The ◆ dev-workspace name goes back to the projects too.
+    home: { value: null },
     default: undefined,
+    fullscreen: true,
   })
+  assert.deepEqual(
+    rowButtons.map(({ label, right }) => ({ label, right })),
+    [
+      { label: '▶ run', right: undefined },
+      { label: '… args', right: true },
+    ],
+  )
+  assert.deepEqual(rowButtons[0].value(scripts[1]), {
+    script: scripts[1],
+    withArguments: false,
+  })
+  assert.deepEqual(rowButtons[1].value(scripts[1]), {
+    script: scripts[1],
+    withArguments: true,
+  })
+})
+
+test('chooseScript passes button answers on as they are', async () => {
+  const script = { name: 'dev', command: 'nuxt dev' }
+
+  for (const answer of [
+    null,
+    RUN_WITH_ARGUMENTS,
+    { script, withArguments: true },
+  ]) {
+    const { prompts } = createPromptMocks({ select: answer })
+
+    assert.equal(await prompts.chooseScript([script]), answer)
+  }
 })
 
 test('chooseScript keeps the hooks note apart, so the list never cuts it', async () => {
@@ -232,7 +257,18 @@ test('chooseScript asks which script to run with arguments', async () => {
   assert.equal(calls.select[0].message, 'Run which script with arguments?')
   assert.deepEqual(
     calls.select[0].items.map(item => item.label),
-    ['dev', 'Back to scripts'],
+    ['dev'],
+  )
+  assert.deepEqual(calls.select[0].toolbar, [{ label: '← Back', value: null }])
+  assert.equal(calls.select[0].rowButtons, undefined)
+  assert.equal(calls.select[0].home, undefined)
+
+  // The script picked here is run with arguments.
+  const { prompts: picking } = createPromptMocks({ select: scripts[0] })
+
+  assert.deepEqual(
+    await picking.chooseScript(scripts, { forArguments: true }),
+    { script: scripts[0], withArguments: true },
   )
 })
 
@@ -242,9 +278,9 @@ test('chooseScript supports an empty script list', async () => {
   const result = await prompts.chooseScript([])
 
   assert.equal(result, null)
-  assert.deepEqual(calls.select[0].items, [
-    { icon: '←', label: 'Back to projects', value: null, action: true },
-  ])
+  assert.deepEqual(calls.select[0].items, [])
+  // Nothing to run with arguments.
+  assert.deepEqual(calls.select[0].toolbar, [{ label: '← Back', value: null }])
 })
 
 test('askForArguments splits the answer and validates quotes', async () => {
@@ -261,27 +297,27 @@ test('askForArguments splits the answer and validates quotes', async () => {
   assert.equal(calls.input[0].validate('"open'), 'Close the " quote.')
 })
 
-test('waitForBack uses its default message', async () => {
+test('waitForBack shows a single Back button, which Escape presses too', async () => {
   const { calls, prompts } = createPromptMocks({ select: true })
 
   const result = await prompts.waitForBack()
 
   assert.equal(result, true)
   assert.deepEqual(calls.select[0], {
-    message: 'Return to projects',
-    items: [{ icon: '←', label: 'Back', value: true }],
+    buttons: [{ label: '← Back to projects', value: true }],
+    escape: { value: true, label: 'back' },
     searchable: false,
+    fullscreen: true,
   })
 })
 
-test('waitForBack accepts a custom message, header and body', async () => {
+test('waitForBack accepts a header and body', async () => {
   const { calls, prompts } = createPromptMocks({ select: true })
   const header = () => []
   const body = [['Could not read package.json', 'red']]
 
-  await prompts.waitForBack('Return to scripts', { header, body })
+  await prompts.waitForBack({ header, body })
 
-  assert.equal(calls.select[0].message, 'Return to scripts')
   assert.equal(calls.select[0].header, header)
   assert.deepEqual(calls.select[0].body, body)
 })
@@ -298,6 +334,7 @@ test('waitAfterCommand offers to run again first', async () => {
       { icon: '↻', label: 'Run again', value: true },
       { icon: '←', label: 'Back to scripts', value: false },
     ],
+    escape: { value: false, label: 'back' },
     searchable: false,
   })
 })
