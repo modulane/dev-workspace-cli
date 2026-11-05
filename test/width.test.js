@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { fitText, textWidth, wrapText } from '../lib/width.js'
+import { fitText, textWidth, truncateText, wrapText } from '../lib/width.js'
 
 test('textWidth counts emoji and wide characters as two columns', () => {
   assert.equal(textWidth('web'), 3)
@@ -40,4 +40,12 @@ test('wrapText breaks between words and cuts words wider than a line', () => {
   // A wide character never splits, even in a single column.
   assert.deepEqual(wrapText('日本', 1), ['日', '本'])
   assert.deepEqual(wrapText('', 10), [])
+})
+
+test('truncateText ends a shortened text with an ellipsis', () => {
+  assert.equal(truncateText('vite build', 20), 'vite build')
+  assert.equal(truncateText('vite build', 6), 'vite …')
+  // Each 日 takes two columns, so only two fit before the ellipsis.
+  assert.equal(truncateText('日本語です', 6), '日本…')
+  assert.equal(truncateText('vite', 0), '')
 })

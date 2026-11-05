@@ -88,6 +88,12 @@ function createTerminal({ columns = 60, rows = 30, now } = {}) {
   return terminal
 }
 
+// A line with `right` aligned to the list's right edge: a 60-column terminal
+// leaves 59 columns, as the last one stays free.
+function aligned(left, right, width = 59) {
+  return left + ' '.repeat(width - textWidth(left) - textWidth(right)) + right
+}
+
 const projects = ['api', 'billing-api', 'design-system', 'docs', 'web'].map(
   name => ({ label: name, value: name, icon: '📁' }),
 )
@@ -138,14 +144,17 @@ test('select draws the list and returns the chosen value', async () => {
   })
 
   assert.deepEqual(terminal.screen(), [
-    '  Select a project  type to search',
-    '  ❯ 📁  api',
-    '    📁  billing-api',
-    '    📁  design-system',
-    '    📁  docs',
-    '    📁  web',
+    aligned('  Select a project', 'type to search'),
+    '',
+    '  ❯ 📁 api',
+    '    📁 billing-api',
+    '    📁 design-system',
+    '    📁 docs',
+    '    📁 web',
+    `  ${'─'.repeat(57)}`,
     '    Change workspace',
     '    Exit',
+    '',
     '  ↑↓ move · Enter select',
   ])
 
@@ -155,7 +164,7 @@ test('select draws the list and returns the chosen value', async () => {
   // The list is replaced by a one-line summary of the answer.
   assert.ok(
     terminal.written.endsWith(
-      '\x1b[8A\r\x1b[J  Select a project  design-system\n\x1b[?25h',
+      '\x1b[11A\r\x1b[J  Select a project  design-system\n\x1b[?25h',
     ),
   )
 })
@@ -260,8 +269,10 @@ test('typing filters the list, best match first, and hides actions', async () =>
 
   assert.deepEqual(terminal.screen(), [
     '  Select a project  api',
-    '  ❯ 📁  api',
-    '    📁  billing-api',
+    '',
+    '  ❯ 📁 api',
+    '    📁 billing-api',
+    '',
     '  ↑↓ move · Enter select · Esc clear search',
   ])
 
@@ -282,9 +293,9 @@ test('Backspace edits the search and Escape clears it', async t => {
   assert.ok(terminal.screen().some(line => line.includes('No matches')))
 
   terminal.type(KEYS.backspace)
-  assert.deepEqual(terminal.screen().slice(1, 3), [
-    '  ❯ 📁  design-system',
-    '    📁  docs',
+  assert.deepEqual(terminal.screen().slice(2, 4), [
+    '  ❯ 📁 design-system',
+    '    📁 docs',
   ])
 
   // Enter does nothing while nothing matches.
@@ -292,7 +303,7 @@ test('Backspace edits the search and Escape clears it', async t => {
   t.mock.timers.tick(50)
 
   // The full list is back, actions included, with the cursor kept.
-  assert.equal(terminal.screen().length, 9)
+  assert.equal(terminal.screen().length, 12)
 
   terminal.type(KEYS.escape, KEYS.up, KEYS.enter)
 
@@ -306,7 +317,7 @@ test('Escape keeps the selected item when clearing the search', async t => {
 
   terminal.type('w', 'e', KEYS.escape)
   t.mock.timers.tick(50)
-  assert.ok(terminal.screen().includes('  ❯ 📁  web'))
+  assert.ok(terminal.screen().includes('  ❯ 📁 web'))
 
   terminal.type(KEYS.enter)
   assert.equal(await result, 'web')
@@ -323,7 +334,7 @@ test('an arrow key split over two chunks is not read as Escape', async t => {
 
   // The search is kept, and Down moved to the second match.
   assert.ok(terminal.screen()[0].includes('Pick  a'))
-  assert.ok(terminal.screen().includes('  ❯ 📁  billing-api'))
+  assert.ok(terminal.screen().includes('  ❯ 📁 billing-api'))
 
   terminal.type(KEYS.enter)
   assert.equal(await result, 'billing-api')
@@ -357,12 +368,14 @@ test('select skips disabled items and separators', async () => {
     ],
   })
 
-  assert.deepEqual(terminal.screen().slice(0, 6), [
-    '  Pick  type to search',
-    '  Recent',
+  assert.deepEqual(terminal.screen().slice(0, 8), [
+    aligned('  Pick', 'type to search'),
+    '',
+    '  RECENT',
     '  ❯ web',
-    '  Projects',
-    '    notes (no package.json)',
+    '',
+    '  PROJECTS',
+    aligned('    notes', '(no package.json)'),
     '    api',
   ])
 
@@ -371,32 +384,144 @@ test('select skips disabled items and separators', async () => {
   assert.equal(await result, 'api')
 })
 
-test('select starts on the default value and shows its description', async () => {
+test('select starts on the default value and lines up the details', async () => {
   const terminal = createTerminal()
   const result = terminal.select({
     message: 'Select a script',
     items: [
-      { label: 'dev', value: 'dev', description: 'vite' },
+      { label: 'dev', value: 'dev', detail: 'vite' },
       {
         label: 'build',
         value: 'build',
-        description: 'vite build',
-        hint: '(last run)',
+        detail: 'vite build',
+        hint: 'last run',
       },
+      { label: 'Back', value: null, action: true },
     ],
     default: 'build',
   })
 
   assert.deepEqual(terminal.screen(), [
-    '  Select a script  type to search',
-    '    dev',
-    '  ❯ build (last run)',
-    '  vite build',
+    aligned('  Select a script', 'type to search'),
+    '',
+    '    dev    vite',
+    aligned('  ❯ build  vite build', 'last run'),
+    `  ${'─'.repeat(57)}`,
+    '    Back',
+    '',
     '  ↑↓ move · Enter select',
   ])
 
   terminal.type(KEYS.enter)
   assert.equal(await result, 'build')
+})
+
+test('a detail is cut to fit, keeping its end whole', async () => {
+  const terminal = createTerminal({ columns: 40 })
+  const result = terminal.select({
+    message: 'Pick',
+    items: [
+      {
+        label: 'build',
+        value: 1,
+        detail: `node ${'x'.repeat(100)}.js`,
+        detailEnd: '  (+ prebuild)',
+        hint: 'last run',
+      },
+      // Each 日 takes two columns.
+      { label: 'echo', value: 2, detail: `echo ${'日'.repeat(40)}` },
+    ],
+  })
+
+  const [build, echo] = terminal.screen().slice(2, 4)
+
+  assert.equal(build, '  ❯ build  nod…  (+ prebuild)  last run')
+  assert.ok(echo.endsWith('…'), echo)
+  assert.ok(textWidth(echo) <= 39, echo)
+
+  terminal.type(KEYS.enter)
+  await result
+})
+
+test('a tag follows the label when the line has no room to align it', async () => {
+  const terminal = createTerminal({ columns: 20 })
+  const result = terminal.select({
+    message: 'Pick',
+    items: [
+      { label: 'a-long-name', value: 1, detail: 'vite', hint: 'last run' },
+    ],
+  })
+
+  // 19 columns: no room for the detail, and the tag is cut at the edge.
+  assert.equal(terminal.screen()[2], '  ❯ a-long-name  la')
+
+  terminal.type(KEYS.enter)
+  await result
+})
+
+test('a header and a body are drawn above the message, and the header stays', async () => {
+  const terminal = createTerminal({ rows: 14 })
+  const widths = []
+  const result = terminal.select({
+    message: 'Pick',
+    items: projects,
+    header: width => {
+      widths.push(width)
+      return [[['  '], ['[box]', 'dim']]]
+    },
+    body: [['Could not read package.json', 'red'], ['Fix it.']],
+    mouse: true,
+  })
+
+  assert.deepEqual(terminal.screen().slice(0, 7), [
+    '  [box]',
+    '',
+    '  Could not read package.json',
+    '  Fix it.',
+    '',
+    aligned('  Pick', 'type to search'),
+    '',
+  ])
+  assert.equal(widths.at(-1), 59)
+
+  // 14 rows: the header, body, message, help and blank lines take 9, and one
+  // row stays free, which leaves room for 4 items.
+  assert.match(terminal.screen().at(-1), /1\/5$/)
+
+  // 13 lines ending on row 20: api is on row 15.
+  terminal.reply(20)
+  terminal.click(16)
+  terminal.reply(20)
+  terminal.click(16)
+
+  assert.equal(await result, 'billing-api')
+  // The summary replaces the list, under the header.
+  assert.ok(terminal.written.includes('\x1b[J  [box]\n\n  Pick  billing-api\n'))
+})
+
+test('hover gives the whole row a grey background when colours are on', async () => {
+  const terminal = createTerminal()
+  const select = createList({
+    input: terminal.input,
+    output: terminal.output,
+    exitEvents: terminal.exitEvents,
+    useColors: true,
+  })
+  const result = select({ message: 'Pick', items: projects, mouse: true })
+
+  // 9 lines ending on row 10: billing-api is on row 5.
+  terminal.reply(10)
+  terminal.hover(5)
+
+  const line = terminal.screen()[3]
+
+  assert.ok(line.startsWith('\x1b[100m  \x1b[49m'), JSON.stringify(line))
+  assert.equal(textWidth(line), 59)
+  assert.ok(line.endsWith(`\x1b[100m${' '.repeat(41)}\x1b[49m`), line)
+  assert.ok(!terminal.screen()[2].includes('\x1b[100m'))
+
+  terminal.type(KEYS.enter)
+  await result
 })
 
 test('a list that is not searchable ignores typing', async () => {
@@ -426,19 +551,20 @@ test('a long list scrolls to keep the cursor visible', async () => {
   }))
   const result = terminal.select({ message: 'Pick', items })
 
-  // 10 rows leave room for 6 items, the message and the help line.
-  assert.equal(terminal.screen().length, 8)
+  // 10 rows leave room for 5 items next to the message, the help line and
+  // the blank lines between them.
+  assert.equal(terminal.screen().length, 9)
   assert.match(terminal.screen().at(-1), /1\/40$/)
 
   terminal.type(KEYS.pageDown)
-  assert.ok(terminal.screen().includes('  ❯ project-6'))
-  assert.match(terminal.screen().at(-1), /6\/40$/)
+  assert.ok(terminal.screen().includes('  ❯ project-5'))
+  assert.match(terminal.screen().at(-1), /5\/40$/)
 
   terminal.type(KEYS.end)
-  assert.equal(terminal.screen().at(-2), '  ❯ project-40')
+  assert.equal(terminal.screen().at(-3), '  ❯ project-40')
 
   terminal.type(KEYS.home)
-  assert.equal(terminal.screen()[1], '  ❯ project-1')
+  assert.equal(terminal.screen()[2], '  ❯ project-1')
 
   terminal.type(KEYS.up, KEYS.enter)
   assert.equal(await result, 1)
@@ -458,12 +584,12 @@ test('select redraws in place, and never wider than the terminal', async () => {
   terminal.written = ''
   terminal.type('a')
 
-  // Back up two lines (three were drawn), then clear and draw again.
-  assert.ok(terminal.written.startsWith('\x1b[2A\r\x1b[J'))
+  // Back up four lines (five were drawn), then clear and draw again.
+  assert.ok(terminal.written.startsWith('\x1b[4A\r\x1b[J'))
 
   terminal.output.columns = 40
   terminal.output.emit('resize')
-  assert.ok(terminal.screen()[1].endsWith('a-very-long-project-name'))
+  assert.ok(terminal.screen()[2].endsWith('a-very-long-project-name'))
 
   terminal.type(KEYS.enter)
   await result
@@ -476,19 +602,20 @@ test('select redraws from its first line after the terminal gets narrower', asyn
     items: [{ label: 'a-very-long-project-name', value: 1, icon: '📁' }],
   })
 
-  // The three lines are 22, 32 and 24 columns wide. At 20 columns the
-  // terminal rewraps each of them onto two rows: six rows, so back up five.
+  // The message, item and help lines are 39, 31 and 24 columns wide, with a
+  // blank line after the first two. At 20 columns the terminal rewraps each
+  // of the three onto two rows: eight rows, so back up seven.
   terminal.written = ''
   terminal.output.columns = 20
   terminal.output.emit('resize')
 
-  assert.ok(terminal.written.startsWith('\x1b[5A\r\x1b[J'))
+  assert.ok(terminal.written.startsWith('\x1b[7A\r\x1b[J'))
 
   // The new drawing fits, so the next one backs up its own lines only.
   terminal.written = ''
   terminal.type('a')
 
-  assert.ok(terminal.written.startsWith('\x1b[2A\r\x1b[J'))
+  assert.ok(terminal.written.startsWith('\x1b[4A\r\x1b[J'))
 
   terminal.type(KEYS.enter)
   await result
@@ -506,7 +633,7 @@ test('select highlights matched characters when colours are on', async () => {
 
   terminal.type('d', 'c')
 
-  const line = terminal.screen()[1]
+  const line = terminal.screen()[2]
 
   assert.ok(line.includes('\x1b[36m❯ \x1b[39m'), JSON.stringify(line))
   assert.ok(line.includes('\x1b[4m\x1b[1m\x1b[36md'), JSON.stringify(line))
@@ -608,10 +735,11 @@ test('a closing list waits for its last position reply, but not for long', async
     mouse: true,
   })
 
+  // 9 lines ending on row 10: api is on row 4.
   time += 300
   terminal.reply(10)
   terminal.hover(6)
-  terminal.type('\x1b[<0;8;5M\x1b[10;1R\x1b[10;1R')
+  terminal.type('\x1b[<0;8;4M\x1b[10;1R\x1b[10;1R')
 
   assert.equal(await second, 'api')
   assert.equal(terminal.input.listenerCount('data'), 0)
@@ -638,20 +766,23 @@ test('a click selects an item and a second click opens it', async () => {
     mouse: true,
   })
 
-  // 9 lines (message, 7 items, help) ending on row 20: api is on row 13.
+  // 12 lines (message, 5 items, rule, 2 actions, help and the blank lines)
+  // ending on row 20: api is on row 11, the rule on row 16.
   terminal.reply(20)
-  terminal.click(15)
+  terminal.click(13)
 
-  assert.equal(terminal.screen()[3], '  ❯ 📁  design-system')
+  assert.equal(terminal.screen()[4], '  ❯ 📁 design-system')
 
-  // The help line and rows outside the list do nothing.
+  // The help line, the rule, blank lines and rows outside the list do nothing.
   terminal.reply(20)
   terminal.click(20)
-  terminal.click(12)
+  terminal.click(16)
+  terminal.click(10)
+  terminal.click(8)
 
-  assert.equal(terminal.screen()[3], '  ❯ 📁  design-system')
+  assert.equal(terminal.screen()[4], '  ❯ 📁 design-system')
 
-  terminal.click(15)
+  terminal.click(13)
 
   assert.equal(await result, 'design-system')
 })
@@ -665,9 +796,9 @@ test('Back and Exit entries can be clicked', async () => {
   })
 
   terminal.reply(20)
-  terminal.click(19)
+  terminal.click(18)
   terminal.reply(20)
-  terminal.click(19)
+  terminal.click(18)
 
   assert.equal(await result, null)
 })
@@ -681,9 +812,10 @@ test('clicks are ignored briefly after an item opens', async () => {
     mouse: true,
   })
 
-  // The first press of a double-click opens api, which is selected.
+  // The first press of a double-click opens api, which is selected: 9 lines
+  // ending on row 10 put it on row 4.
   terminal.reply(10)
-  terminal.click(5)
+  terminal.click(4)
   assert.equal(await first, 'api')
 
   const second = terminal.select({
@@ -694,13 +826,13 @@ test('clicks are ignored briefly after an item opens', async () => {
 
   // The second press lands on the next list and is ignored.
   terminal.reply(10)
-  terminal.click(6)
-  assert.equal(terminal.screen()[1], '  ❯ 📁  api')
+  terminal.click(5)
+  assert.equal(terminal.screen()[2], '  ❯ 📁 api')
 
   time += 300
-  terminal.click(6)
+  terminal.click(5)
   terminal.reply(10)
-  terminal.click(6)
+  terminal.click(5)
 
   assert.equal(await second, 'billing-api')
 })
@@ -718,17 +850,17 @@ test('clicks skip separators and disabled items', async () => {
     mouse: true,
   })
 
-  // 6 lines ending on row 6: the separator is on row 2.
-  terminal.reply(6)
-  terminal.click(2)
-  terminal.click(4)
-  terminal.reply(6)
-
-  assert.equal(terminal.screen()[2], '  ❯ web')
-
+  // 8 lines ending on row 8: the separator is on row 3, old on row 5.
+  terminal.reply(8)
+  terminal.click(3)
   terminal.click(5)
-  terminal.reply(6)
-  terminal.click(5)
+  terminal.reply(8)
+
+  assert.equal(terminal.screen()[3], '  ❯ web')
+
+  terminal.click(6)
+  terminal.reply(8)
+  terminal.click(6)
 
   assert.equal(await result, 'api')
 })
@@ -741,13 +873,14 @@ test('hover marks the item under the pointer, and the wheel moves the cursor', a
     mouse: true,
   })
 
+  // 9 lines ending on row 10: design-system is on row 6.
   terminal.reply(10)
-  terminal.hover(7)
+  terminal.hover(6)
 
-  assert.deepEqual(terminal.screen().slice(1, 4), [
-    '  ❯ 📁  api',
-    '    📁  billing-api',
-    '  › 📁  design-system',
+  assert.deepEqual(terminal.screen().slice(2, 5), [
+    '  ❯ 📁 api',
+    '    📁 billing-api',
+    '  › 📁 design-system',
   ])
 
   // Moving within the same item neither redraws nor asks again.
@@ -755,18 +888,18 @@ test('hover marks the item under the pointer, and the wheel moves the cursor', a
 
   const before = terminal.written
 
-  terminal.hover(7)
+  terminal.hover(6)
   assert.equal(terminal.written, before)
 
-  terminal.type('\x1b[<65;8;7M', '\x1b[<65;8;7M')
+  terminal.type('\x1b[<65;8;6M', '\x1b[<65;8;6M')
 
-  assert.deepEqual(terminal.screen().slice(1, 4), [
-    '    📁  api',
-    '    📁  billing-api',
-    '  ❯ 📁  design-system',
+  assert.deepEqual(terminal.screen().slice(2, 5), [
+    '    📁 api',
+    '    📁 billing-api',
+    '  ❯ 📁 design-system',
   ])
 
-  terminal.type('\x1b[<64;8;7M', KEYS.enter)
+  terminal.type('\x1b[<64;8;6M', KEYS.enter)
 
   assert.equal(await result, 'billing-api')
 })
@@ -781,7 +914,7 @@ test('pressing the wheel opens the selected item, wherever the pointer is', asyn
   })
 
   assert.equal(
-    terminal.screen()[6],
+    terminal.screen()[8],
     '  ↑↓ move · Enter select · Middle-click select',
   )
 
@@ -803,7 +936,7 @@ test('pressing the wheel opens the selected item, wherever the pointer is', asyn
   terminal.reply(10)
   terminal.type('\x1b[<1;8;10M')
   terminal.reply(10)
-  assert.equal(terminal.screen()[0], '  Pick  type to search')
+  assert.equal(terminal.screen()[0], aligned('  Pick', 'type to search'))
 
   time += 300
   terminal.type('\x1b[<1;8;10M')
@@ -819,19 +952,19 @@ test('clicks follow the list when it scrolls', async () => {
   }))
   const result = terminal.select({ message: 'Pick', items, mouse: true })
 
-  // 4 visible items, so 6 lines, ending on the last row.
+  // 3 visible items, so 7 lines, ending on the last row.
   terminal.reply(8)
   terminal.type(KEYS.end)
   terminal.reply(8)
 
-  assert.equal(terminal.screen()[1], '    project-6')
+  assert.equal(terminal.screen()[2], '    project-7')
 
-  // project-6 is on row 4, so project-7 on row 5.
+  // project-7 is on row 4, so project-8 on row 5.
   terminal.click(5)
   terminal.reply(8)
   terminal.click(5)
 
-  assert.equal(await result, 7)
+  assert.equal(await result, 8)
 })
 
 test('a position reply that was not asked for is ignored', async () => {
@@ -845,9 +978,9 @@ test('a position reply that was not asked for is ignored', async () => {
   terminal.reply(10)
   // Shift+F3 in some terminals looks like a reply.
   terminal.reply(1)
-  terminal.click(6)
+  terminal.click(5)
 
-  assert.equal(terminal.screen()[2], '  ❯ 📁  billing-api')
+  assert.equal(terminal.screen()[3], '  ❯ 📁 billing-api')
 
   terminal.type(KEYS.enter)
   assert.equal(await result, 'billing-api')
@@ -862,8 +995,10 @@ test('a note is shown under the list, wrapped to its width', async () => {
   })
 
   assert.deepEqual(terminal.screen(), [
-    '  Pick  type to search',
-    '  ❯ 📁  api',
+    aligned('  Pick', 'type to search', 29),
+    '',
+    '  ❯ 📁 api',
+    '',
     '  ↑↓ move · Enter select',
     '',
     '  Mouse support has not been',

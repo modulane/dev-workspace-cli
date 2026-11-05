@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createUi } from '../lib/ui.js'
+import { createUi, headerLines } from '../lib/ui.js'
 import { textWidth } from '../lib/width.js'
 
 test('color returns plain text when colors are disabled', () => {
@@ -29,78 +29,76 @@ test('color returns plain text for an unknown shade', () => {
   assert.equal(color('Hello', 'purple'), 'Hello')
 })
 
-test('printHeader logs the default section and workspace', () => {
-  const lines = []
-  const { printHeader } = createUi({
-    useColors: false,
-    log: (...args) => lines.push(args.join(' ')),
-  })
-
-  printHeader('/projects')
-
-  assert.ok(lines.some(line => line.includes('DEV WORKSPACE CLI')))
-  assert.ok(lines.some(line => line.includes('DEVELOPER TOOLKIT')))
-  assert.ok(lines.some(line => line.includes('WORKSPACE')))
-  assert.ok(lines.some(line => line.includes('/projects')))
-  assert.ok(lines.some(line => line.includes('PROJECT EXPLORER')))
-})
-
-test('printHeader supports a custom section', () => {
-  const lines = []
-  const { printHeader } = createUi({
-    useColors: false,
-    log: (...args) => lines.push(args.join(' ')),
-  })
-
-  printHeader('/projects', 'PROJECT SCRIPTS')
-
-  assert.ok(lines.some(line => line.includes('PROJECT SCRIPTS')))
-})
-
-test('printHeader applies colors when enabled', () => {
-  const lines = []
-  const { printHeader } = createUi({
-    useColors: true,
-    log: (...args) => lines.push(args.join(' ')),
-  })
-
-  printHeader('/projects')
-
-  assert.ok(lines.some(line => line.includes('\x1b[36m')))
-  assert.ok(lines.some(line => line.includes('\x1b[0m')))
-})
-
-// The header lines, without the blank line before them.
-function headerLines(workspace) {
-  const lines = []
-  const { printHeader } = createUi({
-    useColors: false,
-    log: (...args) => lines.push(args.join(' ')),
-  })
-
-  printHeader(workspace)
-
-  return lines.filter(Boolean)
+// The header as plain text: each line's segments joined, without styles.
+function header(options, width = 60) {
+  return headerLines(options, width).map(line =>
+    line.map(([text]) => text).join(''),
+  )
 }
 
-// The 44-column box, indented by two columns.
-const HEADER_LINE_WIDTH = 2 + 44
+test('headerLines draws the name and workspace in a box', () => {
+  assert.deepEqual(header({ workspace: '/projects' }, 40), [
+    '  ╭─ ◆ dev-workspace ──────────────────╮',
+    '  │  /projects                         │',
+    '  ╰────────────────────────────────────╯',
+  ])
+})
 
-test('printHeader keeps its border aligned around wide characters', () => {
-  const lines = headerLines('/projets/日本語/📦-app')
+test('headerLines shows the breadcrumb and the tag in the top border', () => {
+  const [top] = header(
+    { workspace: '/projects', crumbs: ['web-app'], tag: 'npm · default' },
+    60,
+  )
 
-  assert.ok(lines.some(line => line.includes('日本語/📦-app')))
-  assert.ok(lines.some(line => line.includes('⚙️  DEVELOPER TOOLKIT')))
+  assert.equal(
+    top,
+    '  ╭─ ◆ dev-workspace › web-app ──────────── npm · default ─╮',
+  )
+})
 
-  for (const line of lines) {
-    assert.equal(textWidth(line), HEADER_LINE_WIDTH, line)
+test('headerLines styles the parts of the box', () => {
+  const [top] = headerLines({ workspace: '/p', crumbs: ['web'] }, 40)
+
+  assert.deepEqual(top.slice(1, 6), [
+    ['╭─ ', 'dim'],
+    ['◆', 'cyan'],
+    [' dev-workspace', 'bold'],
+    [' › ', 'dim'],
+    ['web'],
+  ])
+})
+
+test('headerLines drops the tag, then cuts the breadcrumb, when short of room', () => {
+  const options = {
+    workspace: '/projects',
+    crumbs: ['a-project-with-a-long-name'],
+    tag: 'pnpm · pnpm-lock.yaml',
+  }
+  const [wide] = header(options, 70)
+  const [narrow] = header(options, 40)
+
+  assert.ok(wide.includes('a-project-with-a-long-name'), wide)
+  assert.ok(!wide.includes('pnpm'), wide)
+  assert.ok(narrow.includes('› a-project-wit…'), narrow)
+})
+
+test('headerLines keeps its border aligned around wide characters', () => {
+  for (const width of [30, 60, 100]) {
+    const lines = header(
+      { workspace: '/projets/日本語/📦-app', crumbs: ['日本語'], tag: 'npm' },
+      width,
+    )
+
+    assert.ok(lines[1].includes('日本語/📦-app') || width < 40, lines[1])
+
+    for (const line of lines) assert.equal(textWidth(line), width, line)
   }
 })
 
-test('printHeader cuts a long workspace path to fit', () => {
-  const lines = headerLines(`/${'very-long-folder/'.repeat(10)}`)
+test('headerLines cuts a long workspace path to fit', () => {
+  const lines = header({ workspace: `/${'very-long-folder/'.repeat(10)}` }, 50)
 
-  for (const line of lines) {
-    assert.equal(textWidth(line), HEADER_LINE_WIDTH, line)
-  }
+  assert.ok(lines[1].endsWith('… │'), lines[1])
+
+  for (const line of lines) assert.equal(textWidth(line), 50, line)
 })

@@ -96,9 +96,9 @@ This installs two equivalent commands, `dev-workspace` and the shorter `dws`.
 | Enter               | Open the selected project or run the script |
 | Ctrl+C              | Stop a running script, or quit from a menu  |
 
-Each list also has entries to go **Back**, **Exit**, or **Change workspace**.
+Each list also has entries to go **Back**, **Exit**, or **Change workspace**, under a line that separates them from the projects or scripts.
 
-Long workspace paths and script commands are cut to fit, and emoji or CJK characters in folder names never break the layout.
+Every menu opens with a small box that shows where you are: the tool's name, followed by the project you are in (`◆ dev-workspace › web-app`), the workspace folder, and in a project, its package manager on the right. Each script's command is shown next to its name, in a column of its own, and tags such as `last run` sit at the right edge. The layout stays within 100 columns on wide terminals. Long workspace paths and script commands are cut with `…` to fit, and emoji or CJK characters in folder names never break the layout.
 
 ### Searching
 
@@ -125,7 +125,7 @@ In a terminal without full support, the first menu shows a short note, once: wha
 
 ### Recent projects and scripts
 
-The five projects you used most recently are listed first, under **Recent**. In a project's script list, the cursor starts on the script you ran last, marked `(last run)`. This history is kept in a separate `state.json` file next to the configuration (see [Configuration](#configuration)); `dws --clear-history` deletes it without touching your settings.
+The five projects you used most recently are listed first, under **Recent**. In a project's script list, the cursor starts on the script you ran last, tagged `last run`. This history is kept in a separate `state.json` file next to the configuration (see [Configuration](#configuration)); `dws --clear-history` deletes it without touching your settings.
 
 ### Running scripts
 
@@ -137,9 +137,9 @@ To pass arguments to a script, choose **Run with arguments…** at the end of th
 
 Every subfolder of the workspace is listed as a project, including links to folders (symbolic links, and junctions on Windows), except folders that are never projects: names starting with a dot (such as `.git` or `.vscode`) and `node_modules`. Only the immediate subfolders are listed; projects nested deeper are not discovered.
 
-Projects are sorted by name, ignoring case. Folders without a `package.json` have no scripts to run, so they appear dimmed at the end of the list, marked `(no package.json)`, and cannot be selected. A `package.json` that starts with a UTF-8 byte order mark, as Windows PowerShell 5.1 and some editors write it, is read normally, as npm does.
+Projects are sorted by name, ignoring case. Folders without a `package.json` have no scripts to run, so they appear dimmed at the end of the list, tagged `no package.json`, and cannot be selected. A `package.json` that starts with a UTF-8 byte order mark, as Windows PowerShell 5.1 and some editors write it, is read normally, as npm does.
 
-In the script list, the selected script's command is shown below the list, shortened to fit the terminal. Lifecycle hooks are listed with their main script instead of separately: with `prebuild`, `build` and `postbuild` scripts, the list shows only `build`, described as `node build.js  (+ prebuild, postbuild)`. Running `build` runs its hooks too, as the package manager normally does. A hook without its main script, such as `postinstall` on its own, is listed like any other script. In Yarn 2+ projects, which never run these hooks, every hook is listed as a separate script so you can still run it.
+In the script list, each script's command is shown next to its name, shortened to fit the terminal. Lifecycle hooks are listed with their main script instead of separately: with `prebuild`, `build` and `postbuild` scripts, the list shows only `build`, with the command `node build.js  (+ prebuild, postbuild)`; when the command is shortened, the hooks are always kept. Running `build` runs its hooks too, as the package manager normally does. A hook without its main script, such as `postinstall` on its own, is listed like any other script. In Yarn 2+ projects, which never run these hooks, every hook is listed as a separate script so you can still run it.
 
 ## Package managers
 
@@ -157,7 +157,7 @@ Each project's scripts run with the package manager that project uses. It is cho
 
 3. npm, when neither is present.
 
-The project screen shows the choice and the reason, for example `Package manager: pnpm (from pnpm-lock.yaml)`. If that package manager is not installed, the CLI explains how to install it. For pnpm and Yarn it suggests `corepack enable` on Node.js 24 and earlier; Node.js 25 and later no longer include Corepack, so there it suggests `npm install --global` first.
+The box at the top of the project screen shows the choice and the reason, for example `pnpm · pnpm-lock.yaml`. If that package manager is not installed, the CLI explains how to install it. For pnpm and Yarn it suggests `corepack enable` on Node.js 24 and earlier; Node.js 25 and later no longer include Corepack, so there it suggests `npm install --global` first.
 
 Whether `pre` and `post` hooks run is decided by the package manager: npm, pnpm, Bun and Yarn 1 run them, while Yarn 2 and later ignore them. The CLI recognises Yarn 2+ from a `packageManager` field such as `yarn@4.5.0`, or from a `yarn.lock` that starts with a `__metadata:` block, and then lists the hooks separately instead of grouping them.
 

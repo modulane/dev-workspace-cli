@@ -5,7 +5,6 @@ import {
   RUN_WITH_ARGUMENTS,
   createPrompts,
 } from '../lib/prompts.js'
-import { textWidth } from '../lib/width.js'
 
 function createPromptMocks(results = {}) {
   const calls = {
@@ -76,17 +75,31 @@ test('chooseProject lists projects, then workspace and exit actions', async () =
   assert.deepEqual(calls.select[0], {
     message: 'Select a project',
     items: [
-      { icon: '📁', label: 'project-a', value: projects[0] },
-      { icon: '📁', label: 'project-b', value: projects[1] },
+      { label: 'project-a', value: projects[0] },
+      { label: 'project-b', value: projects[1] },
       {
-        icon: '⚙️',
+        icon: '⚙',
         label: 'Change workspace',
         value: CHANGE_WORKSPACE,
         action: true,
       },
-      { icon: '↩', label: 'Exit', value: null, action: true },
+      { icon: '✕', label: 'Exit', value: null, action: true },
     ],
   })
+})
+
+test('chooseProject passes the header and body to the list', async () => {
+  const { calls, prompts } = createPromptMocks({ select: null })
+  const header = () => []
+  const body = [['No project folders in this workspace.', 'yellow']]
+
+  await prompts.chooseProject([], { header, body })
+  await prompts.chooseProject([], { header, body: [] })
+
+  assert.equal(calls.select[0].header, header)
+  assert.deepEqual(calls.select[0].body, body)
+  // An empty body is left out.
+  assert.equal(Object.hasOwn(calls.select[1], 'body'), false)
 })
 
 test('chooseProject supports an empty project list', async () => {
@@ -112,7 +125,15 @@ test('chooseProject shows recent projects first, under a heading', async () => {
 
   assert.deepEqual(
     calls.select[0].items.map(item => item.separator ?? item.label),
-    ['Recent', 'web', 'api', 'Projects', 'docs', 'Change workspace', 'Exit'],
+    [
+      'Recent',
+      'web',
+      'api',
+      'All projects',
+      'docs',
+      'Change workspace',
+      'Exit',
+    ],
   )
 })
 
@@ -126,13 +147,8 @@ test('chooseProject disables folders without a package.json', async () => {
   await prompts.chooseProject(projects)
 
   assert.deepEqual(calls.select[0].items.slice(0, 2), [
-    { icon: '📁', label: 'web', value: projects[0] },
-    {
-      icon: '📁',
-      label: 'notes',
-      value: projects[1],
-      disabled: '(no package.json)',
-    },
+    { label: 'web', value: projects[0] },
+    { label: 'notes', value: projects[1], disabled: 'no package.json' },
   ])
 })
 
@@ -149,28 +165,42 @@ test('chooseScript lists scripts with their command, then the actions', async ()
   assert.deepEqual(calls.select[0], {
     message: 'Select a script',
     items: [
-      {
-        icon: '▶',
-        label: 'dev',
-        value: scripts[0],
-        description: 'nuxt dev',
-      },
-      {
-        icon: '▶',
-        label: 'build',
-        value: scripts[1],
-        description: 'nuxt build',
-      },
+      { label: 'dev', value: scripts[0], detail: 'nuxt dev' },
+      { label: 'build', value: scripts[1], detail: 'nuxt build' },
       {
         icon: '…',
-        label: 'Run with arguments…',
+        label: 'Run with arguments',
         value: RUN_WITH_ARGUMENTS,
         action: true,
       },
-      { icon: '↩', label: 'Back to projects', value: null, action: true },
+      { icon: '←', label: 'Back to projects', value: null, action: true },
     ],
     default: undefined,
   })
+})
+
+test('chooseScript keeps the hooks note apart, so the list never cuts it', async () => {
+  const { calls, prompts } = createPromptMocks({ select: null })
+  const header = () => []
+
+  await prompts.chooseScript(
+    [
+      {
+        name: 'build',
+        command: 'vite build',
+        hooks: ['prebuild', 'postbuild'],
+      },
+    ],
+    { header },
+  )
+
+  assert.deepEqual(calls.select[0].items[0], {
+    label: 'build',
+    value: calls.select[0].items[0].value,
+    detail: 'vite build',
+    detailEnd: '  (+ prebuild, postbuild)',
+  })
+  assert.equal(calls.select[0].header, header)
 })
 
 test('chooseScript starts on the last script run', async () => {
@@ -183,7 +213,7 @@ test('chooseScript starts on the last script run', async () => {
   await prompts.chooseScript(scripts, { lastScript: 'build' })
 
   assert.equal(calls.select[0].default, scripts[1])
-  assert.equal(calls.select[0].items[1].hint, '(last run)')
+  assert.equal(calls.select[0].items[1].hint, 'last run')
   assert.equal(calls.select[0].items[0].hint, undefined)
 })
 
@@ -207,7 +237,7 @@ test('chooseScript supports an empty script list', async () => {
 
   assert.equal(result, null)
   assert.deepEqual(calls.select[0].items, [
-    { icon: '↩', label: 'Back to projects', value: null, action: true },
+    { icon: '←', label: 'Back to projects', value: null, action: true },
   ])
 })
 
@@ -232,17 +262,21 @@ test('waitForBack uses its default message', async () => {
   assert.equal(result, true)
   assert.deepEqual(calls.select[0], {
     message: 'Return to projects',
-    items: [{ icon: '↩', label: 'Back', value: true }],
+    items: [{ icon: '←', label: 'Back', value: true }],
     searchable: false,
   })
 })
 
-test('waitForBack accepts a custom message', async () => {
+test('waitForBack accepts a custom message, header and body', async () => {
   const { calls, prompts } = createPromptMocks({ select: true })
+  const header = () => []
+  const body = [['Could not read package.json', 'red']]
 
-  await prompts.waitForBack('Return to scripts')
+  await prompts.waitForBack('Return to scripts', { header, body })
 
   assert.equal(calls.select[0].message, 'Return to scripts')
+  assert.equal(calls.select[0].header, header)
+  assert.deepEqual(calls.select[0].body, body)
 })
 
 test('waitAfterCommand offers to run again first', async () => {
@@ -255,82 +289,10 @@ test('waitAfterCommand offers to run again first', async () => {
     message: 'What next?',
     items: [
       { icon: '↻', label: 'Run again', value: true },
-      { icon: '↩', label: 'Back to scripts', value: false },
+      { icon: '←', label: 'Back to scripts', value: false },
     ],
     searchable: false,
   })
-})
-
-test('chooseScript fits the command to the terminal width', async () => {
-  const calls = []
-  const select = async options => {
-    calls.push(options)
-    return null
-  }
-  const long = `node ${'x'.repeat(200)}.js`
-
-  for (const [columns, expectedLength] of [
-    [40, 37],
-    [120, 117],
-    [undefined, 77],
-    [5, 20],
-  ]) {
-    calls.length = 0
-
-    await createPrompts({ select, columns: () => columns }).chooseScript([
-      { name: 'build', command: long },
-    ])
-
-    const { description } = calls[0].items[0]
-
-    assert.equal(description.length, expectedLength, String(columns))
-    assert.ok(description.endsWith('…'))
-  }
-
-  calls.length = 0
-  await createPrompts({ select, columns: () => 40 }).chooseScript([
-    { name: 'dev', command: 'node server.js' },
-  ])
-  assert.equal(calls[0].items[0].description, 'node server.js')
-})
-
-test('chooseScript keeps the hooks note when shortening the command', async () => {
-  const calls = []
-  const select = async options => {
-    calls.push(options)
-    return null
-  }
-
-  await createPrompts({ select, columns: () => 50 }).chooseScript([
-    {
-      name: 'build',
-      command: `node ${'x'.repeat(100)}.js`,
-      hooks: ['prebuild', 'postbuild'],
-    },
-  ])
-
-  const { description } = calls[0].items[0]
-
-  assert.equal(description.length, 47)
-  assert.ok(description.endsWith('…  (+ prebuild, postbuild)'), description)
-})
-
-test('chooseScript measures the command in columns, not characters', async () => {
-  const calls = []
-  const select = async options => {
-    calls.push(options)
-    return null
-  }
-
-  // Each 日 takes two columns.
-  await createPrompts({ select, columns: () => 40 }).chooseScript([
-    { name: 'build', command: `echo ${'日'.repeat(40)}` },
-  ])
-
-  const { description } = calls[0].items[0]
-
-  assert.equal(textWidth(description), 36)
-  assert.ok(description.endsWith('…'))
 })
 
 test('useMouse turns the mouse on for every menu and shows the note once', async () => {
