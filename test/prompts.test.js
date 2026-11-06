@@ -305,16 +305,9 @@ test('chooseScript lists scripts with their command, with back and args buttons'
   })
   assert.deepEqual(
     rowButtons.map(({ label, right }) => ({ label, right })),
-    [
-      { label: '▶ run', right: undefined },
-      { label: '… args', right: true },
-    ],
+    [{ label: '… run with args', right: true }],
   )
   assert.deepEqual(rowButtons[0].value(scripts[1]), {
-    script: scripts[1],
-    withArguments: false,
-  })
-  assert.deepEqual(rowButtons[1].value(scripts[1]), {
     script: scripts[1],
     withArguments: true,
   })

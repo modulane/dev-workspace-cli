@@ -123,7 +123,7 @@ Start typing in the project or script list to filter it. The characters you type
 
 ### Mouse
 
-In terminals that report the mouse, you can also use it in every menu. One click opens a project, since **← Back** undoes it. A script needs a deliberate click, so a stray one never starts a build: the script under the pointer shows **▶ run** and **… args** buttons at the end of its row, or click the script once to select it and again, or double-click, to run it. The entry under the pointer is marked `›`. Every button in the header box can be clicked. Clicking `▲ n more` or `▼ n more` moves a page. The keyboard works exactly as before.
+In terminals that report the mouse, you can also use it in every menu. One click opens a project, since **← Back** undoes it. A script needs a deliberate click, so a stray one never starts a build: click the script once to select it and again, or double-click, to run it. The script under the pointer shows a **… run with args** button at the end of its row. The entry under the pointer is marked `›`. Every button in the header box can be clicked. Clicking `▲ n more` or `▼ n more` moves a page. The keyboard works exactly as before.
 
 The scroll wheel alone is enough to get around: it moves as ↑ and ↓ do, so scrolling up past the first entry reaches the buttons, and pressing the wheel (middle-click) opens the selected entry or presses the focused button, wherever the pointer is. The hint under each menu mentions it. Only searching and the questions that ask you to type, such as the workspace path or script arguments, need the keyboard.
 
@@ -150,7 +150,7 @@ A script runs on the normal screen, under the header box with the project and sc
 
 Then **↻ Run again** and **← Back to scripts** sit side by side. Run again is focused, so pressing Enter, or `r`, repeats the script with the same arguments; Esc goes back to the list.
 
-To pass arguments to a script, press → on it, or click its **… args** button, then type the arguments, for example `--port 4000`. The **… Run with args** button in the header box does the same after asking which script to run. Use quotes for an argument that contains spaces: `--title "my app"`. The arguments are passed to the script as they are, without a shell. Press Esc at the arguments prompt to go back to the scripts without running anything.
+To pass arguments to a script, press → on it, or click its **… run with args** button, then type the arguments, for example `--port 4000`. The **… Run with args** button in the header box does the same after asking which script to run. Use quotes for an argument that contains spaces: `--title "my app"`. The arguments are passed to the script as they are, without a shell. Press Esc at the arguments prompt to go back to the scripts without running anything.
 
 ### Projects
 
