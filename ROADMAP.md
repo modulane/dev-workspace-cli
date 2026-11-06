@@ -24,7 +24,8 @@ These apply to every milestone:
 | Foundations                     | Released in 0.3.0                         | Platform config location, CLI flags, aliases, Ctrl+C fix                  |
 | Works with every project        | Released in 0.5.0                         | Package manager detection, project filtering, lifecycle scripts           |
 | Fast navigation                 | Released in 0.6.0                         | Fuzzy search, recent items, direct mode, script arguments                 |
-| A polished interface            | Planned                                   | Mouse support, framed header, buttons, themes, project details, first run |
+| A polished interface            | Released in 0.9.0                         | Mouse support, framed header, buttons, themes, project details, first run |
+| Terminal compatibility          | Planned                                   | Mouse and screens checked in macOS Terminal, iTerm2 and Linux terminals   |
 | Bigger workspaces               | Planned                                   | Monorepos, nested projects, multiple named workspaces                     |
 | Configuration and scripts       | Planned                                   | Versioned config schema, `config` command, JSON output                    |
 | Hardening and release candidate | Planned                                   | Linting, type checks, end-to-end tests, interface freeze, feedback period |
@@ -87,7 +88,7 @@ The project list currently shows every subfolder of the workspace, including fol
 
 The CLI should be faster than typing `cd` and `npm run`.
 
-- [x] **Own list prompt:** replace Inquirer's `select` with a small list component that the CLI controls fully: rendering, scrolling, key handling and the row position of every item. It is the base for fuzzy search here and for mouse support in [A polished interface](#a-polished-interface).
+- [x] **Own list prompt:** replace Inquirer's `select` with a small list component that the CLI controls fully: rendering, scrolling, key handling and the row position of every item. It is the base for fuzzy search here and for mouse support in [A polished interface](#a-polished-interface-released-in-090).
   - [x] It decodes raw terminal input itself, so escape sequences it does not use yet, such as mouse reports, are recognised and ignored instead of being typed into the search.
   - [x] Raw mode is switched off and the cursor shown again on every exit path, including Ctrl+C and the process exiting while a list is open.
 - [x] **Fuzzy search** in the project and script lists: typing filters the list (subsequence matching, best matches first) and Escape clears the filter.
@@ -109,9 +110,9 @@ The CLI should be faster than typing `cd` and `npm run`.
 
 Both are met: `dws <project> <script>` runs a script in one command, and a test checks the keystroke goal on a 50-project workspace of deliberately similar names (`web`, `web-app`, `web-ui`, …), counting typed characters and Down presses.
 
-## A polished interface
+## A polished interface _(released in 0.9.0)_
 
-The CLI should look clean, and stay correct, in every terminal.
+The CLI should look clean, and stay correct, in every terminal. Checking it in each terminal moved to its own milestone, [Terminal compatibility](#terminal-compatibility), so the interface could ship once its code was done.
 
 The design is mouse-first and keyboard-complete. The list is the focus of every screen, and the frame around it stays quiet: one thin line style, one accent colour for "you are here" (cyan, or the one chosen on the first launch), a muted colour for the Git branch, and green, red and yellow only for results and warnings, and hierarchy that still reads with `NO_COLOR`. Everything on screen that looks clickable is clickable, hover shows what a click will do, and every click has a keyboard equivalent. Safe actions such as opening a project take one click; running a script takes a deliberate one.
 
@@ -144,7 +145,7 @@ Terminals can report mouse events as escape sequences (SGR mouse mode, `\x1b[?10
 | iTerm2                         | Not recorded yet                                          |
 | Linux (GNOME Terminal, others) | Not recorded yet                                          |
 
-Windows Terminal and the classic Windows console both work fully, so mouse support is confirmed as feasible on Windows. The remaining terminals must be checked before this milestone is complete.
+Windows Terminal and the classic Windows console both work fully, so mouse support is confirmed as feasible on Windows. The remaining terminals are checked in [Terminal compatibility](#terminal-compatibility).
 
 In macOS Terminal a click only lands on a row when the bottom of the I-beam pointer is over it. The terminal reports whole character cells, not pixels, so the CLI cannot correct this; the `›` hover marker shows which row a click will hit.
 
@@ -167,7 +168,16 @@ The check script draws its items on fixed rows, so its clicks are offset once th
 - [x] **Non-interactive guard:** when stdin is not a TTY and no direct-mode arguments are given, exit with a clear message instead of a prompt error [#34](https://github.com/modulane/dev-workspace-cli/issues/34).
 - [x] **Coloured `--help`.**
 
-**Done when:** screenshots of the main screens look correct in Windows Terminal, PowerShell, macOS Terminal, iTerm2 and a Linux terminal, at 80 and 120 columns, with and without `NO_COLOR`.
+**Done when:** every item above is done, and the interface was checked in Windows Terminal. The checks in the other terminals are the [next milestone](#terminal-compatibility).
+
+## Terminal compatibility
+
+Every screen checked in the terminals people use, on their own schedule: they need macOS and Linux machines, while the code they check is already released.
+
+- [ ] **Mouse in the remaining terminals:** run `node scripts/mouse-check.js` in iTerm2 and a Linux terminal, and record the results in the [terminal support table](#mouse-support) [#26](https://github.com/modulane/dev-workspace-cli/issues/26).
+- [ ] **Screens in every terminal:** the main screens, the alternate screen while the window is resized, and the 256-colour accents look correct in each terminal below [#75](https://github.com/modulane/dev-workspace-cli/issues/75).
+
+**Done when:** screenshots of the main screens look correct in Windows Terminal, PowerShell, macOS Terminal, iTerm2 and a Linux terminal, at 80 and 120 columns, with and without `NO_COLOR`, and resizing the window while a menu is open never leaves broken lines or duplicate headers in any of them.
 
 ## Bigger workspaces
 
