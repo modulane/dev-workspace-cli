@@ -1561,3 +1561,23 @@ test('a detail end can be segments with their own styles', async () => {
   terminal.type(KEYS.enter)
   await result
 })
+
+test('a hint style colours the tag, not the label', async () => {
+  const terminal = createTerminal()
+  const select = terminal.createSelect({ useColors: true })
+  const result = select({
+    message: 'Pick',
+    items: [
+      { label: 'dev', value: 1 },
+      { label: 'build', value: 2, hint: 'last run', hintStyle: 'accent' },
+    ],
+  })
+
+  const line = terminal.screen()[3]
+
+  assert.ok(line.includes('\x1b[36mlast run\x1b[39m'), JSON.stringify(line))
+  assert.ok(line.includes('  build'), JSON.stringify(line))
+
+  terminal.type(KEYS.enter)
+  await result
+})

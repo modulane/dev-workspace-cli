@@ -369,9 +369,10 @@ test('chooseScript starts on the last script run', async () => {
 
   assert.equal(calls.select[0].default, scripts[1])
   assert.equal(calls.select[0].items[1].hint, 'last run')
-  // Named in the accent, so it stands out once the cursor moves on.
-  assert.equal(calls.select[0].items[1].style, 'accent')
-  assert.equal(calls.select[0].items[0].style, undefined)
+  // The tag is in the accent, the name stays as the others.
+  assert.equal(calls.select[0].items[1].hintStyle, 'accent')
+  assert.equal(calls.select[0].items[1].style, undefined)
+  assert.equal(calls.select[0].items[0].hintStyle, undefined)
   assert.equal(calls.select[0].items[0].hint, undefined)
 })
 
