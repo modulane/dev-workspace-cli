@@ -4,7 +4,11 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { createCli, findProject, formatDuration } from '../lib/cli.js'
-import { CHANGE_WORKSPACE, RUN_WITH_ARGUMENTS } from '../lib/prompts.js'
+import {
+  CHANGE_WORKSPACE,
+  ENTER_PATH,
+  RUN_WITH_ARGUMENTS,
+} from '../lib/prompts.js'
 import { emptyState } from '../lib/state.js'
 import { headerLines } from '../lib/ui.js'
 import { resolveDirectoryInput } from '../lib/workspace.js'
@@ -80,6 +84,7 @@ function createDependencies(overrides = {}) {
       getScripts: async () => [],
       detectPackageManager: async () => ({ name: 'npm', source: 'default' }),
       readGitBranch: async () => null,
+      suggestWorkspaces: async () => [],
     },
 
     commands: {
@@ -581,6 +586,161 @@ test('CLI keeps the workspace when its change is cancelled with Escape', async (
   assert.deepEqual(
     calls.discoveredWorkspaces.map(call => call.root),
     [WORKSPACE, WORKSPACE],
+  )
+})
+
+test('CLI offers the common workspace folders on first run', async () => {
+  const home = path.resolve('fake/home')
+  const folders = [path.join(home, 'dev'), path.join(home, 'code')]
+  const shown = []
+  let mouseFirst
+
+  const { dependencies, calls } = createDependencies({
+    config: {
+      readWorkspaceConfig: async () => null,
+    },
+    workspace: {
+      suggestWorkspaces: async () => folders,
+      getProjects: async root => {
+        calls.discoveredWorkspaces.push({ root })
+        return [
+          { name: 'a', hasPackageJson: true },
+          { name: 'b', hasPackageJson: true },
+          { name: 'notes', hasPackageJson: false },
+        ]
+      },
+    },
+    prompts: {
+      chooseWorkspace: async (offered, options) => {
+        mouseFirst = calls.mouse.length === 1
+        shown.push([offered, options])
+        return offered[1]
+      },
+      askForWorkspace: async () => assert.fail('no path prompt'),
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  const [[offered, options]] = shown
+
+  assert.deepEqual(offered, folders)
+  assert.equal(options.cancellable, false)
+  assert.equal(options.header, undefined)
+  assert.deepEqual(options.body, [
+    ['Configure your development workspace.', 'bold'],
+    ['Choose the folder that contains your projects.', 'dim'],
+  ])
+  assert.deepEqual(await options.details(folders[0]), {
+    detail: '2 projects',
+  })
+  // The list has the mouse, as every menu does.
+  assert.equal(mouseFirst, true)
+  assert.deepEqual(calls.savedWorkspaces, [
+    {
+      workspace: folders[1],
+      file: '/fake/home/.dev-workspace-cli/config.json',
+    },
+  ])
+  assert.ok(calls.leftScreen >= 1)
+})
+
+test('CLI counts the projects of a suggested folder', async () => {
+  const folders = {
+    '/home/dev': [{ hasPackageJson: true }],
+    '/home/code': [{ hasPackageJson: false }],
+  }
+  let details
+
+  const { dependencies } = createDependencies({
+    config: {
+      readWorkspaceConfig: async () => null,
+    },
+    workspace: {
+      suggestWorkspaces: async () => Object.keys(folders),
+      getProjects: async folder => folders[folder] ?? [],
+    },
+    prompts: {
+      chooseWorkspace: async (offered, options) => {
+        details = options.details
+        return offered[0]
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.deepEqual(await details('/home/dev'), { detail: '1 project' })
+  assert.deepEqual(await details('/home/code'), { detail: 'no projects' })
+})
+
+test('CLI asks for a path when another one is wanted, or none is suggested', async () => {
+  for (const suggested of [['/home/dev'], []]) {
+    const asked = []
+
+    const { dependencies, calls } = createDependencies({
+      config: {
+        readWorkspaceConfig: async () => null,
+      },
+      workspace: {
+        suggestWorkspaces: async () => suggested,
+      },
+      prompts: {
+        chooseWorkspace: async () => ENTER_PATH,
+        askForWorkspace: async (validate, options) => {
+          asked.push(options)
+          return WORKSPACE
+        },
+      },
+    })
+
+    await createCli(dependencies).run()
+
+    assert.deepEqual(asked, [{ cancellable: false }])
+    assert.match(loggedText(calls), /Enter the folder containing your projects/)
+    assert.equal(calls.savedWorkspaces[0].workspace, WORKSPACE)
+  }
+})
+
+test('CLI offers the folders again from the project list, where Escape goes back', async () => {
+  const otherWorkspace = path.resolve('fake/other')
+  const choices = [CHANGE_WORKSPACE, CHANGE_WORKSPACE, null]
+  const answers = [null, otherWorkspace]
+  const shown = []
+
+  const { dependencies, calls } = createDependencies({
+    workspace: {
+      suggestWorkspaces: async () => [WORKSPACE, otherWorkspace],
+    },
+    prompts: {
+      chooseProject: async () => choices.shift(),
+      chooseWorkspace: async (folders, options) => {
+        shown.push(options)
+        return answers.shift()
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.equal(shown[0].cancellable, true)
+  assert.equal(shown[0].current, WORKSPACE)
+  assert.equal(shown[0].body, undefined)
+  assert.match(
+    shown[0]
+      .header(80)
+      .map(line => line.map(([text]) => text).join(''))
+      .join('\n'),
+    // Drawn with the workspace of the moment, now the new one.
+    /◆ other › workspace ─/,
+  )
+  assert.deepEqual(
+    calls.savedWorkspaces.map(saved => saved.workspace),
+    [otherWorkspace],
+  )
+  assert.deepEqual(
+    calls.discoveredWorkspaces.map(call => call.root),
+    [WORKSPACE, WORKSPACE, otherWorkspace],
   )
 })
 

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
 import {
   CHANGE_WORKSPACE,
+  ENTER_PATH,
   RUN_WITH_ARGUMENTS,
   createPrompts,
 } from '../lib/prompts.js'
@@ -116,6 +117,57 @@ test('confirmWorkspaceChange defaults to true', async () => {
       theme: THEME,
     },
   ])
+})
+
+test('chooseWorkspace lists the folders, then a way to type another path', async () => {
+  const { calls, prompts } = createPromptMocks({ select: ENTER_PATH })
+  const details = async folder => ({ detail: folder })
+
+  const result = await prompts.chooseWorkspace(['/home/dev', '/home/code'], {
+    details,
+    body: [['Choose a folder.']],
+  })
+
+  assert.equal(result, ENTER_PATH)
+
+  const { items, ...options } = calls.select[0]
+
+  assert.deepEqual(
+    items.map(({ label, value, hint }) => ({ label, value, hint })),
+    [
+      { label: '/home/dev', value: '/home/dev', hint: undefined },
+      { label: '/home/code', value: '/home/code', hint: undefined },
+      { label: '… Enter another path', value: ENTER_PATH, hint: undefined },
+    ],
+  )
+  assert.deepEqual(await items[1].load(), { detail: '/home/code' })
+  assert.equal(items[2].load, undefined)
+  // On first run, a folder is required: Escape does nothing.
+  assert.deepEqual(options, {
+    message: 'Select your workspace folder',
+    searchable: false,
+    clickOpens: true,
+    fullscreen: true,
+    body: [['Choose a folder.']],
+  })
+})
+
+test('chooseWorkspace starts on the current folder, and Escape goes back', async () => {
+  const { calls, prompts } = createPromptMocks({ select: null })
+  const header = () => []
+
+  const result = await prompts.chooseWorkspace(['/home/dev', '/home/code'], {
+    current: '/home/code',
+    cancellable: true,
+    header,
+  })
+
+  assert.equal(result, null)
+  assert.equal(calls.select[0].items[1].hint, 'current')
+  assert.equal(calls.select[0].default, '/home/code')
+  assert.deepEqual(calls.select[0].escape, { value: null, label: 'back' })
+  assert.equal(calls.select[0].header, header)
+  assert.equal(Object.hasOwn(calls.select[0].items[0], 'load'), false)
 })
 
 test('chooseProject lists projects, with workspace and exit buttons', async () => {

@@ -11,6 +11,7 @@ import {
   normalizePathInput,
   readGitBranch,
   resolveDirectoryInput,
+  suggestWorkspaces,
 } from '../lib/workspace.js'
 
 // Each test gets its own isolated temporary directory.
@@ -413,5 +414,18 @@ test('readGitBranch follows a .git file, and is null outside Git', async () => {
 
     await writeFile(path.join(project, '.git'), 'not a pointer\n')
     assert.equal(await readGitBranch(project), null)
+  })
+})
+
+test('suggestWorkspaces returns the common folders that exist, in order', async () => {
+  await withTempDirectory(async directory => {
+    await mkdir(path.join(directory, 'repos'))
+    await mkdir(path.join(directory, 'dev'))
+    await writeFile(path.join(directory, 'code'), 'a file, not a folder')
+
+    assert.deepEqual(await suggestWorkspaces({ homeDirectory: directory }), [
+      path.join(directory, 'dev'),
+      path.join(directory, 'repos'),
+    ])
   })
 })
