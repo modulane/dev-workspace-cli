@@ -152,6 +152,8 @@ Every subfolder of the workspace is listed as a project, including links to fold
 
 Projects are sorted by name, ignoring case. Folders without a `package.json` have no scripts to run, so they appear dimmed at the end of the list, tagged `no package.json`, and cannot be selected. A `package.json` that starts with a UTF-8 byte order mark, as Windows PowerShell 5.1 and some editors write it, is read normally, as npm does.
 
+Next to each project, the list shows how many scripts it has and its Git branch (`12 scripts · main`, or the short commit when nothing is checked out), with its package manager on the right. These details are read only for the projects in view, as they scroll into the window, so a large workspace still opens at once. They are kept for the rest of the session, and read again for a project after you open it. The branch is read from `.git/HEAD`, so Git does not need to be installed.
+
 In the script list, each script's command is shown next to its name, shortened to fit the terminal. Lifecycle hooks are listed with their main script instead of separately: with `prebuild`, `build` and `postbuild` scripts, the list shows only `build`, with the command `node build.js  (+ prebuild, postbuild)`; when the command is shortened, the hooks are always kept. Running `build` runs its hooks too, as the package manager normally does. A hook without its main script, such as `postinstall` on its own, is listed like any other script. In Yarn 2+ projects, which never run these hooks, every hook is listed as a separate script so you can still run it.
 
 ## Package managers

@@ -60,7 +60,7 @@ node scripts/try-install.js --again -- web dev  # with arguments for dws
 | `config.js`           | Configuration file location, reading, writing and migration    |
 | `state.js`            | The history of recent projects and last scripts (`state.json`) |
 | `terminal.js`         | Recognising the terminal and its mouse support, the mouse note |
-| `workspace.js`        | Listing projects, reading their scripts, resolving typed paths |
+| `workspace.js`        | Projects, their scripts and Git branch, resolving typed paths  |
 | `package-managers.js` | Detecting each project's package manager                       |
 | `commands.js`         | Running a script with that package manager                     |
 | `json.js`             | Parsing JSON files, ignoring a leading byte order mark         |

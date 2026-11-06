@@ -202,6 +202,28 @@ test('chooseProject disables folders without a package.json', async () => {
   ])
 })
 
+test('chooseProject lets the list load the details of each project', async () => {
+  const projects = [
+    { name: 'web', directory: '/projects/web', hasPackageJson: true },
+    { name: 'notes', directory: '/projects/notes', hasPackageJson: false },
+  ]
+  const { calls, prompts } = createPromptMocks({ select: null })
+  const asked = []
+  const details = async project => {
+    asked.push(project)
+    return { detail: '3 scripts' }
+  }
+
+  await prompts.chooseProject(projects, { recent: [projects[0]], details })
+
+  const [, web, , notes] = calls.select[0].items
+
+  assert.deepEqual(await web.load(), { detail: '3 scripts' })
+  assert.deepEqual(asked, [projects[0]])
+  // A folder without a package.json has nothing to load.
+  assert.equal(notes.load, undefined)
+})
+
 test('chooseScript lists scripts with their command, with back and args buttons', async () => {
   const scripts = [
     { name: 'dev', command: 'nuxt dev' },

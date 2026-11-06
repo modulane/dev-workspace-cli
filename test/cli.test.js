@@ -79,6 +79,7 @@ function createDependencies(overrides = {}) {
       },
       getScripts: async () => [],
       detectPackageManager: async () => ({ name: 'npm', source: 'default' }),
+      readGitBranch: async () => null,
     },
 
     commands: {
@@ -957,6 +958,93 @@ test('CLI shows the project and its package manager in the header', async () => 
 
     assert.match(menuText(calls), expected)
   }
+})
+
+test('CLI gives the project list the scripts, branch and package manager of each project', async () => {
+  const projects = ['api', 'docs', 'web', 'broken'].map(name => ({
+    name,
+    directory: path.join(WORKSPACE, name),
+    hasPackageJson: true,
+  }))
+  const scripts = {
+    api: [{ name: 'dev' }, { name: 'build' }],
+    docs: [{ name: 'dev' }],
+    web: [],
+  }
+  const reads = []
+  const lists = []
+
+  const { dependencies } = createDependencies({
+    workspace: {
+      getProjects: async () => projects,
+      detectPackageManager: async directory =>
+        directory.endsWith('docs')
+          ? { name: 'yarn', source: 'yarn.lock', runsHooks: false }
+          : { name: 'pnpm', source: 'pnpm-lock.yaml', runsHooks: true },
+      readGitBranch: async directory =>
+        directory.endsWith('docs') ? null : 'main',
+      getScripts: async (directory, options) => {
+        const name = path.basename(directory)
+
+        reads.push([name, options])
+        if (!scripts[name]) throw new Error('Invalid JSON')
+        return scripts[name]
+      },
+    },
+    prompts: {
+      chooseProject: async (shown, options) => {
+        lists.push(options.details)
+        return null
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  const [details] = lists
+
+  assert.deepEqual(await Promise.all(projects.map(details)), [
+    { detail: '2 scripts · main', hint: 'pnpm' },
+    { detail: '1 script', hint: 'yarn' },
+    { detail: 'no scripts · main', hint: 'pnpm' },
+    { detail: 'invalid package.json · main', hint: 'pnpm' },
+  ])
+  // Counted as the script menu counts them.
+  assert.deepEqual(reads[1], ['docs', { groupHooks: false }])
+
+  // Read once per session.
+  await details(projects[1])
+  assert.equal(reads.length, 4)
+})
+
+test('CLI reads the details of a project again after opening it', async () => {
+  const project = {
+    name: 'api',
+    directory: path.join(WORKSPACE, 'api'),
+    hasPackageJson: true,
+  }
+  const shown = []
+  let branch = 'main'
+  let lists = 0
+
+  const { dependencies } = createDependencies({
+    workspace: {
+      getProjects: async () => [project],
+      getScripts: async () => [{ name: 'dev', command: 'vite' }],
+      readGitBranch: async () => branch,
+    },
+    prompts: {
+      chooseProject: async (projects, { details }) => {
+        shown.push((await details(project)).detail)
+        branch = 'feat/login'
+        return ++lists === 1 ? project : null
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.deepEqual(shown, ['1 script · main', '1 script · feat/login'])
 })
 
 test('CLI groups hooks only when the package manager runs them', async () => {

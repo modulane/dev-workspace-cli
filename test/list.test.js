@@ -438,6 +438,76 @@ test('select starts on the default value and lines up the details', async () => 
   assert.equal(await result, 'build')
 })
 
+test('items load their details once, when first drawn', async () => {
+  const terminal = createTerminal({ rows: 10 })
+  const asked = []
+  let fail
+  const items = Array.from({ length: 20 }, (_, index) => ({
+    label: `p${index + 1}`,
+    value: index + 1,
+    load: () => {
+      asked.push(index + 1)
+
+      if (index === 1) {
+        return new Promise((resolve, reject) => {
+          fail = reject
+        })
+      }
+
+      return Promise.resolve({ detail: `${index + 1} scripts`, hint: 'npm' })
+    },
+  }))
+  const result = terminal.select({ message: 'Pick', items })
+
+  // Only the items in view are read, and the list redraws once they arrive.
+  await new Promise(resolve => setImmediate(resolve))
+  assert.deepEqual(asked, [1, 2, 3, 4, 5])
+  assert.equal(terminal.screen()[2], aligned('  ❯ p1   1 scripts', 'npm'))
+  assert.equal(terminal.screen()[3], '    p2')
+
+  // A failed load leaves the item as it is, and is not tried again.
+  fail(new Error('unreadable'))
+  await new Promise(resolve => setImmediate(resolve))
+  terminal.type(KEYS.down, KEYS.up)
+  assert.equal(terminal.screen()[3], '    p2')
+  assert.deepEqual(asked, [1, 2, 3, 4, 5])
+
+  terminal.type(KEYS.pageDown, KEYS.pageDown)
+  await new Promise(resolve => setImmediate(resolve))
+  assert.deepEqual(asked, [1, 2, 3, 4, 5, 6, 7, 8, 9])
+
+  terminal.type(KEYS.enter)
+  assert.equal(await result, 9)
+})
+
+test('details that arrive after the list closes are not drawn', async () => {
+  const terminal = createTerminal()
+  let finish
+  const result = terminal.select({
+    message: 'Pick',
+    items: [
+      {
+        label: 'api',
+        value: 'api',
+        load: () =>
+          new Promise(resolve => {
+            finish = resolve
+          }),
+      },
+    ],
+  })
+
+  await new Promise(resolve => setImmediate(resolve))
+  terminal.type(KEYS.enter)
+  assert.equal(await result, 'api')
+
+  const written = terminal.written
+
+  finish({ detail: 'late' })
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(terminal.written, written)
+})
+
 test('a detail is cut to fit, keeping its end whole', async () => {
   const terminal = createTerminal({ columns: 40 })
   const result = terminal.select({

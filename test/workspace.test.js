@@ -9,6 +9,7 @@ import {
   getProjects,
   getScripts,
   normalizePathInput,
+  readGitBranch,
   resolveDirectoryInput,
 } from '../lib/workspace.js'
 
@@ -373,5 +374,44 @@ test('getScripts reads a package.json that starts with a byte order mark', async
     assert.deepEqual(await getScripts(directory), [
       { name: 'hello', command: 'echo hello' },
     ])
+  })
+})
+
+test('readGitBranch reads the branch, or the short commit, from .git/HEAD', async () => {
+  await withTempDirectory(async directory => {
+    const head = path.join(directory, '.git', 'HEAD')
+
+    await mkdir(path.join(directory, '.git'))
+    assert.equal(await readGitBranch(directory), null)
+
+    await writeFile(head, 'ref: refs/heads/feat/login\n')
+    assert.equal(await readGitBranch(directory), 'feat/login')
+
+    await writeFile(head, '0123456789abcdef0123456789abcdef01234567\n')
+    assert.equal(await readGitBranch(directory), '0123456')
+
+    await writeFile(head, 'garbage\n')
+    assert.equal(await readGitBranch(directory), null)
+  })
+})
+
+test('readGitBranch follows a .git file, and is null outside Git', async () => {
+  await withTempDirectory(async directory => {
+    const project = path.join(directory, 'worktree')
+    const gitDir = path.join(directory, 'main', '.git', 'worktrees', 'wt')
+
+    await mkdir(project)
+    assert.equal(await readGitBranch(project), null)
+
+    await mkdir(gitDir, { recursive: true })
+    await writeFile(path.join(gitDir, 'HEAD'), 'ref: refs/heads/main\n')
+    await writeFile(
+      path.join(project, '.git'),
+      `gitdir: ${path.relative(project, gitDir)}\n`,
+    )
+    assert.equal(await readGitBranch(project), 'main')
+
+    await writeFile(path.join(project, '.git'), 'not a pointer\n')
+    assert.equal(await readGitBranch(project), null)
   })
 })
