@@ -518,3 +518,15 @@ test('chooseAccent shows each colour in its own colour, and previews it', async 
     header,
   })
 })
+
+test('askForArguments returns null on Escape, to go back', async () => {
+  const keys = new EventEmitter()
+  const prompts = createPrompts({ input: abortableInput(keys), keys })
+
+  const answer = prompts.askForArguments('dev')
+
+  keys.emit('keypress', undefined, { name: 'escape' })
+
+  assert.equal(await answer, null)
+  assert.equal(keys.listenerCount('keypress'), 0)
+})

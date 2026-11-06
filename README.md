@@ -150,7 +150,7 @@ A script runs on the normal screen, under the header box with the project and sc
 
 Then **↻ Run again** and **← Back to scripts** sit side by side. Run again is focused, so pressing Enter, or `r`, repeats the script with the same arguments; Esc goes back to the list.
 
-To pass arguments to a script, press → on it, or click its **… args** button, then type the arguments, for example `--port 4000`. The **… Run with args** button in the header box does the same after asking which script to run. Use quotes for an argument that contains spaces: `--title "my app"`. The arguments are passed to the script as they are, without a shell.
+To pass arguments to a script, press → on it, or click its **… args** button, then type the arguments, for example `--port 4000`. The **… Run with args** button in the header box does the same after asking which script to run. Use quotes for an argument that contains spaces: `--title "my app"`. The arguments are passed to the script as they are, without a shell. Press Esc at the arguments prompt to go back to the scripts without running anything.
 
 ### Projects
 

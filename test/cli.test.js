@@ -2059,3 +2059,36 @@ test('CLI --set-color saves the colour and exits', async () => {
   assert.match(calls.logs.at(-1)[0], /accent colour is now sky/)
   assert.equal(calls.discoveredWorkspaces.length, 0)
 })
+
+test('CLI goes back to the scripts on Escape at the arguments prompt', async () => {
+  const project = projectFixtures()[0]
+  const dev = { name: 'dev', command: 'vite' }
+  const answers = [{ script: dev, withArguments: true }, null]
+  let projectSelections = 0
+  const runs = []
+
+  const { dependencies, calls } = createDependencies({
+    workspace: {
+      getProjects: async () => [project],
+      getScripts: async () => [dev],
+    },
+    commands: {
+      runCommand: async (...args) => {
+        runs.push(args)
+        return { code: 0 }
+      },
+    },
+    prompts: {
+      chooseProject: async () => (++projectSelections === 1 ? project : null),
+      chooseScript: async () => answers.shift(),
+      askForArguments: async () => null,
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  // The script list was shown again, and nothing ran.
+  assert.deepEqual(answers, [])
+  assert.deepEqual(runs, [])
+  assert.match(loggedText(calls), /Press Esc to go back to the scripts\./)
+})
