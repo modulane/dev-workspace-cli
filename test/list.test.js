@@ -1337,10 +1337,11 @@ test('the hovered item shows its row buttons in place of its tag', async () => {
   assert.equal(terminal.screen()[2], aligned('  ❯ dev    vite', 'last run'))
   assert.equal(
     terminal.screen()[3],
-    aligned('  › build  vite build', ' ▶ run  … args '),
+    // A divider keeps the two buttons apart.
+    aligned('  › build  vite build', ' ▶ run │ … args '),
   )
 
-  // ▶ run covers columns 45 to 51 of the row.
+  // ▶ run covers columns 44 to 50 of the row.
   terminal.click(4, 47)
 
   assert.equal(await result, 'run build')
