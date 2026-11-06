@@ -211,6 +211,30 @@ test('select restores the terminal when it closes', async () => {
   assert.ok(terminal.written.endsWith('\x1b[?25h'))
 })
 
+test('select stops reading before it leaves raw mode', async () => {
+  const terminal = createTerminal()
+  const steps = []
+  const { pause, setRawMode } = terminal.input
+
+  terminal.input.pause = () => {
+    steps.push('pause')
+    pause()
+  }
+  terminal.input.setRawMode = mode => {
+    steps.push(`raw ${mode}`)
+    setRawMode(mode)
+  }
+
+  const result = terminal.select({ message: 'Pick', items: projects })
+
+  terminal.type(KEYS.enter)
+  await result
+
+  // On Windows, leaving raw mode while reading starts a line-mode read that
+  // waits for Enter.
+  assert.deepEqual(steps, ['raw true', 'pause', 'raw false'])
+})
+
 test('select shows the cursor again if the process exits while open', () => {
   const terminal = createTerminal()
 
