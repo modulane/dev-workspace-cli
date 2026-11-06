@@ -1280,7 +1280,7 @@ test('typing returns the focus to the list and searches', async () => {
   assert.equal(await result, 'web')
 })
 
-test('a focused button is drawn in reverse, and a hovered one in grey', async () => {
+test('a focused button is drawn reversed in the accent, a hovered one on grey', async () => {
   const terminal = createTerminal()
   const select = terminal.createSelect({ useColors: true })
   const result = select({
@@ -1293,10 +1293,16 @@ test('a focused button is drawn in reverse, and a hovered one in grey', async ()
   })
 
   terminal.type('\t')
-  assert.ok(terminal.screen()[1].includes('\x1b[7m ⚙ Workspace \x1b[27m'))
+  assert.ok(
+    terminal
+      .screen()[1]
+      .includes('\x1b[7m\x1b[36m ⚙ Workspace \x1b[39m\x1b[27m'),
+  )
 
   terminal.hover(2, 18)
-  assert.ok(terminal.screen()[1].includes('\x1b[100m ✕ Exit \x1b[49m'))
+  assert.ok(
+    terminal.screen()[1].includes('\x1b[100m\x1b[36m ✕ Exit \x1b[39m\x1b[49m'),
+  )
 
   terminal.type(KEYS.enter)
   assert.equal(await result, 'change')

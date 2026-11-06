@@ -6,7 +6,6 @@ import {
   ENTER_PATH,
   RUN_WITH_ARGUMENTS,
   createPrompts,
-  scriptKind,
 } from '../lib/prompts.js'
 
 // Passed through to Inquirer as it is.
@@ -292,18 +291,8 @@ test('chooseScript lists scripts with their command, with back and args buttons'
   assert.deepEqual(options, {
     message: 'Select a script',
     items: [
-      {
-        label: 'dev',
-        value: scripts[0],
-        detail: 'nuxt dev',
-        style: 'scriptRun',
-      },
-      {
-        label: 'build',
-        value: scripts[1],
-        detail: 'nuxt build',
-        style: 'scriptBuild',
-      },
+      { label: 'dev', value: scripts[0], detail: 'nuxt dev' },
+      { label: 'build', value: scripts[1], detail: 'nuxt build' },
     ],
     toolbar: [
       { label: '← Back', value: null },
@@ -365,7 +354,6 @@ test('chooseScript keeps the hooks note apart, so the list never cuts it', async
     value: calls.select[0].items[0].value,
     detail: 'vite build',
     detailEnd: '  (+ prebuild, postbuild)',
-    style: 'scriptBuild',
   })
   assert.equal(calls.select[0].header, header)
 })
@@ -381,6 +369,9 @@ test('chooseScript starts on the last script run', async () => {
 
   assert.equal(calls.select[0].default, scripts[1])
   assert.equal(calls.select[0].items[1].hint, 'last run')
+  // Named in the accent, so it stands out once the cursor moves on.
+  assert.equal(calls.select[0].items[1].style, 'accent')
+  assert.equal(calls.select[0].items[0].style, undefined)
   assert.equal(calls.select[0].items[0].hint, undefined)
 })
 
@@ -525,20 +516,4 @@ test('chooseAccent shows each colour in its own colour, and previews it', async 
     fullscreen: true,
     header,
   })
-})
-
-test('scriptKind colours the common kinds of scripts by their first word', () => {
-  for (const [name, kind] of [
-    ['dev', 'scriptRun'],
-    ['start:prod', 'scriptRun'],
-    ['build', 'scriptBuild'],
-    ['test:unit', 'scriptTest'],
-    ['E2E', 'scriptTest'],
-    ['lint-fix', 'scriptCheck'],
-    ['format.check', 'scriptCheck'],
-    ['release', undefined],
-    ['devtools', undefined],
-  ]) {
-    assert.equal(scriptKind(name), kind, name)
-  }
 })
