@@ -123,7 +123,7 @@ Start typing in the project or script list to filter it. The characters you type
 
 ### Mouse
 
-In terminals that report the mouse, you can also use it in every menu. One click opens a project, since **← Back** undoes it. A script needs a deliberate click, so a stray one never starts a build: the script under the pointer shows two buttons at the end of its row, **▶ run** and **… run with args**, divided by a thin line, or click the script once to select it and again, or double-click, to run it. The entry under the pointer is marked `›`. Every button in the header box can be clicked. Clicking `▲ n more` or `▼ n more` moves a page. The keyboard works exactly as before.
+In terminals that report the mouse, you can also use it in every menu. One click opens a project, since **← Back** undoes it. A script needs a deliberate click, so a stray one never starts a build: the script under the pointer shows two buttons at the end of its row, **▶ run** and **… run with args**, divided by a thin line in a faint version of the accent colour, or click the script once to select it and again, or double-click, to run it. The entry under the pointer is marked `›`. Every button in the header box can be clicked. Clicking `▲ n more` or `▼ n more` moves a page. The keyboard works exactly as before.
 
 The scroll wheel alone is enough to get around: it moves as ↑ and ↓ do, so scrolling up past the first entry reaches the buttons, and pressing the wheel (middle-click) opens the selected entry or presses the focused button, wherever the pointer is. The hint under each menu mentions it. Only searching and the questions that ask you to type, such as the workspace path or script arguments, need the keyboard.
 

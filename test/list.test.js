@@ -1582,3 +1582,27 @@ test('a hint style colours the tag, not the label', async () => {
   terminal.type(KEYS.enter)
   await result
 })
+
+test('row buttons are divided by a line in the faint accent', async () => {
+  const terminal = createTerminal()
+  const select = terminal.createSelect({ useColors: true })
+  const result = select({
+    message: 'Pick',
+    items: scripts,
+    rowButtons,
+    mouse: true,
+    fullscreen: true,
+  })
+
+  terminal.hover(4)
+
+  const line = terminal.screen()[3]
+
+  assert.ok(
+    line.includes('\x1b[2m\x1b[36m│\x1b[39m\x1b[22m'),
+    JSON.stringify(line),
+  )
+
+  terminal.type(KEYS.enter)
+  await result
+})
