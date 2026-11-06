@@ -558,6 +558,31 @@ test('CLI lets the user change the workspace from the project list', async () =>
   )
 })
 
+test('CLI keeps the workspace when its change is cancelled with Escape', async () => {
+  const choices = [CHANGE_WORKSPACE, null]
+  const asked = []
+
+  const { dependencies, calls } = createDependencies({
+    prompts: {
+      chooseProject: async () => choices.shift(),
+      askForWorkspace: async (validate, options) => {
+        asked.push(options)
+        return null
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.deepEqual(asked, [{ cancellable: true }])
+  assert.match(loggedText(calls), /Press Esc to keep .*workspace\./)
+  assert.deepEqual(calls.savedWorkspaces, [])
+  assert.deepEqual(
+    calls.discoveredWorkspaces.map(call => call.root),
+    [WORKSPACE, WORKSPACE],
+  )
+})
+
 test('CLI offers a workspace change when the project list is empty', async () => {
   let offeredProjects
 

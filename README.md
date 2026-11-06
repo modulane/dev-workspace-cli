@@ -99,7 +99,7 @@ This installs two equivalent commands, `dev-workspace` and the shorter `dws`.
 | ← / →               | Move between buttons                        |
 | Ctrl+C              | Stop a running script, or quit from a menu  |
 
-Escape goes back one screen: from a project to the project list, and from the project list it exits. While you are searching, it only clears the search. The help line under each menu shows what it does (`esc back` or `esc exit`).
+Escape goes back one screen: from a project to the project list, from the workspace path prompt to the project list, and from the project list it exits. While you are searching, it only clears the search. The help line under each menu shows what it does (`esc back` or `esc exit`).
 
 Every menu opens with a small box that shows where you are: the name of the workspace folder, followed by the project you are in (`◆ dev › web-app`), the workspace folder, and in a project, its package manager on the right. The box also holds the buttons of the screen, on the right of the workspace line: **⚙ Workspace** and **✕ Exit** in the project list, **← Back** and **… Run with args** in a project. The buttons sit just above the list: press ↑ on the first entry to reach the first button, ↑ again for the next one, and ↓ to come back (Tab and Shift+Tab work too, and ← and → move between buttons). The focused button is shown in reverse, or between brackets without colours, and Enter presses it. Each script's command is shown next to its name, in a column of its own, and tags such as `last run` sit at the right edge. When a list is longer than the window, `▲ 3 more` and `▼ 12 more` show how many entries are hidden above and below. The layout stays within 100 columns on wide terminals. Long workspace paths are shortened in the middle (`C:Users…projectsweb`), keeping the folders that tell them apart, and script commands are cut with `…` to fit, and emoji or CJK characters in folder names never break the layout.
 
@@ -242,7 +242,7 @@ The workspace path is saved in the standard configuration folder of your operati
 - The `DEV_WORKSPACE_CONFIG` environment variable points the CLI at a different file.
 - If you edit the file by hand, an editor that saves it with a UTF-8 byte order mark does no harm.
 - `dws --set-mouse off` saves `"mouse": false` in the file, so menus use only the keyboard: `{ "workspace": "…", "mouse": false }`. `dws --set-mouse on` saves `true`. Changing the workspace keeps this setting, and it can be saved before any workspace is chosen.
-- To switch workspaces, press the **⚙ Workspace** button in the project list or run `dws --workspace <path>`. If the saved workspace no longer exists, the CLI asks for a new one.
+- To switch workspaces, press the **⚙ Workspace** button in the project list or run `dws --workspace <path>`. At the path prompt, Esc keeps the current workspace and goes back to the list. If the saved workspace no longer exists, the CLI asks for a new one.
 - Versions before 0.3.0 stored the file in `~/.dev-workspace-cli/config.json`. If that file exists, it is moved to the new location automatically.
 
 The history of recent projects and last scripts, and which mouse notes were shown, is kept apart from the settings, in `state.json` in the same folder as `config.json`. With `DEV_WORKSPACE_CONFIG`, it is named after your file instead (`dws.json` keeps it in `dws.state.json`), so it never overwrites a `state.json` of your own. It is only a convenience: if it is missing or damaged, the CLI starts with an empty history. `dws --clear-history` deletes it.

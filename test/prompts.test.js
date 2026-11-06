@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { EventEmitter } from 'node:events'
 import {
   CHANGE_WORKSPACE,
   RUN_WITH_ARGUMENTS,
@@ -49,6 +50,57 @@ test('askForWorkspace passes its message and validator to input', async () => {
   assert.equal(calls.input[0].message, 'Workspace path')
   assert.equal(calls.input[0].validate, validate)
   assert.equal(calls.input[0].theme, THEME)
+})
+
+// An input prompt that waits until its signal aborts, as Inquirer's does, or
+// fails with `error` once a key is pressed.
+function abortableInput(keys, error) {
+  return (options, { signal }) =>
+    new Promise((resolve, reject) => {
+      signal.addEventListener('abort', () =>
+        reject(
+          Object.assign(new Error('aborted'), { name: 'AbortPromptError' }),
+        ),
+      )
+      if (error) keys.once('keypress', () => reject(error))
+    })
+}
+
+test('askForWorkspace returns null on Escape when cancellable', async () => {
+  const keys = new EventEmitter()
+  const prompts = createPrompts({ input: abortableInput(keys), keys })
+
+  const answer = prompts.askForWorkspace(() => true, { cancellable: true })
+
+  keys.emit('keypress', 'a', { name: 'a' })
+  keys.emit('keypress', undefined, undefined)
+  keys.emit('keypress', undefined, { name: 'escape' })
+
+  assert.equal(await answer, null)
+  assert.equal(keys.listenerCount('keypress'), 0)
+})
+
+test('askForWorkspace passes other errors on when cancellable', async () => {
+  const keys = new EventEmitter()
+  const failure = new Error('closed')
+  const prompts = createPrompts({ input: abortableInput(keys, failure), keys })
+
+  const answer = prompts.askForWorkspace(() => true, { cancellable: true })
+
+  keys.emit('keypress', 'a', { name: 'a' })
+
+  await assert.rejects(answer, failure)
+  assert.equal(keys.listenerCount('keypress'), 0)
+})
+
+test('askForWorkspace returns the typed path when cancellable', async () => {
+  const keys = new EventEmitter()
+  const prompts = createPrompts({ input: async () => '/projects', keys })
+
+  assert.equal(
+    await prompts.askForWorkspace(() => true, { cancellable: true }),
+    '/projects',
+  )
 })
 
 test('confirmWorkspaceChange defaults to true', async () => {
