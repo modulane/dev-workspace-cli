@@ -142,7 +142,7 @@ In a terminal without full support, the first menu shows a short note, once: wha
 
 ### Recent projects and scripts
 
-The five projects you used most recently are listed first, under **Recent**. In a project's script list, the cursor starts on the script you ran last, tagged `last run`. This history is kept in a separate `state.json` file next to the configuration (see [Configuration](#configuration)); `dws --clear-history` deletes it without touching your settings.
+The three projects you used most recently are listed first, under **Recent**. In a project's script list, the cursor starts on the script you ran last, tagged `last run`. This history is kept in a separate `state.json` file next to the configuration (see [Configuration](#configuration)); `dws --clear-history` deletes it without touching your settings.
 
 ### Running scripts
 
