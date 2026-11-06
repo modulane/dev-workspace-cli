@@ -174,8 +174,6 @@ test('chooseScript lists scripts with their command, with back and args buttons'
     ],
     escape: { value: null, label: 'back' },
     enter: 'run',
-    // The ◆ dev-workspace name goes back to the projects too.
-    home: { value: null },
     default: undefined,
     fullscreen: true,
   })
@@ -261,7 +259,6 @@ test('chooseScript asks which script to run with arguments', async () => {
   )
   assert.deepEqual(calls.select[0].toolbar, [{ label: '← Back', value: null }])
   assert.equal(calls.select[0].rowButtons, undefined)
-  assert.equal(calls.select[0].home, undefined)
 
   // The script picked here is run with arguments.
   const { prompts: picking } = createPromptMocks({ select: scripts[0] })

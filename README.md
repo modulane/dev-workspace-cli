@@ -87,7 +87,7 @@ This installs two equivalent commands, `dev-workspace` and the shorter `dws`.
 
 | Key                 | Action                                      |
 | ------------------- | ------------------------------------------- |
-| ↑ / ↓               | Move through a list                         |
+| ↑ / ↓               | Move through a list, and up to the buttons  |
 | Page Up / Page Down | Move a page at a time                       |
 | Home / End          | Go to the first or last entry               |
 | Letters, digits, …  | Search the list                             |
@@ -101,9 +101,9 @@ This installs two equivalent commands, `dev-workspace` and the shorter `dws`.
 
 Escape goes back one screen: from a project to the project list, and from the project list it exits. While you are searching, it only clears the search. The help line under each menu shows what it does (`esc back` or `esc exit`).
 
-Every menu opens with a small box that shows where you are: the tool's name, followed by the project you are in (`◆ dev-workspace › web-app`), the workspace folder, and in a project, its package manager on the right. The box also holds the buttons of the screen, on the right of the workspace line: **⚙ Workspace** and **✕ Exit** in the project list, **← Back** and **… Run with args** in a project. Press Tab to reach them (the focused button is shown in reverse, or between brackets without colours), ← and → to move between them, and Enter to press one. Each script's command is shown next to its name, in a column of its own, and tags such as `last run` sit at the right edge. When a list is longer than the window, `▲ 3 more` and `▼ 12 more` show how many entries are hidden above and below. The layout stays within 100 columns on wide terminals.
+Every menu opens with a small box that shows where you are: the tool's name, followed by the project you are in (`◆ dev-workspace › web-app`), the workspace folder, and in a project, its package manager on the right. The box also holds the buttons of the screen, on the right of the workspace line: **⚙ Workspace** and **✕ Exit** in the project list, **← Back** and **… Run with args** in a project. The buttons sit just above the list: press ↑ on the first entry to reach the first button, ↑ again for the next one, and ↓ to come back (Tab and Shift+Tab work too, and ← and → move between buttons). The focused button is shown in reverse, or between brackets without colours, and Enter presses it. Each script's command is shown next to its name, in a column of its own, and tags such as `last run` sit at the right edge. When a list is longer than the window, `▲ 3 more` and `▼ 12 more` show how many entries are hidden above and below. The layout stays within 100 columns on wide terminals. Long workspace paths are shortened in the middle (`C:Users…projectsweb`), keeping the folders that tell them apart, and script commands are cut with `…` to fit, and emoji or CJK characters in folder names never break the layout.
 
-The menus are drawn on the terminal's alternate screen, as `less` and `vim` do, so resizing the window redraws the whole screen cleanly and the menus never fill your scrollback. A script's output appears on the normal screen and stays there after you return to the menus. Long workspace paths are shortened in the middle (`C:Users…projectsweb`), keeping the folders that tell them apart, and script commands are cut with `…` to fit, and emoji or CJK characters in folder names never break the layout.
+The menus are drawn on the terminal's alternate screen, as `less` and `vim` do, so resizing the window redraws the whole screen cleanly and the menus never fill your scrollback. A script's output appears on the normal screen and stays there after you return to the menus.
 
 ### Colours
 
@@ -117,9 +117,9 @@ Start typing in the project or script list to filter it. The characters you type
 
 ### Mouse
 
-In terminals that report the mouse, you can also use it in every menu. One click opens a project, since **← Back** undoes it. A script needs a deliberate click, so a stray one never starts a build: the script under the pointer shows **▶ run** and **… args** buttons at the end of its row, or click the script once to select it and again, or double-click, to run it. The entry under the pointer is marked `›`. Every button in the header box can be clicked, and so can `◆ dev-workspace`, which returns from a project to the project list. Clicking `▲ n more` or `▼ n more` moves a page. The keyboard works exactly as before.
+In terminals that report the mouse, you can also use it in every menu. One click opens a project, since **← Back** undoes it. A script needs a deliberate click, so a stray one never starts a build: the script under the pointer shows **▶ run** and **… args** buttons at the end of its row, or click the script once to select it and again, or double-click, to run it. The entry under the pointer is marked `›`. Every button in the header box can be clicked. Clicking `▲ n more` or `▼ n more` moves a page. The keyboard works exactly as before.
 
-The scroll wheel moves through the list, and pressing the wheel (middle-click) opens the selected entry, wherever the pointer is. The hint under each menu mentions it. Only searching and the questions that ask you to type, such as the workspace path or script arguments, need the keyboard.
+The scroll wheel alone is enough to get around: it moves as ↑ and ↓ do, so scrolling up past the first entry reaches the buttons, and pressing the wheel (middle-click) opens the selected entry or presses the focused button, wherever the pointer is. The hint under each menu mentions it. Only searching and the questions that ask you to type, such as the workspace path or script arguments, need the keyboard.
 
 While a menu is open, the mouse is used by the menu instead of selecting text; hold Shift or Option, depending on the terminal, and drag to select text anyway. Mouse reporting and the alternate screen are switched off before a script runs and whenever the CLI exits. To use only the keyboard, run `dws --no-mouse` for one run, or `dws --set-mouse off` to keep it that way; `dws --set-mouse on` turns the mouse back on.
 

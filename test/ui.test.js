@@ -218,19 +218,3 @@ test('headerLines leaves the toolbar out when the path would get too short', () 
 
   assert.equal(path, '  │  /projects           │')
 })
-
-test('headerLines marks the name as the home button when asked', () => {
-  const [plain] = headerLines({ workspace: '/p' }, 40)
-  const [top] = headerLines({ workspace: '/p', home: true }, 40)
-  const [cut] = headerLines(
-    { workspace: '/p', crumbs: ['a-very-long-project-name'], home: true },
-    30,
-  )
-
-  assert.ok(!plain.some(segment => segment.length > 2))
-  assert.deepEqual(top.slice(2, 4), [
-    ['◆', 'cyan', { target: 'home' }],
-    [' dev-workspace', 'bold', { target: 'home' }],
-  ])
-  assert.deepEqual(cut[3], [' dev-workspace', 'bold', { target: 'home' }])
-})

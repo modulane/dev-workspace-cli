@@ -112,11 +112,11 @@ const toolbar = [
   { label: '✕ Exit', value: null },
 ]
 
-// A header that draws the toolbar it is given on one line, and marks the
-// home name when asked, as the box from ui.js does.
-function testHeader(width, { toolbar = [], home = false } = {}) {
+// A header that draws the toolbar it is given on its second line, as the
+// box from ui.js does.
+function testHeader(width, { toolbar = [] } = {}) {
   return [
-    [['  '], ['◆ home', ...(home ? [{ target: 'home' }] : [])], [' ']],
+    [['  '], ['◆ home'], [' ']],
     [['  '], ...toolbar],
   ]
 }
@@ -1101,26 +1101,66 @@ test('toolbar buttons sit in the header and are clicked by column', async () => 
   assert.equal(await result, null)
 })
 
-test('the home name in the header is a button', async () => {
+test('↑ on the first item moves to the buttons, one by one', async () => {
   const terminal = createTerminal()
   const result = terminal.select({
     message: 'Pick',
     items: projects,
+    toolbar,
     header: testHeader,
-    home: { value: 'home' },
+  })
+  const buttons = () => terminal.screen()[1]
+
+  terminal.type(KEYS.down, KEYS.up)
+  assert.equal(buttons(), '   ⚙ Workspace  ✕ Exit ')
+
+  // Without colours, brackets replace the spaces around a focused button.
+  terminal.type(KEYS.up)
+  assert.equal(buttons(), '  [⚙ Workspace] ✕ Exit ')
+  assert.match(terminal.screen().at(-1), /enter press/)
+
+  // ↑ again goes on to the next button, and stays at the last one.
+  terminal.type(KEYS.up, KEYS.up)
+  assert.equal(buttons(), '   ⚙ Workspace [✕ Exit]')
+
+  // ↓ comes back the same way, to the first item.
+  terminal.type(KEYS.down, KEYS.down)
+  assert.equal(buttons(), '   ⚙ Workspace  ✕ Exit ')
+  assert.ok(terminal.screen().includes('  ❯ 📁 api'))
+
+  terminal.type(KEYS.up, KEYS.enter)
+
+  assert.equal(await result, 'change')
+})
+
+test('the wheel reaches the buttons, and pressing it presses one', async () => {
+  let time = 0
+  const terminal = createTerminal({ now: () => time })
+  const options = {
+    message: 'Pick',
+    items: projects,
+    toolbar,
+    header: testHeader,
     mouse: true,
     fullscreen: true,
-  })
+  }
+  const first = terminal.select(options)
+  const wheelUp = '\x1b[<64;8;12M'
+  const wheelDown = '\x1b[<65;8;12M'
+  const middle = '\x1b[<1;8;12M'
 
-  terminal.click(1, 4)
+  terminal.type(wheelDown, wheelUp, wheelUp, wheelUp)
+  assert.equal(terminal.screen()[1], '   ⚙ Workspace [✕ Exit]')
 
-  assert.equal(await result, 'home')
-  // The summary keeps the header, then names the button.
-  assert.ok(
-    terminal.written.endsWith(
-      '  Pick  ◆ dev-workspace\n\x1b[?1006l\x1b[?1003l\x1b[?1000l\x1b[?25h',
-    ),
-  )
+  terminal.type(middle)
+  assert.equal(await first, null)
+
+  // Back down to the list, pressing the wheel opens the item again.
+  const second = terminal.select(options)
+
+  time += 300
+  terminal.type(wheelUp, wheelDown, wheelDown, middle)
+  assert.equal(await second, 'billing-api')
 })
 
 test('Tab and the arrow keys move the focus between buttons', async () => {
@@ -1130,35 +1170,28 @@ test('Tab and the arrow keys move the focus between buttons', async () => {
     items: projects,
     toolbar,
     header: testHeader,
-    home: { value: 'home' },
   })
-  const header = () => terminal.screen().slice(0, 2)
+  const buttons = () => terminal.screen()[1]
 
   terminal.type('\t')
-  // Without colours, brackets replace the spaces around a focused button.
-  assert.deepEqual(header(), [' [◆ home]', '   ⚙ Workspace  ✕ Exit '])
-  assert.match(terminal.screen().at(-1), /enter press/)
-
-  terminal.type('\t')
-  assert.deepEqual(header(), ['  ◆ home ', '  [⚙ Workspace] ✕ Exit '])
+  assert.equal(buttons(), '  [⚙ Workspace] ✕ Exit ')
 
   terminal.type(KEYS.right)
-  assert.equal(header()[1], '   ⚙ Workspace [✕ Exit]')
+  assert.equal(buttons(), '   ⚙ Workspace [✕ Exit]')
 
   // At the last button, → stays; ← goes back, and Shift+Tab too.
-  terminal.type(KEYS.right, KEYS.left, '\x1b[Z', '\x1b[Z')
-  assert.deepEqual(header(), ['  ◆ home ', '   ⚙ Workspace  ✕ Exit '])
+  terminal.type(KEYS.right, KEYS.left, '\x1b[Z')
+  assert.equal(buttons(), '   ⚙ Workspace  ✕ Exit ')
 
   // From the list, Shift+Tab goes round to the last button.
   terminal.type('\x1b[Z')
-  assert.equal(header()[1], '   ⚙ Workspace [✕ Exit]')
+  assert.equal(buttons(), '   ⚙ Workspace [✕ Exit]')
 
-  // An arrow key returns to the list.
-  terminal.type(KEYS.down)
-  assert.equal(header()[1], '   ⚙ Workspace  ✕ Exit ')
-  assert.ok(terminal.screen().includes('  ❯ 📁 billing-api'))
+  // Page Down returns to the list.
+  terminal.type(KEYS.pageDown)
+  assert.equal(buttons(), '   ⚙ Workspace  ✕ Exit ')
 
-  terminal.type('\t', '\t', KEYS.enter)
+  terminal.type('\t', KEYS.enter)
 
   assert.equal(await result, 'change')
 })
