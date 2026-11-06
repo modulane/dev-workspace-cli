@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { formatHelp, parseCliArgs, splitArguments } from '../lib/args.js'
-import { createUi } from '../lib/ui.js'
+import { ACCENTS, createUi } from '../lib/ui.js'
 
 test('parseCliArgs returns no options for an empty command line', () => {
   assert.deepEqual({ ...parseCliArgs([]) }, {})
@@ -57,6 +57,7 @@ test('formatHelp documents every option', () => {
     '--workspace',
     '--no-mouse',
     '--set-mouse',
+    '--set-color',
     '--config-path',
     '--clear-history',
     '--add-alias',
@@ -94,6 +95,9 @@ test('formatHelp defaults to plain text', () => {
         --no-mouse           Use only the keyboard in menus, this time
         --set-mouse <on|off>
                              Save whether menus use the mouse
+        --set-color <name>   Save the accent colour: cyan, blue, purple,
+                             magenta, pink, orange, teal, sky, lavender,
+                             coral, gold, bold
         --config-path        Print the configuration file location
         --clear-history      Forget recently used projects and scripts
         --add-alias <name>   Create another command that starts the CLI
@@ -107,6 +111,9 @@ test('formatHelp defaults to plain text', () => {
 
   Environment:
     DEV_WORKSPACE_CONFIG     Use a custom configuration file path
+    NO_COLOR                 Turn colours off
+    FORCE_COLOR              Turn colours on, even when output is not
+                             a terminal (0 turns them off)
 `,
   )
 })
@@ -122,15 +129,17 @@ test('formatHelp applies colors to headings, commands, options and environment',
   const colored = formatHelp((value, shade) => `[${shade}]${value}[/${shade}]`)
 
   assert.ok(colored.includes('[bold]Usage:[/bold]'))
-  assert.ok(colored.includes('[cyan]dev-workspace[/cyan]'))
-  assert.ok(colored.includes('[cyan]dws[/cyan]'))
+  assert.ok(colored.includes('[accent]dev-workspace[/accent]'))
+  assert.ok(colored.includes('[accent]dws[/accent]'))
   assert.ok(colored.includes('[bold]Examples:[/bold]'))
-  assert.ok(colored.includes('[cyan]dws web[/cyan]'))
+  assert.ok(colored.includes('[accent]dws web[/accent]'))
   assert.ok(colored.includes('[bold]Options:[/bold]'))
-  assert.ok(colored.includes('[cyan]-w, --workspace[/cyan] [dim]<path>[/dim]'))
+  assert.ok(
+    colored.includes('[accent]-w, --workspace[/accent] [dim]<path>[/dim]'),
+  )
   assert.ok(colored.includes('Use <path> as the workspace'))
   assert.ok(colored.includes('[bold]Environment:[/bold]'))
-  assert.ok(colored.includes('[cyan]DEV_WORKSPACE_CONFIG[/cyan]'))
+  assert.ok(colored.includes('[accent]DEV_WORKSPACE_CONFIG[/accent]'))
 })
 
 test('parseCliArgs reads a project and a script for direct mode', () => {
@@ -179,4 +188,26 @@ test('splitArguments splits on whitespace and honours quotes', () => {
   // No shell is involved, so backslashes are kept, as in Windows paths.
   assert.deepEqual(splitArguments('C:\\dir\\file.txt'), ['C:\\dir\\file.txt'])
   assert.throws(() => splitArguments('"open'), /Close the " quote/)
+})
+
+test('parseCliArgs accepts only the accent colours for --set-color', () => {
+  for (const name of ACCENTS) {
+    assert.deepEqual(
+      { ...parseCliArgs(['--set-color', name]) },
+      {
+        'set-color': name,
+      },
+    )
+  }
+
+  assert.throws(
+    () => parseCliArgs(['--set-color', 'green']),
+    /Use --set-color with cyan, blue, .*, gold or bold, not "green"\.\n.*--help/,
+  )
+})
+
+test('formatHelp names every accent colour', () => {
+  const help = formatHelp().replace(/\s+/g, ' ')
+
+  assert.ok(help.includes(`colour: ${ACCENTS.join(', ')}`), help)
 })

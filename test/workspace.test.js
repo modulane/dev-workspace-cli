@@ -9,7 +9,9 @@ import {
   getProjects,
   getScripts,
   normalizePathInput,
+  readGitBranch,
   resolveDirectoryInput,
+  suggestWorkspaces,
 } from '../lib/workspace.js'
 
 // Each test gets its own isolated temporary directory.
@@ -374,4 +376,123 @@ test('getScripts reads a package.json that starts with a byte order mark', async
       { name: 'hello', command: 'echo hello' },
     ])
   })
+})
+
+test('readGitBranch reads the branch, or the short commit, from .git/HEAD', async () => {
+  await withTempDirectory(async directory => {
+    const head = path.join(directory, '.git', 'HEAD')
+
+    await mkdir(path.join(directory, '.git'))
+    assert.equal(await readGitBranch(directory), null)
+
+    await writeFile(head, 'ref: refs/heads/feat/login\n')
+    assert.equal(await readGitBranch(directory), 'feat/login')
+
+    await writeFile(head, '0123456789abcdef0123456789abcdef01234567\n')
+    assert.equal(await readGitBranch(directory), '0123456')
+
+    await writeFile(head, 'garbage\n')
+    assert.equal(await readGitBranch(directory), null)
+  })
+})
+
+test('readGitBranch follows a .git file, and is null outside Git', async () => {
+  await withTempDirectory(async directory => {
+    const project = path.join(directory, 'worktree')
+    const gitDir = path.join(directory, 'main', '.git', 'worktrees', 'wt')
+
+    await mkdir(project)
+    assert.equal(await readGitBranch(project), null)
+
+    await mkdir(gitDir, { recursive: true })
+    await writeFile(path.join(gitDir, 'HEAD'), 'ref: refs/heads/main\n')
+    await writeFile(
+      path.join(project, '.git'),
+      `gitdir: ${path.relative(project, gitDir)}\n`,
+    )
+    assert.equal(await readGitBranch(project), 'main')
+
+    await writeFile(path.join(project, '.git'), 'not a pointer\n')
+    assert.equal(await readGitBranch(project), null)
+  })
+})
+
+test('suggestWorkspaces returns the common folders that exist, in order', async () => {
+  await withTempDirectory(async directory => {
+    await mkdir(path.join(directory, 'repos'))
+    await mkdir(path.join(directory, 'dev'))
+    await writeFile(path.join(directory, 'code'), 'a file, not a folder')
+
+    // Without drive roots to look at; on Windows, the folders are still
+    // found through the forward slashes of the Linux path joins.
+    assert.deepEqual(
+      await suggestWorkspaces({
+        homeDirectory: directory,
+        cwd: directory,
+        platform: 'linux',
+      }),
+      [path.posix.join(directory, 'dev'), path.posix.join(directory, 'repos')],
+    )
+  })
+})
+
+test('suggestWorkspaces adds the folder above a project and Windows drive roots', async () => {
+  const folders = new Set([
+    'C:\\',
+    'E:\\',
+    'C:\\Users\\you\\projects',
+    'E:\\dev',
+    'e:\\work',
+  ])
+  const options = {
+    homeDirectory: 'C:\\Users\\you',
+    platform: 'win32',
+    isDirectory: async folder => folders.has(folder),
+  }
+
+  // Run inside e:\work\web, a project: e:\work comes first.
+  assert.deepEqual(
+    await suggestWorkspaces({
+      ...options,
+      cwd: 'e:\\work\\web',
+      isFile: async file => file === 'e:\\work\\web\\package.json',
+    }),
+    ['e:\\work', 'C:\\Users\\you\\projects', 'E:\\dev'],
+  )
+
+  // E:\dev, found above the project and on the drive, is offered once.
+  assert.deepEqual(
+    await suggestWorkspaces({
+      ...options,
+      cwd: 'E:\\dev\\web',
+      isFile: async () => true,
+    }),
+    ['E:\\dev', 'C:\\Users\\you\\projects'],
+  )
+
+  // A drive root has no folder above it.
+  assert.deepEqual(
+    await suggestWorkspaces({
+      ...options,
+      cwd: 'C:\\',
+      isFile: async () => true,
+    }),
+    ['C:\\Users\\you\\projects', 'E:\\dev'],
+  )
+})
+
+test('suggestWorkspaces skips a drive that does not answer in time', async () => {
+  const result = await suggestWorkspaces({
+    homeDirectory: 'C:\\Users\\you',
+    cwd: 'C:\\',
+    platform: 'win32',
+    isFile: async () => false,
+    isDirectory: folder =>
+      folder.startsWith('Z:')
+        ? new Promise(() => {})
+        : Promise.resolve(folder === 'C:\\' || folder === 'C:\\dev'),
+    timeout: 10,
+  })
+
+  assert.deepEqual(result, ['C:\\dev'])
 })

@@ -16,9 +16,11 @@ import path from 'node:path'
 import {
   getConfigPaths,
   migrateLegacyConfig,
+  readColorSetting,
   readMouseSetting,
   readWorkspaceConfig,
   resetWorkspaceConfig,
+  saveColorSetting,
   saveMouseSetting,
   saveWorkspaceConfig,
 } from '../lib/config.js'
@@ -356,5 +358,30 @@ test('saveWorkspaceConfig keeps the other settings', async () => {
     assert.deepEqual(JSON.parse(await readFile(file, 'utf8')), {
       workspace: '/projects',
     })
+  })
+})
+
+test('saveColorSetting saves the colour and keeps the other settings', async () => {
+  await withTempHome(async home => {
+    const { directory, file } = pathsIn(home)
+
+    assert.equal(await readColorSetting(file), null)
+
+    await saveWorkspaceConfig('/projects', file)
+    await saveColorSetting('teal', file)
+
+    assert.deepEqual(JSON.parse(await readFile(file, 'utf8')), {
+      workspace: '/projects',
+      color: 'teal',
+    })
+    assert.equal(await readColorSetting(file), 'teal')
+    assert.equal(await readWorkspaceConfig(file), '/projects')
+
+    await mkdir(directory, { recursive: true })
+
+    for (const content of ['{ not json', JSON.stringify({ color: 3 })]) {
+      await writeFile(file, content, 'utf8')
+      assert.equal(await readColorSetting(file), null)
+    }
   })
 })

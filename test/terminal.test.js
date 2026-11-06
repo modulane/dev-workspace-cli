@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   MOUSE_CHECK_ISSUE,
   detectTerminal,
+  isInteractive,
   isTerminal,
   mouseNote,
 } from '../lib/terminal.js'
@@ -89,4 +90,9 @@ test('isTerminal needs a terminal for both input and output', () => {
   assert.equal(isTerminal({ input: tty, output: tty }), true)
   assert.equal(isTerminal({ input: tty, output: pipe }), false)
   assert.equal(isTerminal({ input: pipe, output: tty }), false)
+})
+
+test('isInteractive needs a terminal for input only', () => {
+  assert.equal(isInteractive({ input: { isTTY: true } }), true)
+  assert.equal(isInteractive({ input: {} }), false)
 })

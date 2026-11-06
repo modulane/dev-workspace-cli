@@ -3,9 +3,14 @@ import path from 'node:path'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { createCli, findProject } from '../lib/cli.js'
-import { CHANGE_WORKSPACE, RUN_WITH_ARGUMENTS } from '../lib/prompts.js'
+import { createCli, findProject, formatDuration } from '../lib/cli.js'
+import {
+  CHANGE_WORKSPACE,
+  ENTER_PATH,
+  RUN_WITH_ARGUMENTS,
+} from '../lib/prompts.js'
 import { emptyState } from '../lib/state.js'
+import { ACCENTS, headerLines } from '../lib/ui.js'
 import { resolveDirectoryInput } from '../lib/workspace.js'
 
 const { version } = createRequire(import.meta.url)('../package.json')
@@ -19,8 +24,13 @@ function createDependencies(overrides = {}) {
     savedStates: [],
     mouse: [],
     mouseSettings: [],
+    colorSettings: [],
+    accents: [],
     errors: [],
     logs: [],
+    menus: [],
+    runHeaders: [],
+    time: 0,
   }
 
   const dependencies = {
@@ -38,9 +48,13 @@ function createDependencies(overrides = {}) {
         legacyFile: '/fake/home/.legacy/config.json',
       }),
       migrateLegacyConfig: async () => null,
+      readColorSetting: async () => 'cyan',
       readMouseSetting: async () => true,
       readWorkspaceConfig: async () => WORKSPACE,
       resetWorkspaceConfig: async () => [],
+      saveColorSetting: async (color, file) => {
+        calls.colorSettings.push({ color, file })
+      },
       saveMouseSetting: async (enabled, file) => {
         calls.mouseSettings.push({ enabled, file })
       },
@@ -63,6 +77,7 @@ function createDependencies(overrides = {}) {
         name: 'Windows Terminal',
         support: 'full',
       }),
+      isInteractive: () => true,
       isTerminal: () => true,
     },
 
@@ -74,6 +89,8 @@ function createDependencies(overrides = {}) {
       },
       getScripts: async () => [],
       detectPackageManager: async () => ({ name: 'npm', source: 'default' }),
+      readGitBranch: async () => null,
+      suggestWorkspaces: async () => [],
     },
 
     commands: {
@@ -83,21 +100,47 @@ function createDependencies(overrides = {}) {
     prompts: {
       askForArguments: async () => [],
       askForWorkspace: async () => WORKSPACE,
-      chooseProject: async () => null,
-      chooseScript: async () => null,
+      chooseProject: async (projects, options) => {
+        calls.menus.push(options)
+        return null
+      },
+      chooseScript: async (scripts, options) => {
+        calls.menus.push(options)
+        return null
+      },
       confirmWorkspaceChange: async () => true,
+      chooseAccent: async () => assert.fail('no colour question'),
       useMouse: (enabled, note = null, onNoteShown = null) => {
         calls.mouse.push({ enabled, note })
         calls.showNote = onNoteShown
       },
       waitAfterCommand: async () => undefined,
-      waitForBack: async () => undefined,
+      waitForBack: async options => {
+        calls.menus.push(options)
+      },
     },
 
     ui: {
-      clearScreen: () => undefined,
+      leaveScreen: () => {
+        calls.leftScreen = (calls.leftScreen ?? 0) + 1
+      },
       color: value => String(value),
-      printHeader: () => undefined,
+      headerLines,
+      setAccent: name => calls.accents.push(name),
+      drawHeader: options => {
+        calls.runHeaders.push(options)
+        return headerLines(options, 80).map(line =>
+          line.map(([text]) => text).join(''),
+        )
+      },
+    },
+
+    // Each reading is 4.2 seconds after the previous one.
+    clock: {
+      now: () => {
+        calls.time += 4200
+        return calls.time
+      },
     },
 
     output: {
@@ -188,11 +231,9 @@ test('CLI exits cleanly when the project list is empty', async () => {
   await cli.run()
 
   assert.equal(calls.discoveredWorkspaces.length, 1)
-  assert.ok(
-    calls.logs.some(args =>
-      args.join(' ').includes('No project folders found'),
-    ),
-  )
+  assert.match(menuText(calls), /No project folders in this workspace\./)
+  // The header starts with the workspace folder's name.
+  assert.match(menuText(calls), /◆ workspace ─/)
 })
 
 test('CLI treats prompt cancellation as a normal exit', async () => {
@@ -271,9 +312,7 @@ test('CLI handles a project with no npm scripts', async () => {
 
   await createCli(dependencies).run()
 
-  assert.ok(
-    calls.logs.some(args => args.join(' ').includes('No scripts found')),
-  )
+  assert.match(menuText(calls), /No scripts in empty-project\./)
 })
 
 test('CLI runs a selected script and reports success', async () => {
@@ -290,7 +329,7 @@ test('CLI runs a selected script and reports success', async () => {
     },
     prompts: {
       chooseProject: async () => project,
-      chooseScript: async () => script,
+      chooseScript: async () => ({ script, withArguments: false }),
       waitAfterCommand: async () => undefined,
     },
     commands: {
@@ -307,16 +346,25 @@ test('CLI runs a selected script and reports success', async () => {
   let scriptSelections = 0
   dependencies.prompts.chooseScript = async () => {
     scriptSelections++
-    return scriptSelections === 1 ? script : null
+    return scriptSelections === 1 ? { script, withArguments: false } : null
   }
 
   await createCli(dependencies).run()
 
-  assert.ok(
-    calls.logs.some(args =>
-      args.join(' ').includes('Command completed successfully.'),
+  const lines = loggedText(calls).split('\n')
+
+  assert.deepEqual(calls.runHeaders, [
+    { workspace: WORKSPACE, crumbs: ['example', 'dev'], tag: 'npm · default' },
+  ])
+  assert.deepEqual(lines.slice(0, 6), [
+    '',
+    ...headerLines(calls.runHeaders[0], 80).map(line =>
+      line.map(([text]) => text).join(''),
     ),
-  )
+    '',
+    '  ▶ npm run dev',
+  ])
+  assert.deepEqual(lines.slice(-3), ['', '  ✔ dev finished in 4.2s', ''])
 })
 
 test('CLI reports a non-zero script exit code', async () => {
@@ -342,15 +390,11 @@ test('CLI reports a non-zero script exit code', async () => {
 
   let scriptSelections = 0
   dependencies.prompts.chooseScript = async () =>
-    ++scriptSelections === 1 ? script : null
+    ++scriptSelections === 1 ? { script, withArguments: false } : null
 
   await createCli(dependencies).run()
 
-  assert.ok(
-    calls.logs.some(args =>
-      args.join(' ').includes('Command exited with code 7.'),
-    ),
-  )
+  assert.match(loggedText(calls), /✖ test failed · exit 7 · 4\.2s/)
 })
 
 test('CLI reports a command interrupted by a signal', async () => {
@@ -379,15 +423,11 @@ test('CLI reports a command interrupted by a signal', async () => {
 
   let scriptSelections = 0
   dependencies.prompts.chooseScript = async () =>
-    ++scriptSelections === 1 ? script : null
+    ++scriptSelections === 1 ? { script, withArguments: false } : null
 
   await createCli(dependencies).run()
 
-  assert.ok(
-    calls.logs.some(args =>
-      args.join(' ').includes('Command was interrupted (SIGTERM).'),
-    ),
-  )
+  assert.match(loggedText(calls), /✖ build failed · SIGTERM · 4\.2s/)
 })
 
 test('CLI handles errors while reading a project package.json', async () => {
@@ -411,14 +451,11 @@ test('CLI handles errors while reading a project package.json', async () => {
 
   await createCli(dependencies).run()
 
-  assert.ok(
-    calls.errors.some(args =>
-      args.join(' ').includes('Could not read package.json'),
-    ),
+  assert.match(
+    menuText(calls),
+    /Could not read package\.json: Invalid package JSON/,
   )
-  assert.ok(
-    calls.errors.some(args => args.join(' ').includes('Invalid package JSON')),
-  )
+  assert.match(menuText(calls), /› broken-project/)
 })
 
 test('CLI handles errors when starting a command', async () => {
@@ -446,13 +483,13 @@ test('CLI handles errors when starting a command', async () => {
 
   let scriptSelections = 0
   dependencies.prompts.chooseScript = async () =>
-    ++scriptSelections === 1 ? script : null
+    ++scriptSelections === 1 ? { script, withArguments: false } : null
 
   await createCli(dependencies).run()
 
   assert.ok(
     calls.errors.some(args =>
-      args.join(' ').includes('Could not start command: npm unavailable'),
+      args.join(' ').includes('✖ dev could not start: npm unavailable'),
     ),
   )
 })
@@ -480,20 +517,34 @@ test('CLI treats prompt abortion as a normal exit', async () => {
   assert.ok(calls.logs.some(args => args.join(' ').includes('Goodbye!')))
 })
 
-test('CLI propagates unexpected errors', async () => {
-  const { dependencies } = createDependencies({
-    ui: {
-      printHeader: () => {
+test('CLI propagates unexpected errors, after leaving the alternate screen', async () => {
+  const { dependencies, calls } = createDependencies({
+    prompts: {
+      chooseProject: async () => {
         throw new Error('Unexpected UI failure')
       },
     },
   })
 
   await assert.rejects(createCli(dependencies).start(), /Unexpected UI failure/)
+  assert.equal(calls.leftScreen, 1)
 })
 
 function loggedText(calls) {
   return calls.logs.map(args => args.join(' ')).join('\n')
+}
+
+// What the recorded menus show above their message: the header box, at 80
+// columns, and the body.
+function menuText(calls) {
+  return calls.menus
+    .flatMap(options => [
+      ...(options?.header?.(80) ?? []).map(line =>
+        line.map(([text]) => text).join(''),
+      ),
+      ...(options?.body ?? []).map(([text]) => text),
+    ])
+    .join('\n')
 }
 
 test('CLI lets the user change the workspace from the project list', async () => {
@@ -518,6 +569,186 @@ test('CLI lets the user change the workspace from the project list', async () =>
   assert.deepEqual(
     calls.discoveredWorkspaces.map(call => call.root),
     [WORKSPACE, otherWorkspace],
+  )
+})
+
+test('CLI keeps the workspace when its change is cancelled with Escape', async () => {
+  const choices = [CHANGE_WORKSPACE, null]
+  const asked = []
+
+  const { dependencies, calls } = createDependencies({
+    prompts: {
+      chooseProject: async () => choices.shift(),
+      askForWorkspace: async (validate, options) => {
+        asked.push(options)
+        return null
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.deepEqual(asked, [{ cancellable: true }])
+  assert.match(loggedText(calls), /Press Esc to keep .*workspace\./)
+  assert.deepEqual(calls.savedWorkspaces, [])
+  assert.deepEqual(
+    calls.discoveredWorkspaces.map(call => call.root),
+    [WORKSPACE, WORKSPACE],
+  )
+})
+
+test('CLI offers the common workspace folders on first run', async () => {
+  const home = path.resolve('fake/home')
+  const folders = [path.join(home, 'dev'), path.join(home, 'code')]
+  const shown = []
+  let mouseFirst
+
+  const { dependencies, calls } = createDependencies({
+    config: {
+      readWorkspaceConfig: async () => null,
+    },
+    workspace: {
+      suggestWorkspaces: async () => folders,
+      getProjects: async root => {
+        calls.discoveredWorkspaces.push({ root })
+        return [
+          { name: 'a', hasPackageJson: true },
+          { name: 'b', hasPackageJson: true },
+          { name: 'notes', hasPackageJson: false },
+        ]
+      },
+    },
+    prompts: {
+      chooseWorkspace: async (offered, options) => {
+        mouseFirst = calls.mouse.length === 1
+        shown.push([offered, options])
+        return offered[1]
+      },
+      askForWorkspace: async () => assert.fail('no path prompt'),
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  const [[offered, options]] = shown
+
+  assert.deepEqual(offered, folders)
+  assert.equal(options.cancellable, false)
+  assert.equal(options.header, undefined)
+  assert.deepEqual(options.body, [
+    ['Configure your development workspace.', 'bold'],
+    ['Choose the folder that contains your projects.', 'dim'],
+  ])
+  assert.deepEqual(await options.details(folders[0]), {
+    detail: '2 projects',
+  })
+  // The list has the mouse, as every menu does.
+  assert.equal(mouseFirst, true)
+  assert.deepEqual(calls.savedWorkspaces, [
+    {
+      workspace: folders[1],
+      file: '/fake/home/.dev-workspace-cli/config.json',
+    },
+  ])
+  assert.ok(calls.leftScreen >= 1)
+})
+
+test('CLI counts the projects of a suggested folder', async () => {
+  const folders = {
+    '/home/dev': [{ hasPackageJson: true }],
+    '/home/code': [{ hasPackageJson: false }],
+  }
+  let details
+
+  const { dependencies } = createDependencies({
+    config: {
+      readWorkspaceConfig: async () => null,
+    },
+    workspace: {
+      suggestWorkspaces: async () => Object.keys(folders),
+      getProjects: async folder => folders[folder] ?? [],
+    },
+    prompts: {
+      chooseWorkspace: async (offered, options) => {
+        details = options.details
+        return offered[0]
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.deepEqual(await details('/home/dev'), { detail: '1 project' })
+  assert.deepEqual(await details('/home/code'), { detail: 'no projects' })
+})
+
+test('CLI asks for a path when another one is wanted, or none is suggested', async () => {
+  for (const suggested of [['/home/dev'], []]) {
+    const asked = []
+
+    const { dependencies, calls } = createDependencies({
+      config: {
+        readWorkspaceConfig: async () => null,
+      },
+      workspace: {
+        suggestWorkspaces: async () => suggested,
+      },
+      prompts: {
+        chooseWorkspace: async () => ENTER_PATH,
+        askForWorkspace: async (validate, options) => {
+          asked.push(options)
+          return WORKSPACE
+        },
+      },
+    })
+
+    await createCli(dependencies).run()
+
+    assert.deepEqual(asked, [{ cancellable: false }])
+    assert.match(loggedText(calls), /Enter the folder containing your projects/)
+    assert.equal(calls.savedWorkspaces[0].workspace, WORKSPACE)
+  }
+})
+
+test('CLI offers the folders again from the project list, where Escape goes back', async () => {
+  const otherWorkspace = path.resolve('fake/other')
+  const choices = [CHANGE_WORKSPACE, CHANGE_WORKSPACE, null]
+  const answers = [null, otherWorkspace]
+  const shown = []
+
+  const { dependencies, calls } = createDependencies({
+    workspace: {
+      suggestWorkspaces: async () => [WORKSPACE, otherWorkspace],
+    },
+    prompts: {
+      chooseProject: async () => choices.shift(),
+      chooseWorkspace: async (folders, options) => {
+        shown.push(options)
+        return answers.shift()
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.equal(shown[0].cancellable, true)
+  assert.equal(shown[0].current, WORKSPACE)
+  assert.equal(shown[0].body, undefined)
+  assert.match(
+    shown[0]
+      .header(80)
+      .map(line => line.map(([text]) => text).join(''))
+      .join('\n'),
+    // Drawn with the workspace of the moment, now the new one.
+    /◆ other › workspace ─/,
+  )
+  assert.deepEqual(
+    calls.savedWorkspaces.map(saved => saved.workspace),
+    [otherWorkspace],
+  )
+  assert.deepEqual(
+    calls.discoveredWorkspaces.map(call => call.root),
+    [WORKSPACE, WORKSPACE, otherWorkspace],
   )
 })
 
@@ -632,8 +863,8 @@ test('CLI colors help text through ui.color', async () => {
 
   const text = loggedText(calls)
   assert.match(text, /\[bold\]Usage:\[\/bold\]/)
-  assert.match(text, /\[cyan\]dev-workspace\[\/cyan\]/)
-  assert.match(text, /\[cyan\]-w, --workspace\[\/cyan\]/)
+  assert.match(text, /\[accent\]dev-workspace\[\/accent\]/)
+  assert.match(text, /\[accent\]-w, --workspace\[\/accent\]/)
 })
 
 test('CLI rejects unknown options with a pointer to --help', async () => {
@@ -847,7 +1078,8 @@ test('CLI runs scripts with the detected package manager', async () => {
     },
     prompts: {
       chooseProject: async () => (++projectSelections === 1 ? project : null),
-      chooseScript: async () => (++scriptSelections === 1 ? script : null),
+      chooseScript: async () =>
+        ++scriptSelections === 1 ? { script, withArguments: false } : null,
     },
     commands: {
       runCommand: async (...args) => {
@@ -862,20 +1094,17 @@ test('CLI runs scripts with the detected package manager', async () => {
   assert.deepEqual(runs, [
     ['dev', project.directory, { packageManager: 'pnpm' }],
   ])
-  assert.match(
-    loggedText(calls),
-    /Package manager: pnpm \(from pnpm-lock\.yaml\)/,
-  )
-  assert.match(loggedText(calls), /Running: pnpm run dev/)
+  assert.match(loggedText(calls), /▶ pnpm run dev/)
 })
 
-test('CLI explains where the package manager choice comes from', async () => {
+test('CLI shows the project and its package manager in the header', async () => {
   const cases = [
     [
-      { name: 'yarn', source: 'packageManager' },
-      /yarn \(from the packageManager field\)/,
+      { name: 'pnpm', source: 'pnpm-lock.yaml' },
+      /◆ workspace › p ─+ pnpm · pnpm-lock\.yaml ─╮/,
     ],
-    [{ name: 'npm', source: 'default' }, /npm \(default\)/],
+    [{ name: 'yarn', source: 'packageManager' }, /yarn · packageManager field/],
+    [{ name: 'npm', source: 'default' }, /npm · default/],
   ]
 
   for (const [detected, expected] of cases) {
@@ -895,8 +1124,108 @@ test('CLI explains where the package manager choice comes from', async () => {
 
     await createCli(dependencies).run()
 
-    assert.match(loggedText(calls), expected)
+    assert.match(menuText(calls), expected)
   }
+})
+
+test('CLI gives the project list the scripts, branch and package manager of each project', async () => {
+  const projects = ['api', 'docs', 'web', 'broken'].map(name => ({
+    name,
+    directory: path.join(WORKSPACE, name),
+    hasPackageJson: true,
+  }))
+  const scripts = {
+    api: [{ name: 'dev' }, { name: 'build' }],
+    docs: [{ name: 'dev' }],
+    web: [],
+  }
+  const reads = []
+  const lists = []
+
+  const { dependencies } = createDependencies({
+    workspace: {
+      getProjects: async () => projects,
+      detectPackageManager: async directory =>
+        directory.endsWith('docs')
+          ? { name: 'yarn', source: 'yarn.lock', runsHooks: false }
+          : { name: 'pnpm', source: 'pnpm-lock.yaml', runsHooks: true },
+      readGitBranch: async directory =>
+        directory.endsWith('docs')
+          ? null
+          : directory.endsWith('web')
+            ? 'feat/login'
+            : 'main',
+      getScripts: async (directory, options) => {
+        const name = path.basename(directory)
+
+        reads.push([name, options])
+        if (!scripts[name]) throw new Error('Invalid JSON')
+        return scripts[name]
+      },
+    },
+    prompts: {
+      chooseProject: async (shown, options) => {
+        lists.push(options.details)
+        return null
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  const [details] = lists
+  // The default branch in one colour, any other in another.
+  const main = [
+    [' · ', 'dim'],
+    ['main', 'mainBranch'],
+  ]
+  const feature = [
+    [' · ', 'dim'],
+    ['feat/login', 'branch'],
+  ]
+
+  assert.deepEqual(await Promise.all(projects.map(details)), [
+    { detail: '2 scripts', detailEnd: main, hint: 'pnpm' },
+    { detail: '1 script', hint: 'yarn' },
+    { detail: 'no scripts', detailEnd: feature, hint: 'pnpm' },
+    { detail: 'invalid package.json', detailEnd: main, hint: 'pnpm' },
+  ])
+  // Counted as the script menu counts them.
+  assert.deepEqual(reads[1], ['docs', { groupHooks: false }])
+
+  // Read once per session.
+  await details(projects[1])
+  assert.equal(reads.length, 4)
+})
+
+test('CLI reads the details of a project again after opening it', async () => {
+  const project = {
+    name: 'api',
+    directory: path.join(WORKSPACE, 'api'),
+    hasPackageJson: true,
+  }
+  const shown = []
+  let branch = 'main'
+  let lists = 0
+
+  const { dependencies } = createDependencies({
+    workspace: {
+      getProjects: async () => [project],
+      getScripts: async () => [{ name: 'dev', command: 'vite' }],
+      readGitBranch: async () => branch,
+    },
+    prompts: {
+      chooseProject: async (projects, { details }) => {
+        shown.push((await details(project)).detailEnd[1][0])
+        branch = 'feat/login'
+        return ++lists === 1 ? project : null
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.deepEqual(shown, ['main', 'feat/login'])
 })
 
 test('CLI groups hooks only when the package manager runs them', async () => {
@@ -970,8 +1299,8 @@ function directDependencies(overrides = {}) {
       ...overrides.prompts,
     },
     ui: {
-      clearScreen: () => {
-        throw new Error('direct mode must not clear the screen')
+      leaveScreen: () => {
+        throw new Error('direct mode never uses the alternate screen')
       },
     },
   })
@@ -1260,7 +1589,8 @@ test('CLI starts the script list on the last script run', async () => {
 
   await createCli(dependencies).run()
 
-  assert.deepEqual(scriptOptions, { lastScript: 'build' })
+  assert.equal(scriptOptions.lastScript, 'build')
+  assert.equal(typeof scriptOptions.header, 'function')
 })
 
 test('CLI keeps going when the history cannot be saved', async () => {
@@ -1288,7 +1618,8 @@ test('CLI keeps going when the history cannot be saved', async () => {
     },
     prompts: {
       chooseProject: async () => (++projectSelections === 1 ? project : null),
-      chooseScript: async () => (++scriptSelections === 1 ? script : null),
+      chooseScript: async () =>
+        ++scriptSelections === 1 ? { script, withArguments: false } : null,
     },
   })
 
@@ -1301,7 +1632,7 @@ test('CLI runs a script with arguments typed in the menu', async () => {
   const project = projectFixtures()[0]
   const dev = { name: 'dev', command: 'vite' }
   const answers = [RUN_WITH_ARGUMENTS, RUN_WITH_ARGUMENTS, null]
-  const forArguments = [null, dev]
+  const forArguments = [null, { script: dev, withArguments: true }]
   const runs = []
   let projectSelections = 0
 
@@ -1339,7 +1670,7 @@ test('CLI runs a script with arguments typed in the menu', async () => {
       { packageManager: 'npm', args: ['--port', '4000'] },
     ],
   ])
-  assert.match(loggedText(calls), /Running: npm run dev -- --port 4000/)
+  assert.match(loggedText(calls), /▶ npm run dev -- --port 4000/)
 })
 
 test('CLI runs the same script again when asked', async () => {
@@ -1363,7 +1694,8 @@ test('CLI runs the same script again when asked', async () => {
     },
     prompts: {
       chooseProject: async () => (++projectSelections === 1 ? project : null),
-      chooseScript: async () => (++scriptSelections === 1 ? script : null),
+      chooseScript: async () =>
+        ++scriptSelections === 1 ? { script, withArguments: false } : null,
       waitAfterCommand: async () => again.shift(),
     },
   })
@@ -1535,4 +1867,228 @@ test('CLI keeps the mouse off, with no note, without a terminal on both sides', 
   await createCli(dependencies).run()
 
   assert.deepEqual(calls.mouse, [{ enabled: false, note: null }])
+})
+
+test('CLI refuses to open the menus without a terminal for input', async () => {
+  const { dependencies, calls } = createDependencies({
+    terminal: { isInteractive: () => false },
+  })
+
+  for (const args of [[], ['web'], ['--workspace', WORKSPACE]]) {
+    await assert.rejects(
+      createCli(dependencies).start(args),
+      /menus need an interactive terminal.*dev-workspace <project> <script>/,
+    )
+  }
+
+  assert.equal(calls.discoveredWorkspaces.length, 0)
+  assert.equal(calls.menus.length, 0)
+  // --workspace is still saved: it needs no terminal.
+  assert.equal(calls.savedWorkspaces.length, 1)
+})
+
+test('CLI runs a script directly without a terminal for input', async () => {
+  const { dependencies } = createDependencies({
+    terminal: { isInteractive: () => false },
+    workspace: {
+      getProjects: async () => [
+        { name: 'web', directory: '/w/web', hasPackageJson: true },
+      ],
+      getScripts: async () => [{ name: 'dev', command: 'vite' }],
+    },
+  })
+
+  assert.equal(await createCli(dependencies).start(['web', 'dev']), 0)
+})
+
+test('CLI asks for arguments when a script is picked with its args button', async () => {
+  const project = projectFixtures()[0]
+  const dev = { name: 'dev', command: 'vite' }
+  const answers = [{ script: dev, withArguments: true }, null]
+  const runs = []
+  let projectSelections = 0
+
+  const { dependencies, calls } = createDependencies({
+    workspace: {
+      getProjects: async () => [project],
+      getScripts: async () => [dev],
+    },
+    commands: {
+      runCommand: async (...args) => {
+        // The script's output goes to the normal screen.
+        runs.push({ args, leftScreen: calls.leftScreen })
+        return { code: 0 }
+      },
+    },
+    prompts: {
+      chooseProject: async () => (++projectSelections === 1 ? project : null),
+      chooseScript: async () => answers.shift(),
+      askForArguments: async () => ['--open'],
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.deepEqual(runs, [
+    {
+      args: [
+        'dev',
+        project.directory,
+        { packageManager: 'npm', args: ['--open'] },
+      ],
+      leftScreen: 1,
+    },
+  ])
+  // Once more when the menus end.
+  assert.equal(calls.leftScreen, 2)
+})
+
+test('CLI draws the header on the list that asks which script takes arguments', async () => {
+  const project = projectFixtures()[0]
+  const dev = { name: 'dev', command: 'vite' }
+  const answers = [RUN_WITH_ARGUMENTS, null]
+  const headers = []
+  let projectSelections = 0
+
+  const { dependencies } = createDependencies({
+    workspace: {
+      getProjects: async () => [project],
+      getScripts: async () => [dev],
+    },
+    prompts: {
+      chooseProject: async () => (++projectSelections === 1 ? project : null),
+      chooseScript: async (scripts, options) => {
+        headers.push(options.header)
+        return options.forArguments ? null : answers.shift()
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.equal(headers.length, 3)
+  assert.ok(headers.every(header => header === headers[0]))
+
+  // The header passes the list's buttons on to the box.
+  const [, path] = headers[0](60, {
+    toolbar: [[' ← Back ', { target: 'toolbar:0' }]],
+  })
+
+  assert.ok(path.some(([text]) => text === ' ← Back '))
+})
+
+test('formatDuration shows tenths of seconds, then minutes', () => {
+  assert.equal(formatDuration(800), '0.8s')
+  assert.equal(formatDuration(-5), '0.0s')
+  assert.equal(formatDuration(42_049), '42.0s')
+  assert.equal(formatDuration(59_960), '1m 00s')
+  assert.equal(formatDuration(125_400), '2m 05s')
+})
+
+test('CLI asks for the accent colour after the workspace on a first run', async () => {
+  const shown = []
+
+  const { dependencies, calls } = createDependencies({
+    config: {
+      readWorkspaceConfig: async () => null,
+      readColorSetting: async () => null,
+    },
+    prompts: {
+      chooseAccent: async (accents, options) => {
+        shown.push([accents, options])
+        options.preview('teal')
+        return 'pink'
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  const [[accents, options]] = shown
+
+  assert.deepEqual(accents, ACCENTS)
+  assert.equal(calls.savedWorkspaces.length, 1)
+  assert.match(
+    options
+      .header(80)
+      .map(line => line.map(([text]) => text).join(''))
+      .join('\n'),
+    /◆ workspace › accent colour ─/,
+  )
+  assert.equal(options.body[0][0], 'Choose an accent colour.')
+  // Previewed, then chosen.
+  assert.deepEqual(calls.accents, ['teal', 'pink'])
+  assert.deepEqual(calls.colorSettings, [
+    { color: 'pink', file: '/fake/home/.dev-workspace-cli/config.json' },
+  ])
+})
+
+test('CLI asks no colour when one is saved, nor when the workspace is', async () => {
+  // A configuration from before colours keeps the default.
+  for (const config of [
+    { readWorkspaceConfig: async () => null },
+    { readColorSetting: async () => null },
+  ]) {
+    const { dependencies, calls } = createDependencies({ config })
+
+    await createCli(dependencies).run()
+
+    assert.deepEqual(calls.colorSettings, [])
+  }
+})
+
+test('CLI applies the saved accent before drawing anything', async () => {
+  const { dependencies, calls } = createDependencies({
+    config: { readColorSetting: async () => 'gold' },
+  })
+
+  await createCli(dependencies).start(['--help'])
+
+  assert.deepEqual(calls.accents, ['gold'])
+})
+
+test('CLI --set-color saves the colour and exits', async () => {
+  const { dependencies, calls } = createDependencies()
+
+  await createCli(dependencies).start(['--set-color', 'sky'])
+
+  assert.deepEqual(calls.colorSettings, [
+    { color: 'sky', file: '/fake/home/.dev-workspace-cli/config.json' },
+  ])
+  assert.deepEqual(calls.accents, ['cyan', 'sky'])
+  assert.match(calls.logs.at(-1)[0], /accent colour is now sky/)
+  assert.equal(calls.discoveredWorkspaces.length, 0)
+})
+
+test('CLI goes back to the scripts on Escape at the arguments prompt', async () => {
+  const project = projectFixtures()[0]
+  const dev = { name: 'dev', command: 'vite' }
+  const answers = [{ script: dev, withArguments: true }, null]
+  let projectSelections = 0
+  const runs = []
+
+  const { dependencies, calls } = createDependencies({
+    workspace: {
+      getProjects: async () => [project],
+      getScripts: async () => [dev],
+    },
+    commands: {
+      runCommand: async (...args) => {
+        runs.push(args)
+        return { code: 0 }
+      },
+    },
+    prompts: {
+      chooseProject: async () => (++projectSelections === 1 ? project : null),
+      chooseScript: async () => answers.shift(),
+      askForArguments: async () => null,
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  // The script list was shown again, and nothing ran.
+  assert.deepEqual(answers, [])
+  assert.deepEqual(runs, [])
+  assert.match(loggedText(calls), /Press Esc to go back to the scripts\./)
 })

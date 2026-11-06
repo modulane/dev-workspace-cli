@@ -60,18 +60,21 @@ node scripts/try-install.js --again -- web dev  # with arguments for dws
 | `config.js`           | Configuration file location, reading, writing and migration    |
 | `state.js`            | The history of recent projects and last scripts (`state.json`) |
 | `terminal.js`         | Recognising the terminal and its mouse support, the mouse note |
-| `workspace.js`        | Listing projects, reading their scripts, resolving typed paths |
+| `workspace.js`        | Projects, scripts, Git branch, suggested folders, typed paths  |
 | `package-managers.js` | Detecting each project's package manager                       |
 | `commands.js`         | Running a script with that package manager                     |
 | `json.js`             | Parsing JSON files, ignoring a leading byte order mark         |
 | `aliases.js`          | Creating, listing and removing custom aliases                  |
 | `prompts.js`          | The questions and menus shown by `cli.js`                      |
-| `list.js`             | The list used by every menu: keys, mouse, drawing, search      |
+| `list.js`             | The list used by every menu: keys, mouse, buttons, drawing     |
+| `screen.js`           | Entering and leaving the terminal's alternate screen           |
 | `fuzzy.js`            | Fuzzy matching and ranking for the list search                 |
 | `width.js`            | Measuring, cutting and wrapping text by its terminal width     |
-| `ui.js`               | Colours, the header and screen clearing                        |
+| `ui.js`               | The colour theme and the header box                            |
 
-Menus use the list in `list.js`, which owns the terminal while it is open; free-text and yes/no questions still use `@inquirer/prompts`. Test the list through `createList()` with fake input and output streams, as `test/list.test.js` does, rather than in a real terminal. With `mouse: true`, the list asks for the cursor position after each drawing; a test answers with a reply such as `[20;1R` (the last line is on row 20) before sending clicks. To see how a real terminal reports the mouse, run `node scripts/mouse-check.js` in it, and record the result in the roadmap's terminal support table and in `detectTerminal()`.
+Menus use the list in `list.js`, which owns the terminal while it is open; free-text and yes/no questions still use `@inquirer/prompts`. The list also draws the header box from `ui.js`, which `cli.js` passes as `header`, so the whole screen redraws together. Actions such as Back or Exit are buttons, never list items: segments that carry a `{ target }`, whose columns the list records so clicks are mapped by row and column, and which Tab reaches from the keyboard. Menus with `fullscreen: true` are drawn on the alternate screen from `screen.js`, from its top row; pass a screen from `createScreen()` to `createList()` in tests. Test the list through `createList()` with fake input and output streams, as `test/list.test.js` does, rather than in a real terminal. With `mouse: true`, the list asks for the cursor position after each drawing; a test answers with a reply such as `[20;1R` (the last line is on row 20) before sending clicks. To see how a real terminal reports the mouse, run `node scripts/mouse-check.js` in it, and record the result in the roadmap's terminal support table and in `detectTerminal()`.
+
+Every colour comes from the theme in `ui.js`: `color()` for plain output, `styleText()` for the list, and `inquirerTheme()` for the `@inquirer/prompts` questions. Do not write ANSI codes elsewhere, so `NO_COLOR` and `FORCE_COLOR` are always respected. Ask for the `accent` style, never for cyan or another colour by name, so the user's chosen accent (`setAccent()`) reaches every screen.
 
 Each file in `lib/` starts with a comment describing what it contains and how it is used. Keep that comment accurate when you change the file.
 

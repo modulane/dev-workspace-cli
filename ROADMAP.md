@@ -24,7 +24,8 @@ These apply to every milestone:
 | Foundations                     | Released in 0.3.0                         | Platform config location, CLI flags, aliases, Ctrl+C fix                  |
 | Works with every project        | Released in 0.5.0                         | Package manager detection, project filtering, lifecycle scripts           |
 | Fast navigation                 | Released in 0.6.0                         | Fuzzy search, recent items, direct mode, script arguments                 |
-| A polished interface            | Planned                                   | Mouse support, framed header, buttons, themes, project details, first run |
+| A polished interface            | Released in 0.9.0                         | Mouse support, framed header, buttons, themes, project details, first run |
+| Terminal compatibility          | Planned                                   | Mouse and screens checked in macOS Terminal, iTerm2 and Linux terminals   |
 | Bigger workspaces               | Planned                                   | Monorepos, nested projects, multiple named workspaces                     |
 | Configuration and scripts       | Planned                                   | Versioned config schema, `config` command, JSON output                    |
 | Hardening and release candidate | Planned                                   | Linting, type checks, end-to-end tests, interface freeze, feedback period |
@@ -87,7 +88,7 @@ The project list currently shows every subfolder of the workspace, including fol
 
 The CLI should be faster than typing `cd` and `npm run`.
 
-- [x] **Own list prompt:** replace Inquirer's `select` with a small list component that the CLI controls fully: rendering, scrolling, key handling and the row position of every item. It is the base for fuzzy search here and for mouse support in [A polished interface](#a-polished-interface).
+- [x] **Own list prompt:** replace Inquirer's `select` with a small list component that the CLI controls fully: rendering, scrolling, key handling and the row position of every item. It is the base for fuzzy search here and for mouse support in [A polished interface](#a-polished-interface-released-in-090).
   - [x] It decodes raw terminal input itself, so escape sequences it does not use yet, such as mouse reports, are recognised and ignored instead of being typed into the search.
   - [x] Raw mode is switched off and the cursor shown again on every exit path, including Ctrl+C and the process exiting while a list is open.
 - [x] **Fuzzy search** in the project and script lists: typing filters the list (subsequence matching, best matches first) and Escape clears the filter.
@@ -109,11 +110,11 @@ The CLI should be faster than typing `cd` and `npm run`.
 
 Both are met: `dws <project> <script>` runs a script in one command, and a test checks the keystroke goal on a 50-project workspace of deliberately similar names (`web`, `web-app`, `web-ui`, …), counting typed characters and Down presses.
 
-## A polished interface
+## A polished interface _(released in 0.9.0)_
 
-The CLI should look clean, and stay correct, in every terminal.
+The CLI should look clean, and stay correct, in every terminal. Checking it in each terminal moved to its own milestone, [Terminal compatibility](#terminal-compatibility), so the interface could ship once its code was done.
 
-The design is mouse-first and keyboard-complete. The list is the focus of every screen, and the frame around it stays quiet: one thin line style, one accent colour (cyan for "you are here"; green, red and yellow only for results and warnings), and hierarchy that still reads with `NO_COLOR`. Everything on screen that looks clickable is clickable, hover shows what a click will do, and every click has a keyboard equivalent. Safe actions such as opening a project take one click; running a script takes a deliberate one.
+The design is mouse-first and keyboard-complete. The list is the focus of every screen, and the frame around it stays quiet: one thin line style, one accent colour for "you are here" (cyan, or the one chosen on the first launch), a muted colour for the Git branch, and green, red and yellow only for results and warnings, and hierarchy that still reads with `NO_COLOR`. Everything on screen that looks clickable is clickable, hover shows what a click will do, and every click has a keyboard equivalent. Safe actions such as opening a project take one click; running a script takes a deliberate one.
 
 ### Mouse support
 
@@ -126,7 +127,7 @@ Terminals can report mouse events as escape sequences (SGR mouse mode, `\x1b[?10
 - [x] Mouse reporting is switched on only while a menu is shown. It is switched off before a script starts, and on every exit path: normal exit, Ctrl+C, errors and crashes. A terminal must never be left in mouse mode. Signals such as `kill` or a closing window count too: on macOS and Linux the list restores the terminal, then lets the signal end the process. Windows ends a process killed from outside (Task Manager, `taskkill /f`) at once, so nothing can run then.
 - [x] Turned off automatically in terminals that do not report mouse events. Users can also disable it for one run with `--no-mouse`, or for good with `--set-mouse off`, because it replaces the terminal's normal text selection while a menu is open (Shift or Option + drag still selects text).
 - [x] Keyboard navigation keeps working exactly as before; the mouse is an addition, never a requirement.
-- [ ] **Buttons:** map clicks by column as well as row, so a screen can hold buttons side by side: toolbar buttons in the header box (Change workspace and Exit, or Back and Run with arguments), a clickable breadcrumb, `▶ run` and `… args` buttons on the hovered script, and `▲ n more` / `▼ n more` scroll hints. Running a script takes its button or a second click, so a stray click never starts a build. Tab and Shift+Tab move between the list and the buttons, so each one also works from the keyboard [#68](https://github.com/modulane/dev-workspace-cli/issues/68).
+- [x] **Buttons:** map clicks by column as well as row, so a screen can hold buttons side by side: toolbar buttons in the header box (Workspace and Exit, or Back and Run with args), `▶ run` and `… run with args` buttons on the hovered script, kept apart by a divider, and `▲ n more` / `▼ n more` scroll hints. Running a script takes its button or a second click, so a stray click never starts a build. The buttons sit one step above the list: ↑ or the wheel past the first item reaches them, ↓ comes back, and pressing the wheel presses the focused one, so each one also works from the keyboard or the wheel alone (Tab and Shift+Tab too). The name in the header is not a button: Back does that job [#68](https://github.com/modulane/dev-workspace-cli/issues/68).
 - [x] Terminals without full support say so. The CLI recognises the terminal from its environment (`TERM_PROGRAM`, `WT_SESSION`, `MSYSTEM`, …) and looks it up in the table below:
   - **Partial or no mouse events** (macOS Terminal, Git Bash): a short note under the menu says what does not work and how to get full mouse support, for example the VS Code integrated terminal on macOS.
   - **Not recorded yet** (iTerm2, Linux terminals, anything unrecognised): the note says mouse support is untested there and asks for help checking it in [#26](https://github.com/modulane/dev-workspace-cli/issues/26).
@@ -144,29 +145,39 @@ Terminals can report mouse events as escape sequences (SGR mouse mode, `\x1b[?10
 | iTerm2                         | Not recorded yet                                          |
 | Linux (GNOME Terminal, others) | Not recorded yet                                          |
 
-Windows Terminal and the classic Windows console both work fully, so mouse support is confirmed as feasible on Windows. The remaining terminals must be checked before this milestone is complete.
+Windows Terminal and the classic Windows console both work fully, so mouse support is confirmed as feasible on Windows. The remaining terminals are checked in [Terminal compatibility](#terminal-compatibility).
 
 In macOS Terminal a click only lands on a row when the bottom of the I-beam pointer is over it. The terminal reports whole character cells, not pixels, so the CLI cannot correct this; the `›` hover marker shows which row a click will hit.
 
-The check script draws its items on fixed rows, so its clicks are offset once the window scrolls (seen in the VS Code terminal when the panel is shorter than the script). The list does not rely on fixed rows: after each drawing it asks the terminal for the cursor position (`[6n`) and maps each click from the row of its last line, so the mouse does not depend on the **Alternate screen** item below.
+The check script draws its items on fixed rows, so its clicks are offset once the window scrolls (seen in the VS Code terminal when the panel is shorter than the script). The list does not rely on fixed rows that may have scrolled: the menus on the alternate screen (see **Alternate screen** below) are drawn from its top row, and the "What next?" list after a script, drawn under its output, asks the terminal for the cursor position (`[6n`) after each drawing and maps each click from the row of its last line.
 
 ### Layout and appearance
 
 - [x] **Correct layout:** measure text by its terminal width (`string-width`) so emoji and wide characters never break the header border.
-- [ ] **Path truncation:** shorten long workspace paths in the middle (`C:/Users/…/projects/web`) instead of cutting off the end.
-- [ ] **Alternate screen:** show the menus on the terminal's alternate screen, as `less` and `vim` do, leaving it before a script runs and on every exit path. Resizing the window can then redraw the whole screen, header included, without leaving broken lines or duplicate headers in the scrollback.
-- [ ] **Framed header:** the same small box on every screen instead of the 11-line header, with `◆ dev-workspace` and a breadcrumb (`› web-app › build`) set in its top border and the workspace inside. One thin line style and only single-width symbols, so it lines up in every terminal. The list draws it, so it redraws with the list and holds the buttons [#30](https://github.com/modulane/dev-workspace-cli/issues/30).
-- [ ] **Menu layout:** aligned columns (name, dim details such as the script's command, tags on the right), uppercase group titles, one blank line between the parts of the screen, single-width symbols on actions only, and a full-row hover highlight that falls back to `›` with `NO_COLOR` [#67](https://github.com/modulane/dev-workspace-cli/issues/67).
-- [ ] **Run result:** show the command before a script's output, and after it `✔ build finished in 4.2s` or `✖ build failed · exit 1 · 0.8s`, with "Run again" and "Back" side by side [#69](https://github.com/modulane/dev-workspace-cli/issues/69).
-- [ ] **Escape goes back:** with an empty search, Escape returns to the previous screen, or exits from the project list [#70](https://github.com/modulane/dev-workspace-cli/issues/70).
-- [ ] **Consistent theme:** apply one theme to every prompt, with all colours going through `color()` so `NO_COLOR` and non-TTY output are always respected. Support `FORCE_COLOR`.
-- [ ] **Project details:** show package manager, script count and Git branch (if any) next to each project, without slowing down the list (read lazily, cache per session).
-- [ ] **First-run experience:** suggest common folders that exist (`~/dev`, `~/projects`, `~/code`, `~/src`, `~/repos`) as choices, with "Enter another path" as the last option.
+- [x] **Path truncation:** shorten long workspace paths in the middle (`C:/Users/…/projects/web`) instead of cutting off the end [#28](https://github.com/modulane/dev-workspace-cli/issues/28).
+- [x] **Alternate screen:** show the menus on the terminal's alternate screen, as `less` and `vim` do, leaving it before a script runs and on every exit path. Resizing the window can then redraw the whole screen, header included, without leaving broken lines or duplicate headers in the scrollback [#60](https://github.com/modulane/dev-workspace-cli/issues/60).
+- [x] **Framed header:** the same small box on every screen instead of the 11-line header, with a breadcrumb that starts at the workspace folder (`◆ dev › web-app › build`) set in its top border and the workspace inside. One thin line style and only single-width symbols, so it lines up in every terminal. The list draws it, so it redraws with the list and holds the buttons [#30](https://github.com/modulane/dev-workspace-cli/issues/30).
+- [x] **Menu layout:** aligned columns (name, dim details such as the script's command, tags on the right), uppercase group titles, one blank line between the parts of the screen, single-width symbols on actions only, and a full-row hover highlight that falls back to `›` with `NO_COLOR` [#67](https://github.com/modulane/dev-workspace-cli/issues/67).
+- [x] **Run result:** show the command before a script's output, and after it `✔ build finished in 4.2s` or `✖ build failed · exit 1 · 0.8s`, with "Run again" and "Back" side by side [#69](https://github.com/modulane/dev-workspace-cli/issues/69).
+- [x] **Escape goes back:** with an empty search, Escape returns to the previous screen, or exits from the project list [#70](https://github.com/modulane/dev-workspace-cli/issues/70).
+- [x] **Consistent theme:** apply one theme to every prompt, with all colours going through `color()` so `NO_COLOR` and non-TTY output are always respected. Support `FORCE_COLOR` [#31](https://github.com/modulane/dev-workspace-cli/issues/31).
+- [x] **Project details:** show package manager, script count and Git branch (if any) next to each project, without slowing down the list (read lazily, cache per session) [#32](https://github.com/modulane/dev-workspace-cli/issues/32).
+- [x] **First-run experience:** suggest common folders that exist (`~/dev`, `~/projects`, `~/code`, `~/src`, `~/repos`) as choices, with "Enter another path" as the last option [#33](https://github.com/modulane/dev-workspace-cli/issues/33).
+- [x] **First-time setup:** turn the first launch into a short setup screen, drawn like every other menu: the workspace folder (the first-run choices above), then the accent colour used for "you are here" and, faintly, for the header's border: one of twelve, previewed as the cursor moves. Both are saved in `config.json`, and `--set-color` changes the colour later without a reset. Hovered and focused buttons and the `last run` tag take the accent; the Git branch gets a muted colour (the default branch apart) [#72](https://github.com/modulane/dev-workspace-cli/issues/72).
 - [x] **Typed paths:** the workspace prompt and `--workspace` accept the forms a shell would normally clean up: `~/projects`, quoted paths (as copied by Explorer's "Copy as path") and, outside Windows, escaped spaces (`my\ projects`). A missing folder is reported with the full path that was checked ([#9](https://github.com/modulane/dev-workspace-cli/issues/9)).
-- [ ] **Non-interactive guard:** when stdin is not a TTY and no direct-mode arguments are given, exit with a clear message instead of a prompt error.
+- [x] **Non-interactive guard:** when stdin is not a TTY and no direct-mode arguments are given, exit with a clear message instead of a prompt error [#34](https://github.com/modulane/dev-workspace-cli/issues/34).
 - [x] **Coloured `--help`.**
 
-**Done when:** screenshots of the main screens look correct in Windows Terminal, PowerShell, macOS Terminal, iTerm2 and a Linux terminal, at 80 and 120 columns, with and without `NO_COLOR`.
+**Done when:** every item above is done, and the interface was checked in Windows Terminal. The checks in the other terminals are the [next milestone](#terminal-compatibility).
+
+## Terminal compatibility
+
+Every screen checked in the terminals people use, on their own schedule: they need macOS and Linux machines, while the code they check is already released.
+
+- [ ] **Mouse in the remaining terminals:** run `node scripts/mouse-check.js` in iTerm2 and a Linux terminal, and record the results in the [terminal support table](#mouse-support) [#26](https://github.com/modulane/dev-workspace-cli/issues/26).
+- [ ] **Screens in every terminal:** the main screens, the alternate screen while the window is resized, and the 256-colour accents look correct in each terminal below [#75](https://github.com/modulane/dev-workspace-cli/issues/75).
+
+**Done when:** screenshots of the main screens look correct in Windows Terminal, PowerShell, macOS Terminal, iTerm2 and a Linux terminal, at 80 and 120 columns, with and without `NO_COLOR`, and resizing the window while a menu is open never leaves broken lines or duplicate headers in any of them.
 
 ## Bigger workspaces
 

@@ -161,7 +161,7 @@ test('rememberScript records the last script and drops the oldest ones', () => {
   assert.ok(!remembered.includes('/a'))
 })
 
-test('recentProjects returns up to five existing projects, most recent first', () => {
+test('recentProjects returns up to three existing projects, most recent first', () => {
   const projects = ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map(name => ({
     name,
     directory: `/${name}`,
@@ -174,7 +174,7 @@ test('recentProjects returns up to five existing projects, most recent first', (
 
   assert.deepEqual(
     recentProjects(state, projects).map(project => project.name),
-    ['f', 'a', 'b', 'c', 'd'],
+    ['f', 'a', 'b'],
   )
 })
 
