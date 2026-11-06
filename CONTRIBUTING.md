@@ -20,14 +20,15 @@ cd dev-workspace-cli
 npm install
 ```
 
-| Command            | Purpose                                                        |
-| ------------------ | -------------------------------------------------------------- |
-| `npm start`        | Run the CLI from the working copy                              |
-| `npm test`         | Run the test suite                                             |
-| `npm run coverage` | Run the tests with a coverage report (minimum 90% of lines)    |
-| `npm run format`   | Format every file with Prettier                                |
-| `npm run lint`     | Check code quality and common errors with ESLint               |
-| `npm run check`    | Check formatting, run the linter and run the tests, as CI does |
+| Command                       | Purpose                                                        |
+| ----------------------------- | -------------------------------------------------------------- |
+| `npm start`                   | Run the CLI from the working copy                              |
+| `node scripts/try-install.js` | Install the working copy as a new user would and run it        |
+| `npm test`                    | Run the test suite                                             |
+| `npm run coverage`            | Run the tests with a coverage report (minimum 90% of lines)    |
+| `npm run format`              | Format every file with Prettier                                |
+| `npm run lint`                | Check code quality and common errors with ESLint               |
+| `npm run check`               | Check formatting, run the linter and run the tests, as CI does |
 
 Some tests run a real script with each supported package manager. Package managers that are not installed are skipped locally; CI installs all of them and sets `REQUIRE_ALL_PACKAGE_MANAGERS=1` so none is skipped there. These tests also check whether each tool runs `pre`/`post` hooks, and that script arguments reach the script unchanged. Yarn 2+, which does not run hooks, is tested with the `@yarnpkg/cli-dist` devDependency: the installed `yarn` (Yarn 1 is enough) hands over to it through `yarnPath`, so Corepack is not needed.
 
@@ -36,6 +37,16 @@ When testing the real command by hand, point it at a temporary configuration so 
 ```bash
 DEV_WORKSPACE_CONFIG=/tmp/dws-test/config.json npm start
 DEV_WORKSPACE_CONFIG=/tmp/dws-test/config.json npm start -- web dev
+```
+
+To see the first run exactly as a new user gets it, use `node scripts/try-install.js`. It packs the working copy with `npm pack`, installs the archive globally into a temporary npm prefix, and runs the installed `dws` with a fake home folder, so there is no configuration or history yet and nothing is published. The fake home has sample projects in `dev/` and `projects/` for the first-run question to suggest. The sandbox is left in the system temp folder (`dws-try-install`) and replaced by the next run.
+
+```bash
+node scripts/try-install.js                     # first run
+node scripts/try-install.js --empty-home        # first run with no folder to suggest
+node scripts/try-install.js --legacy            # config left by a version before 0.3.0
+node scripts/try-install.js --again             # the same sandbox again: the second run
+node scripts/try-install.js --again -- web dev  # with arguments for dws
 ```
 
 ## Code layout
