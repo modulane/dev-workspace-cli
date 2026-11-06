@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { EventEmitter, once } from 'node:events'
 
-import { createList, parseKeys } from '../lib/list.js'
+import { createList, drawLines, parseKeys } from '../lib/list.js'
 import { createScreen } from '../lib/screen.js'
 import { textWidth } from '../lib/width.js'
 
@@ -1334,7 +1334,7 @@ test('a list of buttons starts on the first one, and keys press them', async t =
     '',
     ' [↻ Run again] ← Back ',
     '',
-    '  enter press · ←→ move · esc back',
+    '  enter press · ←→ move · r run again · esc back',
   ])
 
   terminal.type(KEYS.right)
@@ -1390,4 +1390,22 @@ test('a fullscreen list draws on the alternate screen, from the top', async () =
 
   terminal.type(KEYS.enter)
   await next
+})
+
+test('drawLines draws lines once, at the width a list uses', () => {
+  const widths = []
+  const build = width => {
+    widths.push(width)
+    return [[['  '], ['done', 'green']], [['x'.repeat(200)]]]
+  }
+
+  assert.deepEqual(drawLines(build, { columns: 40, useColors: false }), [
+    '  done',
+    'x'.repeat(39),
+  ])
+  assert.equal(
+    drawLines(build, { columns: 300, useColors: true })[0],
+    '  \x1b[32mdone\x1b[39m',
+  )
+  assert.deepEqual(widths, [39, 100])
 })

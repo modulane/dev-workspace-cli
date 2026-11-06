@@ -140,7 +140,9 @@ The five projects you used most recently are listed first, under **Recent**. In 
 
 ### Running scripts
 
-After a script ends, **Run again** is the default choice, so pressing Enter repeats it with the same arguments. **Back to scripts**, or Esc, returns to the list.
+A script runs on the normal screen, under the header box with the project and script as breadcrumb (`◆ dev › web-app › build`) and the command it runs (`▶ npm run build`). When it ends, a line says how it went and how long it took: `✔ build finished in 4.2s` in green, or `✖ build failed · exit 1 · 0.8s` in red, with the signal name (such as `SIGINT`) instead of the exit code when a signal stopped it.
+
+Then **↻ Run again** and **← Back to scripts** sit side by side. Run again is focused, so pressing Enter, or `r`, repeats the script with the same arguments; Esc goes back to the list.
 
 To pass arguments to a script, press → on it, or click its **… args** button, then type the arguments, for example `--port 4000`. The **… Run with args** button in the header box does the same after asking which script to run. Use quotes for an argument that contains spaces: `--title "my app"`. The arguments are passed to the script as they are, without a shell.
 

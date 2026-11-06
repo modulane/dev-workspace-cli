@@ -3,7 +3,7 @@ import path from 'node:path'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { createCli, findProject } from '../lib/cli.js'
+import { createCli, findProject, formatDuration } from '../lib/cli.js'
 import { CHANGE_WORKSPACE, RUN_WITH_ARGUMENTS } from '../lib/prompts.js'
 import { emptyState } from '../lib/state.js'
 import { headerLines } from '../lib/ui.js'
@@ -23,6 +23,8 @@ function createDependencies(overrides = {}) {
     errors: [],
     logs: [],
     menus: [],
+    runHeaders: [],
+    time: 0,
   }
 
   const dependencies = {
@@ -111,6 +113,20 @@ function createDependencies(overrides = {}) {
       },
       color: value => String(value),
       headerLines,
+      drawHeader: options => {
+        calls.runHeaders.push(options)
+        return headerLines(options, 80).map(line =>
+          line.map(([text]) => text).join(''),
+        )
+      },
+    },
+
+    // Each reading is 4.2 seconds after the previous one.
+    clock: {
+      now: () => {
+        calls.time += 4200
+        return calls.time
+      },
     },
 
     output: {
@@ -321,11 +337,20 @@ test('CLI runs a selected script and reports success', async () => {
 
   await createCli(dependencies).run()
 
-  assert.ok(
-    calls.logs.some(args =>
-      args.join(' ').includes('Command completed successfully.'),
+  const lines = loggedText(calls).split('\n')
+
+  assert.deepEqual(calls.runHeaders, [
+    { workspace: WORKSPACE, crumbs: ['example', 'dev'], tag: 'npm · default' },
+  ])
+  assert.deepEqual(lines.slice(0, 6), [
+    '',
+    ...headerLines(calls.runHeaders[0], 80).map(line =>
+      line.map(([text]) => text).join(''),
     ),
-  )
+    '',
+    '  ▶ npm run dev',
+  ])
+  assert.deepEqual(lines.slice(-3), ['', '  ✔ dev finished in 4.2s', ''])
 })
 
 test('CLI reports a non-zero script exit code', async () => {
@@ -355,11 +380,7 @@ test('CLI reports a non-zero script exit code', async () => {
 
   await createCli(dependencies).run()
 
-  assert.ok(
-    calls.logs.some(args =>
-      args.join(' ').includes('Command exited with code 7.'),
-    ),
-  )
+  assert.match(loggedText(calls), /✖ test failed · exit 7 · 4\.2s/)
 })
 
 test('CLI reports a command interrupted by a signal', async () => {
@@ -392,11 +413,7 @@ test('CLI reports a command interrupted by a signal', async () => {
 
   await createCli(dependencies).run()
 
-  assert.ok(
-    calls.logs.some(args =>
-      args.join(' ').includes('Command was interrupted (SIGTERM).'),
-    ),
-  )
+  assert.match(loggedText(calls), /✖ build failed · SIGTERM · 4\.2s/)
 })
 
 test('CLI handles errors while reading a project package.json', async () => {
@@ -458,7 +475,7 @@ test('CLI handles errors when starting a command', async () => {
 
   assert.ok(
     calls.errors.some(args =>
-      args.join(' ').includes('Could not start command: npm unavailable'),
+      args.join(' ').includes('✖ dev could not start: npm unavailable'),
     ),
   )
 })
@@ -883,7 +900,7 @@ test('CLI runs scripts with the detected package manager', async () => {
   assert.deepEqual(runs, [
     ['dev', project.directory, { packageManager: 'pnpm' }],
   ])
-  assert.match(loggedText(calls), /Running: pnpm run dev/)
+  assert.match(loggedText(calls), /▶ pnpm run dev/)
 })
 
 test('CLI shows the project and its package manager in the header', async () => {
@@ -1359,7 +1376,7 @@ test('CLI runs a script with arguments typed in the menu', async () => {
       { packageManager: 'npm', args: ['--port', '4000'] },
     ],
   ])
-  assert.match(loggedText(calls), /Running: npm run dev -- --port 4000/)
+  assert.match(loggedText(calls), /▶ npm run dev -- --port 4000/)
 })
 
 test('CLI runs the same script again when asked', async () => {
@@ -1664,4 +1681,12 @@ test('CLI draws the header on the list that asks which script takes arguments', 
   })
 
   assert.ok(path.some(([text]) => text === ' ← Back '))
+})
+
+test('formatDuration shows tenths of seconds, then minutes', () => {
+  assert.equal(formatDuration(800), '0.8s')
+  assert.equal(formatDuration(-5), '0.0s')
+  assert.equal(formatDuration(42_049), '42.0s')
+  assert.equal(formatDuration(59_960), '1m 00s')
+  assert.equal(formatDuration(125_400), '2m 05s')
 })

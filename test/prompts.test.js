@@ -326,10 +326,9 @@ test('waitAfterCommand offers to run again first', async () => {
 
   assert.equal(result, true)
   assert.deepEqual(calls.select[0], {
-    message: 'What next?',
-    items: [
-      { icon: '↻', label: 'Run again', value: true },
-      { icon: '←', label: 'Back to scripts', value: false },
+    buttons: [
+      { label: '↻ Run again', value: true, key: 'r' },
+      { label: '← Back to scripts', value: false },
     ],
     escape: { value: false, label: 'back' },
     searchable: false,
