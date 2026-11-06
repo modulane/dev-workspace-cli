@@ -4,6 +4,7 @@ import {
   STYLES,
   colorsEnabled,
   createUi,
+  folderName,
   headerLines,
   styleText,
 } from '../lib/ui.js'
@@ -106,9 +107,9 @@ function header(options, width = 60) {
   )
 }
 
-test('headerLines draws the name and workspace in a box', () => {
+test('headerLines draws the workspace folder and path in a box', () => {
   assert.deepEqual(header({ workspace: '/projects' }, 40), [
-    '  ╭─ ◆ dev-workspace ──────────────────╮',
+    '  ╭─ ◆ projects ───────────────────────╮',
     '  │  /projects                         │',
     '  ╰────────────────────────────────────╯',
   ])
@@ -122,7 +123,7 @@ test('headerLines shows the breadcrumb and the tag in the top border', () => {
 
   assert.equal(
     top,
-    '  ╭─ ◆ dev-workspace › web-app ──────────── npm · default ─╮',
+    '  ╭─ ◆ projects › web-app ───────────────── npm · default ─╮',
   )
 })
 
@@ -132,7 +133,7 @@ test('headerLines styles the parts of the box', () => {
   assert.deepEqual(top.slice(1, 6), [
     ['╭─ ', 'dim'],
     ['◆', 'cyan'],
-    [' dev-workspace', 'bold'],
+    [' p', 'bold'],
     [' › ', 'dim'],
     ['web', 'cyan'],
   ])
@@ -164,7 +165,7 @@ test('headerLines drops the tag, then cuts the breadcrumb, when short of room', 
 
   assert.ok(wide.includes('a-project-with-a-long-name'), wide)
   assert.ok(!wide.includes('pnpm'), wide)
-  assert.ok(narrow.includes('› a-project-wit…'), narrow)
+  assert.ok(narrow.includes('› a-project-with-a-l…'), narrow)
 })
 
 test('headerLines keeps its border aligned around wide characters', () => {
@@ -217,4 +218,23 @@ test('headerLines leaves the toolbar out when the path would get too short', () 
   const [, path] = header({ workspace: '/projects', toolbar }, 26)
 
   assert.equal(path, '  │  /projects           │')
+})
+
+test('folderName gives the last folder of a Windows or POSIX path', () => {
+  assert.equal(folderName('E:\\dev'), 'dev')
+  assert.equal(folderName('/home/me/projects/'), 'projects')
+  assert.equal(folderName('C:\\'), 'C:')
+  assert.equal(folderName('/'), '/')
+})
+
+test('headerLines cuts a long folder name to fit the box', () => {
+  const workspace = `/${'a-very-long-folder-name-'.repeat(4)}end`
+
+  for (const width of [20, 40]) {
+    const lines = header({ workspace, crumbs: ['web'] }, width)
+
+    assert.ok(lines[0].includes('…'), lines[0])
+
+    for (const line of lines) assert.equal(textWidth(line), width, line)
+  }
 })

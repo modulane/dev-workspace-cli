@@ -202,7 +202,8 @@ test('CLI exits cleanly when the project list is empty', async () => {
 
   assert.equal(calls.discoveredWorkspaces.length, 1)
   assert.match(menuText(calls), /No project folders in this workspace\./)
-  assert.match(menuText(calls), /◆ dev-workspace ─/)
+  // The header starts with the workspace folder's name.
+  assert.match(menuText(calls), /◆ workspace ─/)
 })
 
 test('CLI treats prompt cancellation as a normal exit', async () => {
@@ -889,7 +890,7 @@ test('CLI shows the project and its package manager in the header', async () => 
   const cases = [
     [
       { name: 'pnpm', source: 'pnpm-lock.yaml' },
-      /◆ dev-workspace › p ─+ pnpm · pnpm-lock\.yaml ─╮/,
+      /◆ workspace › p ─+ pnpm · pnpm-lock\.yaml ─╮/,
     ],
     [{ name: 'yarn', source: 'packageManager' }, /yarn · packageManager field/],
     [{ name: 'npm', source: 'default' }, /npm · default/],
