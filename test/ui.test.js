@@ -1,11 +1,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  ACCENTS,
   STYLES,
   colorsEnabled,
   createUi,
   folderName,
   headerLines,
+  setAccent,
   styleText,
 } from '../lib/ui.js'
 import { textWidth } from '../lib/width.js'
@@ -97,7 +99,7 @@ test('inquirerTheme styles Inquirer prompts through color()', () => {
 test('color returns plain text for an unknown shade', () => {
   const { color } = createUi({ useColors: true })
 
-  assert.equal(color('Hello', 'purple'), 'Hello')
+  assert.equal(color('Hello', 'violet'), 'Hello')
 })
 
 // The header as plain text: each line's segments joined, without styles.
@@ -131,11 +133,11 @@ test('headerLines styles the parts of the box', () => {
   const [top] = headerLines({ workspace: '/p', crumbs: ['web'] }, 40)
 
   assert.deepEqual(top.slice(1, 6), [
-    ['╭─ ', 'dim'],
-    ['◆', 'cyan'],
+    ['╭─ ', 'border'],
+    ['◆', 'accent'],
     [' p', 'bold'],
     [' › ', 'dim'],
-    ['web', 'cyan'],
+    ['web', 'accent'],
   ])
 })
 
@@ -149,7 +151,7 @@ test('headerLines marks only the current screen in the breadcrumb', () => {
     [' › ', 'dim'],
     ['web'],
     [' › ', 'dim'],
-    ['build', 'cyan'],
+    ['build', 'accent'],
   ])
   assert.ok(top.some(([text, style]) => text === ' npm ' && style === 'dim'))
 })
@@ -236,5 +238,42 @@ test('headerLines cuts a long folder name to fit the box', () => {
     assert.ok(lines[0].includes('…'), lines[0])
 
     for (const line of lines) assert.equal(textWidth(line), width, line)
+  }
+})
+
+test('setAccent switches the accent and the border for every drawing', () => {
+  const { color, inquirerTheme } = createUi({ useColors: true })
+
+  try {
+    setAccent('magenta')
+    assert.equal(color('x', 'accent'), '\x1b[35mx\x1b[39m')
+    assert.equal(color('x', 'border'), '\x1b[2m\x1b[35mx\x1b[39m\x1b[22m')
+    // Read when a prompt starts, not when the theme is made.
+    assert.equal(inquirerTheme().prefix.idle, '\x1b[35m?\x1b[39m')
+
+    setAccent('orange')
+    assert.equal(color('x', 'accent'), '\x1b[38;5;208mx\x1b[39m')
+
+    // Bold and dim share their closing code, so the border is only dim.
+    setAccent('bold')
+    assert.equal(color('x', 'accent'), '\x1b[1mx\x1b[22m')
+    assert.equal(color('x', 'border'), '\x1b[2mx\x1b[22m')
+
+    setAccent('green')
+    assert.equal(color('x', 'accent'), '\x1b[36mx\x1b[39m')
+  } finally {
+    setAccent(null)
+  }
+
+  assert.equal(color('x', 'accent'), '\x1b[36mx\x1b[39m')
+})
+
+test('every accent is a style, and none is a result colour', () => {
+  assert.equal(ACCENTS[0], 'cyan')
+  assert.equal(new Set(ACCENTS).size, 12)
+
+  for (const name of ACCENTS) assert.ok(STYLES[name], name)
+  for (const name of ['green', 'red', 'yellow']) {
+    assert.ok(!ACCENTS.includes(name), name)
   }
 })

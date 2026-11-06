@@ -69,7 +69,9 @@ This installs two equivalent commands, `dev-workspace` and the shorter `dws`.
 
    You can type the path as you would in a terminal: `~/projects`, or a quoted path such as one copied with Explorer's **Copy as path**. The folder is saved as an absolute path, so the CLI opens it directly next time.
 
-3. Choose a project, then one of its scripts. With this `package.json`:
+3. Then choose the accent colour of the CLI: cyan (the default), blue, purple, magenta, pink, orange, teal, sky, lavender, coral, gold, or no colour (bold text). Each name is shown in its own colour, and moving the cursor previews it on the whole screen. Both answers are saved, so later launches ask neither; `dws --set-color <name>` changes the colour at any time.
+
+4. Choose a project, then one of its scripts. With this `package.json`:
 
    ```json
    {
@@ -83,7 +85,7 @@ This installs two equivalent commands, `dev-workspace` and the shorter `dws`.
 
    the project menu offers `dev`, `build` and `test`. The script runs in the project folder with its normal output. When it ends, the CLI reports whether it succeeded, and you can run it again or return to the script list.
 
-4. Next time, skip the menus: `dws storefront dev` runs that script directly.
+5. Next time, skip the menus: `dws storefront dev` runs that script directly.
 
 ## Usage
 
@@ -109,7 +111,9 @@ The menus are drawn on the terminal's alternate screen, as `less` and `vim` do, 
 
 ### Colours
 
-Colour marks where you are, and little else: cyan for the selected entry, the current project in the header and your search, green, red and yellow for results and warnings, and dim text for details. The workspace and arguments prompts use the same colours as the menus. Everything still reads without colour: the selected entry keeps its `❯` marker, and group titles are in capitals.
+Colour marks where you are: the accent colour (cyan unless you chose another one on the first launch or with `dws --set-color <name>`) for the selected entry, the current project in the header and your search, and a faint version of it for the header's border. Green, red and yellow are kept for results and warnings, so they are not offered as accents. Details get softer colours: the Git branch of each project (`main`, `master` and `trunk` in one colour, any other branch in another), and common kinds of scripts (dev and start, build, test, lint and format) each in their own colour. The rest is dim text. The workspace and arguments prompts use the same colours as the menus. Everything still reads without colour: the selected entry keeps its `❯` marker, and group titles are in capitals.
+
+The accents other than cyan, blue and magenta use the terminal's 256-colour palette, which every current terminal supports.
 
 Colours are on in a terminal and off when output is redirected to a file or another program. Set `NO_COLOR` to turn them off, or `FORCE_COLOR` to turn them on anyway (`FORCE_COLOR=0` turns them off). `FORCE_COLOR` wins when both are set, as in Node.js.
 
@@ -206,6 +210,7 @@ dev-workspace [options] [project [script] [-- arguments]]
 | `-w, --workspace <path>` | Use `<path>` as the workspace and save it                    |
 | `--no-mouse`             | Use only the keyboard in menus, for this run                 |
 | `--set-mouse <on\|off>`  | Save whether menus use the mouse                             |
+| `--set-color <name>`     | Save the accent colour (see [Colours](#colours))             |
 | `--config-path`          | Print the location of the configuration file                 |
 | `--clear-history`        | Forget the recent projects and last scripts                  |
 | `--add-alias <name>`     | Create another command that starts the CLI                   |
@@ -245,7 +250,8 @@ The workspace path is saved in the standard configuration folder of your operati
 - `dws --config-path` prints the exact path on your machine.
 - The `DEV_WORKSPACE_CONFIG` environment variable points the CLI at a different file.
 - If you edit the file by hand, an editor that saves it with a UTF-8 byte order mark does no harm.
-- `dws --set-mouse off` saves `"mouse": false` in the file, so menus use only the keyboard: `{ "workspace": "…", "mouse": false }`. `dws --set-mouse on` saves `true`. Changing the workspace keeps this setting, and it can be saved before any workspace is chosen.
+- The accent colour chosen on the first launch is saved as `"color"`: `{ "workspace": "…", "color": "teal" }`. `dws --set-color <name>` changes it. A file saved by a version without this setting keeps cyan and is never asked again.
+- `dws --set-mouse off` saves `"mouse": false` in the file, so menus use only the keyboard: `{ "workspace": "…", "mouse": false }`. `dws --set-mouse on` saves `true`. Changing the workspace keeps these settings, and they can be saved before any workspace is chosen.
 - To switch workspaces, press the **⚙ Workspace** button in the project list or run `dws --workspace <path>`. The button shows the same folders as the first launch, with the current one tagged `current`, and **… Enter another path**. In that list, and at the path prompt, Esc keeps the current workspace and goes back to the projects. If the saved workspace no longer exists, the CLI asks for a new one.
 - Versions before 0.3.0 stored the file in `~/.dev-workspace-cli/config.json`. If that file exists, it is moved to the new location automatically.
 

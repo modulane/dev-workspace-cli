@@ -1479,3 +1479,79 @@ test('drawLines draws lines once, at the width a list uses', () => {
   )
   assert.deepEqual(widths, [39, 100])
 })
+
+test('an item style colours its label until it is selected', async () => {
+  const terminal = createTerminal()
+  const select = terminal.createSelect({ useColors: true })
+  const result = select({
+    message: 'Pick',
+    items: [
+      { label: 'dev', value: 1, style: 'red' },
+      { label: 'test', value: 2, style: 'yellow' },
+    ],
+  })
+
+  const [first, second] = terminal.screen().slice(2, 4)
+
+  // The selected item is in the accent, the other in its own style.
+  assert.ok(first.includes('\x1b[36md'), JSON.stringify(first))
+  assert.ok(second.includes('\x1b[33mt'), JSON.stringify(second))
+
+  terminal.type(KEYS.enter)
+  await result
+})
+
+test('preview is called with the selected value before each drawing', async () => {
+  const terminal = createTerminal()
+  const previewed = []
+  const result = terminal.select({
+    message: 'Pick',
+    items: projects,
+    default: 'docs',
+    preview: value => previewed.push(value),
+  })
+
+  terminal.type(KEYS.down)
+
+  assert.deepEqual(previewed, ['docs', 'web'])
+
+  terminal.type(KEYS.enter)
+  assert.equal(await result, 'web')
+})
+
+test('a detail end can be segments with their own styles', async () => {
+  const terminal = createTerminal({ columns: 40 })
+  const select = terminal.createSelect({ useColors: true })
+  const result = select({
+    message: 'Pick',
+    items: [
+      {
+        label: 'api',
+        value: 1,
+        detail: '2 scripts',
+        detailEnd: [
+          [' · ', 'dim'],
+          ['main', 'green'],
+        ],
+      },
+      {
+        label: 'web',
+        value: 2,
+        detail: `${'x'.repeat(60)}`,
+        detailEnd: [[' · feat', 'yellow']],
+      },
+    ],
+  })
+
+  const [api, web] = terminal.screen().slice(2, 4)
+
+  assert.ok(
+    api.includes('\x1b[2m2 scripts\x1b[22m\x1b[2m · \x1b[22m\x1b[32mmain'),
+    JSON.stringify(api),
+  )
+  // The detail is cut, the end kept whole.
+  assert.ok(web.includes('…\x1b[22m\x1b[33m · feat'), JSON.stringify(web))
+
+  terminal.type(KEYS.enter)
+  await result
+})

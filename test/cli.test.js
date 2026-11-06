@@ -10,7 +10,7 @@ import {
   RUN_WITH_ARGUMENTS,
 } from '../lib/prompts.js'
 import { emptyState } from '../lib/state.js'
-import { headerLines } from '../lib/ui.js'
+import { ACCENTS, headerLines } from '../lib/ui.js'
 import { resolveDirectoryInput } from '../lib/workspace.js'
 
 const { version } = createRequire(import.meta.url)('../package.json')
@@ -24,6 +24,8 @@ function createDependencies(overrides = {}) {
     savedStates: [],
     mouse: [],
     mouseSettings: [],
+    colorSettings: [],
+    accents: [],
     errors: [],
     logs: [],
     menus: [],
@@ -46,9 +48,13 @@ function createDependencies(overrides = {}) {
         legacyFile: '/fake/home/.legacy/config.json',
       }),
       migrateLegacyConfig: async () => null,
+      readColorSetting: async () => 'cyan',
       readMouseSetting: async () => true,
       readWorkspaceConfig: async () => WORKSPACE,
       resetWorkspaceConfig: async () => [],
+      saveColorSetting: async (color, file) => {
+        calls.colorSettings.push({ color, file })
+      },
       saveMouseSetting: async (enabled, file) => {
         calls.mouseSettings.push({ enabled, file })
       },
@@ -103,6 +109,7 @@ function createDependencies(overrides = {}) {
         return null
       },
       confirmWorkspaceChange: async () => true,
+      chooseAccent: async () => assert.fail('no colour question'),
       useMouse: (enabled, note = null, onNoteShown = null) => {
         calls.mouse.push({ enabled, note })
         calls.showNote = onNoteShown
@@ -119,6 +126,7 @@ function createDependencies(overrides = {}) {
       },
       color: value => String(value),
       headerLines,
+      setAccent: name => calls.accents.push(name),
       drawHeader: options => {
         calls.runHeaders.push(options)
         return headerLines(options, 80).map(line =>
@@ -855,8 +863,8 @@ test('CLI colors help text through ui.color', async () => {
 
   const text = loggedText(calls)
   assert.match(text, /\[bold\]Usage:\[\/bold\]/)
-  assert.match(text, /\[cyan\]dev-workspace\[\/cyan\]/)
-  assert.match(text, /\[cyan\]-w, --workspace\[\/cyan\]/)
+  assert.match(text, /\[accent\]dev-workspace\[\/accent\]/)
+  assert.match(text, /\[accent\]-w, --workspace\[\/accent\]/)
 })
 
 test('CLI rejects unknown options with a pointer to --help', async () => {
@@ -1142,7 +1150,11 @@ test('CLI gives the project list the scripts, branch and package manager of each
           ? { name: 'yarn', source: 'yarn.lock', runsHooks: false }
           : { name: 'pnpm', source: 'pnpm-lock.yaml', runsHooks: true },
       readGitBranch: async directory =>
-        directory.endsWith('docs') ? null : 'main',
+        directory.endsWith('docs')
+          ? null
+          : directory.endsWith('web')
+            ? 'feat/login'
+            : 'main',
       getScripts: async (directory, options) => {
         const name = path.basename(directory)
 
@@ -1162,12 +1174,21 @@ test('CLI gives the project list the scripts, branch and package manager of each
   await createCli(dependencies).run()
 
   const [details] = lists
+  // The default branch in one colour, any other in another.
+  const main = [
+    [' · ', 'dim'],
+    ['main', 'mainBranch'],
+  ]
+  const feature = [
+    [' · ', 'dim'],
+    ['feat/login', 'branch'],
+  ]
 
   assert.deepEqual(await Promise.all(projects.map(details)), [
-    { detail: '2 scripts · main', hint: 'pnpm' },
+    { detail: '2 scripts', detailEnd: main, hint: 'pnpm' },
     { detail: '1 script', hint: 'yarn' },
-    { detail: 'no scripts · main', hint: 'pnpm' },
-    { detail: 'invalid package.json · main', hint: 'pnpm' },
+    { detail: 'no scripts', detailEnd: feature, hint: 'pnpm' },
+    { detail: 'invalid package.json', detailEnd: main, hint: 'pnpm' },
   ])
   // Counted as the script menu counts them.
   assert.deepEqual(reads[1], ['docs', { groupHooks: false }])
@@ -1195,7 +1216,7 @@ test('CLI reads the details of a project again after opening it', async () => {
     },
     prompts: {
       chooseProject: async (projects, { details }) => {
-        shown.push((await details(project)).detail)
+        shown.push((await details(project)).detailEnd[1][0])
         branch = 'feat/login'
         return ++lists === 1 ? project : null
       },
@@ -1204,7 +1225,7 @@ test('CLI reads the details of a project again after opening it', async () => {
 
   await createCli(dependencies).run()
 
-  assert.deepEqual(shown, ['1 script · main', '1 script · feat/login'])
+  assert.deepEqual(shown, ['main', 'feat/login'])
 })
 
 test('CLI groups hooks only when the package manager runs them', async () => {
@@ -1962,4 +1983,79 @@ test('formatDuration shows tenths of seconds, then minutes', () => {
   assert.equal(formatDuration(42_049), '42.0s')
   assert.equal(formatDuration(59_960), '1m 00s')
   assert.equal(formatDuration(125_400), '2m 05s')
+})
+
+test('CLI asks for the accent colour after the workspace on a first run', async () => {
+  const shown = []
+
+  const { dependencies, calls } = createDependencies({
+    config: {
+      readWorkspaceConfig: async () => null,
+      readColorSetting: async () => null,
+    },
+    prompts: {
+      chooseAccent: async (accents, options) => {
+        shown.push([accents, options])
+        options.preview('teal')
+        return 'pink'
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  const [[accents, options]] = shown
+
+  assert.deepEqual(accents, ACCENTS)
+  assert.equal(calls.savedWorkspaces.length, 1)
+  assert.match(
+    options
+      .header(80)
+      .map(line => line.map(([text]) => text).join(''))
+      .join('\n'),
+    /◆ workspace › accent colour ─/,
+  )
+  assert.equal(options.body[0][0], 'Choose an accent colour.')
+  // Previewed, then chosen.
+  assert.deepEqual(calls.accents, ['teal', 'pink'])
+  assert.deepEqual(calls.colorSettings, [
+    { color: 'pink', file: '/fake/home/.dev-workspace-cli/config.json' },
+  ])
+})
+
+test('CLI asks no colour when one is saved, nor when the workspace is', async () => {
+  // A configuration from before colours keeps the default.
+  for (const config of [
+    { readWorkspaceConfig: async () => null },
+    { readColorSetting: async () => null },
+  ]) {
+    const { dependencies, calls } = createDependencies({ config })
+
+    await createCli(dependencies).run()
+
+    assert.deepEqual(calls.colorSettings, [])
+  }
+})
+
+test('CLI applies the saved accent before drawing anything', async () => {
+  const { dependencies, calls } = createDependencies({
+    config: { readColorSetting: async () => 'gold' },
+  })
+
+  await createCli(dependencies).start(['--help'])
+
+  assert.deepEqual(calls.accents, ['gold'])
+})
+
+test('CLI --set-color saves the colour and exits', async () => {
+  const { dependencies, calls } = createDependencies()
+
+  await createCli(dependencies).start(['--set-color', 'sky'])
+
+  assert.deepEqual(calls.colorSettings, [
+    { color: 'sky', file: '/fake/home/.dev-workspace-cli/config.json' },
+  ])
+  assert.deepEqual(calls.accents, ['cyan', 'sky'])
+  assert.match(calls.logs.at(-1)[0], /accent colour is now sky/)
+  assert.equal(calls.discoveredWorkspaces.length, 0)
 })
