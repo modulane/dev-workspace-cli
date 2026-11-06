@@ -423,9 +423,76 @@ test('suggestWorkspaces returns the common folders that exist, in order', async 
     await mkdir(path.join(directory, 'dev'))
     await writeFile(path.join(directory, 'code'), 'a file, not a folder')
 
-    assert.deepEqual(await suggestWorkspaces({ homeDirectory: directory }), [
-      path.join(directory, 'dev'),
-      path.join(directory, 'repos'),
-    ])
+    // Without drive roots to look at; on Windows, the folders are still
+    // found through the forward slashes of the Linux path joins.
+    assert.deepEqual(
+      await suggestWorkspaces({
+        homeDirectory: directory,
+        cwd: directory,
+        platform: 'linux',
+      }),
+      [path.posix.join(directory, 'dev'), path.posix.join(directory, 'repos')],
+    )
   })
+})
+
+test('suggestWorkspaces adds the folder above a project and Windows drive roots', async () => {
+  const folders = new Set([
+    'C:\\',
+    'E:\\',
+    'C:\\Users\\you\\projects',
+    'E:\\dev',
+    'e:\\work',
+  ])
+  const options = {
+    homeDirectory: 'C:\\Users\\you',
+    platform: 'win32',
+    isDirectory: async folder => folders.has(folder),
+  }
+
+  // Run inside e:\work\web, a project: e:\work comes first.
+  assert.deepEqual(
+    await suggestWorkspaces({
+      ...options,
+      cwd: 'e:\\work\\web',
+      isFile: async file => file === 'e:\\work\\web\\package.json',
+    }),
+    ['e:\\work', 'C:\\Users\\you\\projects', 'E:\\dev'],
+  )
+
+  // E:\dev, found above the project and on the drive, is offered once.
+  assert.deepEqual(
+    await suggestWorkspaces({
+      ...options,
+      cwd: 'E:\\dev\\web',
+      isFile: async () => true,
+    }),
+    ['E:\\dev', 'C:\\Users\\you\\projects'],
+  )
+
+  // A drive root has no folder above it.
+  assert.deepEqual(
+    await suggestWorkspaces({
+      ...options,
+      cwd: 'C:\\',
+      isFile: async () => true,
+    }),
+    ['C:\\Users\\you\\projects', 'E:\\dev'],
+  )
+})
+
+test('suggestWorkspaces skips a drive that does not answer in time', async () => {
+  const result = await suggestWorkspaces({
+    homeDirectory: 'C:\\Users\\you',
+    cwd: 'C:\\',
+    platform: 'win32',
+    isFile: async () => false,
+    isDirectory: folder =>
+      folder.startsWith('Z:')
+        ? new Promise(() => {})
+        : Promise.resolve(folder === 'C:\\' || folder === 'C:\\dev'),
+    timeout: 10,
+  })
+
+  assert.deepEqual(result, ['C:\\dev'])
 })

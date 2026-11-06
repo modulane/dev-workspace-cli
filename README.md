@@ -65,7 +65,7 @@ This installs two equivalent commands, `dev-workspace` and the shorter `dws`.
        └── package.json
    ```
 
-   The CLI lists the usual project folders that exist in your home folder (`~/dev`, `~/projects`, `~/code`, `~/src` and `~/repos`), each with the number of projects in it, so one click or Enter is often enough. For any other folder, pick **… Enter another path**, or, when none of them exist, the CLI asks for the path straight away.
+   The CLI lists the usual project folders that exist in your home folder (`~/dev`, `~/projects`, `~/code`, `~/src` and `~/repos`) and, on Windows, at the root of each drive (`E:\dev`), each with the number of projects in it. Started from inside a project, it offers the folder that holds it first. One click or Enter is often enough. For any other folder, pick **… Enter another path**, or, when none of them exist, the CLI asks for the path straight away.
 
    You can type the path as you would in a terminal: `~/projects`, or a quoted path such as one copied with Explorer's **Copy as path**. The folder is saved as an absolute path, so the CLI opens it directly next time.
 
