@@ -10,6 +10,11 @@ name: Pull request labels
 # from forks. It is safe here because the job never checks out or runs code
 # from the pull request: it only reads the title, through an environment
 # variable, never interpolated into the script.
+#
+# Keep it safe: never add a checkout of the pull request to this workflow, and
+# never interpolate ${{ github.event.* }} straight into a run: block — pass
+# untrusted fields through env, as below. Either change would let any GitHub
+# user run code or shell commands with this job's write token.
 on:
   pull_request_target: # zizmor: ignore[dangerous-triggers] no pull request code is checked out or run
     types: [opened, edited, reopened]
