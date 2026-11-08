@@ -86,7 +86,7 @@ Every change is made on a short-lived branch and reaches `main` through a pull r
 
 1. Create a branch named after the change: `feat/project-search`, `fix/ctrl-c`, `docs/readme`, …
 2. Commit and push as often as needed. Nothing is released from a branch.
-3. Open a pull request. CI runs the test matrix (Windows, macOS and Linux with Node.js 22, 24 and 26), and a check verifies that the title follows [Conventional Commits](https://www.conventionalcommits.org/). Pull requests that change `.github/` are also audited by [zizmor](https://docs.zizmor.sh/). A final **CI passed** job succeeds only when every test and coverage job has passed. It and the title check are the checks that must pass before a pull request can be merged, so changing the test matrix never requires changing the repository rules.
+3. Open a pull request. CI runs the test matrix (Windows, macOS and Linux with Node.js 22, 24 and 26), and a check verifies that the title follows [Conventional Commits](https://www.conventionalcommits.org/). Pull requests that change `.github/` are also audited by [zizmor](https://docs.zizmor.sh/). A final **CI passed** job succeeds only when every test and coverage job has passed. It, the title check and the **AI disclosure** check (see [AI use](#ai-use)) are the checks that must pass before a pull request can be merged, so changing the test matrix never requires changing the repository rules.
 4. The maintainer reviews it. A pull request needs the maintainer's approval, given after its last push, and every review conversation resolved. A new push dismisses an earlier approval. The first workflow run of a first-time contributor also waits for the maintainer's approval.
 5. The maintainer squash-merges it. The pull request title becomes the only commit on `main`.
 
@@ -101,6 +101,16 @@ The pull request title decides what is released, so choose its type carefully:
 Keep the summary lowercase and in the imperative: `feat: add project search`, not `Feat: Added project search`.
 
 **Do not mark changes as breaking before 1.0.0.** A `!` after the type (`feat!:`) or a `BREAKING CHANGE:` footer makes a major release, which would publish 1.0.0 early. Until then, describe incompatible changes in the pull request and release them as `feat:`.
+
+### AI use
+
+AI tools are allowed, but their use is never hidden. The rule is the same for the maintainer and for contributors.
+
+- **Pull requests:** fill in the **AI use** section of the [pull request template](.github/PULL_REQUEST_TEMPLATE.md). Tick **No AI tool was used**, or tick **AI tools were used** and name each tool and what it did under it, for example "Claude Code wrote the first draft of the tests; I reviewed and changed them". The **AI disclosure** check fails until exactly one box is ticked, and a pull request cannot be merged without it. Editing the description runs the check again. Dependabot pull requests are exempt.
+- **Issues:** every issue form asks the same question.
+- **Comments and reviews:** say so when an AI tool wrote or drafted what you post. No check can verify this, so it relies on you.
+
+You are responsible for everything you submit, whoever or whatever wrote it: read it, test it, and be ready to explain it.
 
 ### Labels and reviews
 

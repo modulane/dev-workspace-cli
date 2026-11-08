@@ -1,0 +1,77 @@
+name: AI disclosure
+
+# Every pull request says whether AI tools were used, the maintainer's
+# included. The "AI use" section of the pull request template has two boxes:
+# "No AI tool was used", or "AI tools were used" with each tool and what it
+# did written under it. This check fails until exactly one box is ticked, and
+# the main ruleset requires it. Editing the description runs it again.
+#
+# It reads the description from the event, through an environment variable,
+# and needs no token and no checkout. Dependabot pull requests are exempt.
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+# Only the latest description matters.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: AI disclosure
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check the AI use section
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          if [ "$AUTHOR" = 'dependabot[bot]' ]; then
+            echo 'Dependabot pull request: no disclosure needed.'
+            exit 0
+          fi
+
+          node - <<'JS'
+          const body = (process.env.BODY ?? '').replace(/<!--[\s\S]*?-->/g, '')
+          const fail = (message) => {
+            console.log(`::error::${message}`)
+            process.exit(1)
+          }
+
+          const section = body.match(/^##[ \t]+AI use[ \t]*$([\s\S]*?)(?=^##[ \t]|(?![\s\S]))/im)
+          if (!section) {
+            fail('The description has no "## AI use" section. Copy it from the pull request template and tick one box.')
+          }
+
+          const box = /^[ \t]*[-*][ \t]+\[([ xX])\][ \t]+(.*)$/
+          const lines = section[1].split(/\r?\n/)
+          const ticked = lines.map((line) => line.match(box)).filter((m) => m && m[1] !== ' ')
+          const none = ticked.some((m) => /^no ai tool/i.test(m[2]))
+          const used = ticked.some((m) => /^ai tools were used/i.test(m[2]))
+
+          if (none === used) {
+            fail('In the "AI use" section, tick exactly one box: "No AI tool was used" or "AI tools were used".')
+          }
+
+          if (used) {
+            // The description can follow the box on its line, or the lines under it.
+            const details = lines
+              .map((line) => {
+                const m = line.match(box)
+                return m ? (/^ai tools were used/i.test(m[2]) ? m[2].replace(/^[^:]*:?/, '') : '') : line
+              })
+              .join(' ')
+              .replace(/\s+/g, ' ')
+              .trim()
+            if (details.length < 20) {
+              fail('"AI tools were used" is ticked: under it, name each tool and what it did.')
+            }
+          }
+
+          console.log(none ? 'Disclosed: no AI tool was used.' : 'Disclosed: AI tools were used, and how.')
+          JS

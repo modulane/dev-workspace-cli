@@ -15,3 +15,18 @@ body:
       label: Dev Workspace CLI version
       description: The output of `dws --version`.
       placeholder: 0.6.0
+  - type: dropdown
+    id: ai-use
+    attributes:
+      label: AI use
+      description: Required, for everyone. Say whether AI tools helped write this issue.
+      options:
+        - No AI tool was used
+        - AI tools were used
+    validations:
+      required: true
+  - type: textarea
+    id: ai-tools
+    attributes:
+      label: AI tools used
+      description: If AI tools were used, name each one and what it did, for example "ChatGPT summarised the error log".
