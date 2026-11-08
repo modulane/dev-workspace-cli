@@ -1,0 +1,3 @@
+# Store and check out every text file with LF line endings, as .editorconfig
+# asks, even where Git is set to convert to CRLF (core.autocrlf on Windows).
+* text=auto eol=lf
