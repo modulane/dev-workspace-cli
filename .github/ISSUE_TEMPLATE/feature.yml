@@ -27,3 +27,18 @@ body:
         - 'Hardening and release candidate'
         - 'After 1.0.0'
         - 'Not on the roadmap yet'
+  - type: dropdown
+    id: ai-use
+    attributes:
+      label: AI use
+      description: Required, for everyone. Say whether AI tools helped write this issue.
+      options:
+        - No AI tool was used
+        - AI tools were used
+    validations:
+      required: true
+  - type: textarea
+    id: ai-tools
+    attributes:
+      label: AI tools used
+      description: If AI tools were used, name each one and what it did, for example "ChatGPT summarised the error log".
