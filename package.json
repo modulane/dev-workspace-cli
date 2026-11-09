@@ -52,6 +52,7 @@
   "bugs": {
     "url": "https://github.com/modulane/dev-workspace-cli/issues"
   },
+  "funding": "https://www.patreon.com/modulane",
   "dependencies": {
     "@inquirer/prompts": "^8.7.4",
     "cross-spawn": "^7.0.6",
