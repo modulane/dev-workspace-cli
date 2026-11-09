@@ -1,29 +1,3 @@
-import js from '@eslint/js'
-import globals from 'globals'
+import modulane from '@modulane/eslint-config/node'
 
-export default [
-  {
-    ignores: ['coverage/**'],
-  },
-  js.configs.recommended,
-  {
-    languageOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
-      globals: {
-        ...globals.node,
-      },
-    },
-    rules: {
-      'no-unused-vars': [
-        'error',
-        {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-          caughtErrorsIgnorePattern: '^_',
-          ignoreRestSiblings: true,
-        },
-      ],
-    },
-  },
-]
+export default modulane
