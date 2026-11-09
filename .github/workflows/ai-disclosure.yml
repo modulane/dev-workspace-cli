@@ -1,30 +1,16 @@
 name: AI disclosure
 
 # Every pull request says whether AI tools were used, the maintainer's
-# included. The "AI use" section of the pull request template has two boxes:
-# "No AI tool was used", or "AI tools were used" with each tool and what it
-# did written under it. This check fails until exactly one box is ticked, and
-# the main ruleset requires it. Editing the description runs it again.
-#
-# modulane/ai-disclosure reads the description from the event and needs no
-# token and no checkout. Dependabot pull requests are exempt.
+# included: modulane/workflows fails until the "AI use" section of the
+# description ticks exactly one box. The main ruleset requires this check.
+# Dependabot pull requests are exempt.
 on:
   pull_request:
     types: [opened, edited, reopened, synchronize]
 
 permissions: {}
 
-# Only the latest description matters.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  check:
+  ai-disclosure:
     name: AI disclosure
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    steps:
-      - name: Check the AI use section
-        uses: modulane/ai-disclosure@5d2b11a0b28a8103f1b8d9ac31c7c7d79688b218 # v1.0.0
+    uses: modulane/workflows/.github/workflows/ai-disclosure.yml@8a5ecaa4dc296a9e04849212ec06ddeec2a2480b # v1.0.0
