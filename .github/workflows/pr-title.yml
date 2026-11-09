@@ -1,46 +1,18 @@
 name: Pull request title
 
 # Pull requests are squash-merged, so the title becomes the commit message on
-# main and decides the release (feat: minor, fix: patch, others none). Check
-# that it follows Conventional Commits before it can be merged.
+# main and decides the release. modulane/workflows checks that it is a
+# lowercase Conventional Commit.
 on:
   pull_request:
     types: [opened, edited, reopened, synchronize]
 
-permissions:
-  pull-requests: read # read the pull request title
-
-# Only the latest title and commit of a pull request matter.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+permissions: {}
 
 jobs:
-  check:
-    name: Conventional Commit title
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    steps:
-      - name: Check the title
-        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          types: |
-            feat
-            fix
-            docs
-            style
-            refactor
-            perf
-            test
-            build
-            ci
-            chore
-            revert
-          # "feat: Add X" reads oddly in release notes; keep the summary lowercase.
-          subjectPattern: ^[^A-Z].*$
-          subjectPatternError: >-
-            Start the summary "{subject}" with a lowercase letter, for example
-            "feat: add project search".
+  pr-title:
+    name: Pull request title
+    uses: modulane/workflows/.github/workflows/pr-title.yml@8f843961b41fa36940d8fb22d2387f954cf47c6a # v1.0.0
+    permissions:
+      contents: read # list the files of a pull request in a private repository
+      pull-requests: read # read the pull request title and its files

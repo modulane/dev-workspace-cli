@@ -9,8 +9,10 @@ updates:
       interval: weekly
     # Propose a release only once it is a week old, so a compromised one is
     # more likely to have been found and pulled by then.
+    # modulane's own releases, such as modulane/workflows, come straight away.
     cooldown:
       default-days: 7
+      exclude: ['modulane/*']
     # A ci: title never triggers a release.
     commit-message:
       prefix: ci
