@@ -504,6 +504,33 @@ test('items load their details once, when first drawn', async () => {
   assert.equal(await result, 9)
 })
 
+test('a loaded detail keeps its end, such as the Git branch', async () => {
+  const terminal = createTerminal()
+  const result = terminal.select({
+    message: 'Pick',
+    items: [
+      {
+        label: 'api',
+        value: 'api',
+        load: async () => ({
+          detail: '2 scripts',
+          detailEnd: [[' · main', 'green']],
+          hint: 'npm',
+        }),
+      },
+    ],
+  })
+
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(
+    terminal.screen()[2],
+    aligned('  ❯ api  2 scripts · main', 'npm'),
+  )
+
+  terminal.type(KEYS.enter)
+  assert.equal(await result, 'api')
+})
+
 test('details that arrive after the list closes are not drawn', async () => {
   const terminal = createTerminal()
   let finish
