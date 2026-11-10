@@ -55,6 +55,8 @@ test('parseCliArgs explains how to get help for invalid input', () => {
 test('formatHelp documents every option', () => {
   for (const flag of [
     '--workspace',
+    '--list-workspaces',
+    '--remove-workspace',
     '--no-mouse',
     '--set-mouse',
     '--set-color',
@@ -92,7 +94,11 @@ test('formatHelp defaults to plain text', () => {
     dws web dev -- --port 4000
 
   Options:
-    -w, --workspace <path>   Use <path> as the workspace and save it
+    -w, --workspace <name|path>
+                             Use a saved workspace, or <path> (saved too)
+        --list-workspaces    List the saved workspaces
+        --remove-workspace <name>
+                             Forget a saved workspace
         --no-mouse           Use only the keyboard in menus, this time
         --set-mouse <on|off>
                              Save whether menus use the mouse
@@ -139,9 +145,9 @@ test('formatHelp applies colors to headings, commands, options and environment',
   assert.ok(colored.includes('[accent]dws web[/accent]'))
   assert.ok(colored.includes('[bold]Options:[/bold]'))
   assert.ok(
-    colored.includes('[accent]-w, --workspace[/accent] [dim]<path>[/dim]'),
+    colored.includes('[accent]-w, --workspace[/accent] [dim]<name|path>[/dim]'),
   )
-  assert.ok(colored.includes('Use <path> as the workspace'))
+  assert.ok(colored.includes('Use a saved workspace, or <path>'))
   assert.ok(colored.includes('[bold]Environment:[/bold]'))
   assert.ok(colored.includes('[accent]DEV_WORKSPACE_CONFIG[/accent]'))
 })

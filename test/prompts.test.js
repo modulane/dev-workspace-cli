@@ -563,3 +563,53 @@ test('chooseProject expands a monorepo into its packages', async () => {
   ])
   assert.equal(calls.select[0].default, api)
 })
+
+test('chooseWorkspace lists the saved workspaces first, by name', async () => {
+  const { calls, prompts } = createPromptMocks({ select: '/work' })
+
+  await prompts.chooseWorkspace(['/home/dev'], {
+    saved: [
+      { name: 'work', directory: '/work', missing: false },
+      { name: 'old', directory: '/gone', missing: true },
+    ],
+    current: '/work',
+    cancellable: true,
+  })
+
+  const { items } = calls.select[0]
+
+  assert.deepEqual(items.slice(0, 4), [
+    { separator: 'Saved' },
+    { label: 'work', value: '/work', detail: '/work', hint: 'current' },
+    { label: 'old', value: '/gone', detail: '/gone', disabled: 'not found' },
+    { separator: 'Suggested' },
+  ])
+  assert.equal(items[4].value, '/home/dev')
+  assert.equal(calls.select[0].default, '/work')
+
+  // Without suggestions, no group titles.
+  await prompts.chooseWorkspace([], {
+    saved: [{ name: 'work', directory: '/work', missing: false }],
+  })
+  assert.deepEqual(
+    calls.select[1].items.map(item => item.label),
+    ['work', '… Enter another path'],
+  )
+})
+
+test('askForWorkspaceName suggests a name, trims it, and Escape returns null', async () => {
+  const { calls, prompts } = createPromptMocks({ input: '  personal ' })
+  const validate = () => true
+
+  assert.equal(await prompts.askForWorkspaceName('dev', validate), 'personal')
+  assert.equal(calls.input[0].message, 'Name for this workspace')
+  assert.equal(calls.input[0].default, 'dev')
+  assert.equal(calls.input[0].validate, validate)
+
+  const keys = new EventEmitter()
+  const escaping = createPrompts({ input: abortableInput(keys), keys })
+  const answer = escaping.askForWorkspaceName('dev', validate)
+
+  keys.emit('keypress', undefined, { name: 'escape' })
+  assert.equal(await answer, null)
+})

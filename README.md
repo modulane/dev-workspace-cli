@@ -105,7 +105,7 @@ This installs two equivalent commands, `dev-workspace` and the shorter `dws`.
 
 Escape goes back one screen: from a project to the project list, from the workspace list or path prompt to the project list, and from the project list it exits. While you are searching, it only clears the search. The help line under each menu shows what it does (`esc back` or `esc exit`).
 
-Every menu opens with a small box that shows where you are: the name of the workspace folder, followed by the project you are in (`◆ dev › web-app`), the workspace folder, and in a project, its package manager on the right. The box also holds the buttons of the screen, on the right of the workspace line: **⚙ Workspace** and **✕ Exit** in the project list, **← Back** and **… Run with args** in a project. The buttons sit just above the list: press ↑ on the first entry to reach the first button, ↑ again for the next one, and ↓ to come back (Tab and Shift+Tab work too, and ← and → move between buttons). The focused button is shown in reverse, or between brackets without colours, and Enter presses it. Each script's command is shown next to its name, in a column of its own, and tags such as `last run` sit at the right edge. When a list is longer than the window, `▲ 3 more` and `▼ 12 more` show how many entries are hidden above and below. The layout stays within 100 columns on wide terminals. Long workspace paths are shortened in the middle (`C:Users…projectsweb`), keeping the folders that tell them apart, and script commands are cut with `…` to fit, and emoji or CJK characters in folder names never break the layout.
+Every menu opens with a small box that shows where you are: the name of the workspace (see [Workspaces](#workspaces)), followed by the project you are in (`◆ dev › web-app`), the workspace folder, and in a project, its package manager on the right. The box also holds the buttons of the screen, on the right of the workspace line: **⚙ Workspace** and **✕ Exit** in the project list, **← Back** and **… Run with args** in a project. The buttons sit just above the list: press ↑ on the first entry to reach the first button, ↑ again for the next one, and ↓ to come back (Tab and Shift+Tab work too, and ← and → move between buttons). The focused button is shown in reverse, or between brackets without colours, and Enter presses it. Each script's command is shown next to its name, in a column of its own, and tags such as `last run` sit at the right edge. When a list is longer than the window, `▲ 3 more` and `▼ 12 more` show how many entries are hidden above and below. The layout stays within 100 columns on wide terminals. Long workspace paths are shortened in the middle (`C:Users…projectsweb`), keeping the folders that tell them apart, and script commands are cut with `…` to fit, and emoji or CJK characters in folder names never break the layout.
 
 The menus are drawn on the terminal's alternate screen, as `less` and `vim` do, so resizing the window redraws the whole screen cleanly and the menus never fill your scrollback. A script's output appears on the normal screen and stays there after you return to the menus.
 
@@ -221,21 +221,23 @@ dws web dev -- --port 4000     # pass everything after -- to the script
 dev-workspace [options] [project [script] [-- arguments]]
 ```
 
-| Option                   | Description                                                       |
-| ------------------------ | ----------------------------------------------------------------- |
-| `-w, --workspace <path>` | Use `<path>` as the workspace and save it                         |
-| `--no-mouse`             | Use only the keyboard in menus, for this run                      |
-| `--set-mouse <on\|off>`  | Save whether menus use the mouse                                  |
-| `--set-color <name>`     | Save the accent colour (see [Colours](#colours))                  |
-| `--set-depth <1-3>`      | Save how many folder levels to search (see [Projects](#projects)) |
-| `--config-path`          | Print the location of the configuration file                      |
-| `--clear-history`        | Forget the recent projects and last scripts                       |
-| `--add-alias <name>`     | Create another command that starts the CLI                        |
-| `--remove-alias <name>`  | Delete an alias created with `--add-alias`                        |
-| `--list-aliases`         | List the commands that start the CLI                              |
-| `--reset`                | Delete the configuration, history and custom aliases              |
-| `-v, --version`          | Print the version                                                 |
-| `-h, --help`             | Show the help (coloured as described in [Colours](#colours))      |
+| Option                         | Description                                                                   |
+| ------------------------------ | ----------------------------------------------------------------------------- |
+| `-w, --workspace <name\|path>` | Use a saved workspace, or `<path>` (saved too, see [Workspaces](#workspaces)) |
+| `--list-workspaces`            | List the saved workspaces                                                     |
+| `--remove-workspace <name>`    | Forget a saved workspace (its folder is left as it is)                        |
+| `--no-mouse`                   | Use only the keyboard in menus, for this run                                  |
+| `--set-mouse <on\|off>`        | Save whether menus use the mouse                                              |
+| `--set-color <name>`           | Save the accent colour (see [Colours](#colours))                              |
+| `--set-depth <1-3>`            | Save how many folder levels to search (see [Projects](#projects))             |
+| `--config-path`                | Print the location of the configuration file                                  |
+| `--clear-history`              | Forget the recent projects and last scripts                                   |
+| `--add-alias <name>`           | Create another command that starts the CLI                                    |
+| `--remove-alias <name>`        | Delete an alias created with `--add-alias`                                    |
+| `--list-aliases`               | List the commands that start the CLI                                          |
+| `--reset`                      | Delete the configuration, history and custom aliases                          |
+| `-v, --version`                | Print the version                                                             |
+| `-h, --help`                   | Show the help (coloured as described in [Colours](#colours))                  |
 
 ## Aliases
 
@@ -270,10 +272,21 @@ The workspace path is saved in the standard configuration folder of your operati
 - The accent colour chosen on the first launch is saved as `"color"`: `{ "workspace": "…", "color": "teal" }`. `dws --set-color <name>` changes it. A file saved by a version without this setting keeps cyan and is never asked again.
 - `dws --set-depth 2` saves `"depth": 2`, the number of folder levels searched for projects (1 to 3, 1 when it is missing).
 - `dws --set-mouse off` saves `"mouse": false` in the file, so menus use only the keyboard: `{ "workspace": "…", "mouse": false }`. `dws --set-mouse on` saves `true`. Changing the workspace keeps these settings, and they can be saved before any workspace is chosen.
-- To switch workspaces, press the **⚙ Workspace** button in the project list or run `dws --workspace <path>`. The button shows the same folders as the first launch, with the current one tagged `current`, and **… Enter another path**. In that list, and at the path prompt, Esc keeps the current workspace and goes back to the projects. If the saved workspace no longer exists, the CLI asks for a new one.
+- Saved workspaces are kept as `"workspaces"`, by name, and `"workspace"` holds the path of the current one: `{ "workspace": "…/work", "workspaces": { "dev": "…/dev", "work": "…/work" } }`. A file saved by a version without names keeps working: its workspace is listed under its folder name. See [Workspaces](#workspaces).
 - Versions before 0.3.0 stored the file in `~/.dev-workspace-cli/config.json`. If that file exists, it is moved to the new location automatically.
 
 The history of recent projects and last scripts, and which mouse notes were shown, is kept apart from the settings, in `state.json` in the same folder as `config.json`. With `DEV_WORKSPACE_CONFIG`, it is named after your file instead (`dws.json` keeps it in `dws.state.json`), so it never overwrites a `state.json` of your own. It is only a convenience: if it is missing or damaged, the CLI starts with an empty history. `dws --clear-history` deletes it.
+
+### Workspaces
+
+You can keep several workspaces, for example `work` and `personal`, and switch between them. Every workspace you use is saved under a name: the first one, and any folder passed with `--workspace <path>`, under its folder name (`dev`, or `dev-2` when that name is taken).
+
+- Press the **⚙ Workspace** button in the project list to switch. It lists the saved workspaces by name, with the current one tagged `current` and those whose folder is gone dimmed as `not found`, then the suggested folders of the first launch that are not saved yet, and **… Enter another path**. Choosing a saved workspace switches to it at once; for a new folder, the CLI asks for a name, filled in with the folder name, so Enter keeps it. Names cannot contain `/` or `\`, or start with `.` or `~`, so they never read as a path.
+- `dws --workspace work` switches to the saved workspace `work` (the name is matched exactly, then ignoring case), also in direct mode: `dws -w work web dev`. Anything that is not a saved name is read as a path. To use a folder that has the same name as a saved workspace, give it as a path, such as `./work`.
+- `dws --list-workspaces` prints the saved workspaces and marks the current one; `dws --remove-workspace <name>` forgets one, but never the current one, and leaves its folder as it is.
+- In the workspace list, the name prompt and the path prompt, Esc keeps the current workspace and goes back to the projects. If the current workspace no longer exists, the CLI asks for another one, and the list offers the other saved workspaces.
+
+The header box starts with the workspace's name (`◆ work › web-app`).
 
 ## Uninstalling
 

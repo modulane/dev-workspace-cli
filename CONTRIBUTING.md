@@ -78,7 +78,7 @@ Every colour comes from the theme in `ui.js`: `color()` for plain output, `style
 
 Each file in `lib/` starts with a comment describing what it contains and how it is used. Keep that comment accurate when you change the file.
 
-Modules receive their side effects (file system, prompts, process spawning) as parameters with real defaults, so tests can replace them with fakes. Tests live in `test/`, one file per module.
+Modules receive their side effects (file system, prompts, process spawning) as parameters with real defaults, so tests can replace them with fakes. Tests live in `test/`, one file per module. `test/benchmark.test.js` is the exception: it checks the time budget of the "Bigger workspaces" milestone, a 200-project workspace searched two levels deep in under 500 ms, on real folders in a temporary directory.
 
 ## Workflow
 

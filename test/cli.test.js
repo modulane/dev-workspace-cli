@@ -3,7 +3,12 @@ import path from 'node:path'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { createCli, findProject, formatDuration } from '../lib/cli.js'
+import {
+  checkWorkspaceName,
+  createCli,
+  findProject,
+  formatDuration,
+} from '../lib/cli.js'
 import {
   CHANGE_WORKSPACE,
   ENTER_PATH,
@@ -20,6 +25,7 @@ const WORKSPACE = path.resolve('fake/workspace')
 function createDependencies(overrides = {}) {
   const calls = {
     savedWorkspaces: [],
+    namedWorkspaces: [],
     discoveredWorkspaces: [],
     savedStates: [],
     mouse: [],
@@ -50,6 +56,10 @@ function createDependencies(overrides = {}) {
       migrateLegacyConfig: async () => null,
       readColorSetting: async () => 'cyan',
       readDepthSetting: async () => 1,
+      readSavedWorkspaces: async () => ({}),
+      saveSavedWorkspaces: async (workspaces, file) => {
+        calls.namedWorkspaces.push({ workspaces, file })
+      },
       readMouseSetting: async () => true,
       readWorkspaceConfig: async () => WORKSPACE,
       resetWorkspaceConfig: async () => [],
@@ -101,6 +111,9 @@ function createDependencies(overrides = {}) {
     prompts: {
       askForArguments: async () => [],
       askForWorkspace: async () => WORKSPACE,
+      askForWorkspaceName: async suggested => suggested,
+      // The saved workspace is always offered: type a path by default.
+      chooseWorkspace: async () => ENTER_PATH,
       chooseProject: async (projects, options) => {
         calls.menus.push(options)
         return null
@@ -355,7 +368,12 @@ test('CLI runs a selected script and reports success', async () => {
   const lines = loggedText(calls).split('\n')
 
   assert.deepEqual(calls.runHeaders, [
-    { workspace: WORKSPACE, crumbs: ['example', 'dev'], tag: 'npm · default' },
+    {
+      workspace: WORKSPACE,
+      name: 'workspace',
+      crumbs: ['example', 'dev'],
+      tag: 'npm · default',
+    },
   ])
   assert.deepEqual(lines.slice(0, 6), [
     '',
@@ -772,21 +790,17 @@ test('CLI offers a workspace change when the project list is empty', async () =>
 
 test('CLI saves the workspace passed with --workspace', async () => {
   const otherWorkspace = path.resolve('fake/other')
-  let configRead = false
 
-  const { dependencies, calls } = createDependencies({
-    config: {
-      readWorkspaceConfig: async () => {
-        configRead = true
-        return WORKSPACE
-      },
-    },
-  })
+  const { dependencies, calls } = createDependencies()
 
   await createCli(dependencies).start(['--workspace', 'fake/other'])
 
-  assert.equal(configRead, false)
   assert.equal(calls.savedWorkspaces[0].workspace, otherWorkspace)
+  // The previous workspace stays saved, under its folder name.
+  assert.deepEqual(calls.namedWorkspaces.at(-1).workspaces, {
+    workspace: WORKSPACE,
+    other: otherWorkspace,
+  })
   assert.equal(calls.discoveredWorkspaces[0].root, otherWorkspace)
 })
 
@@ -2291,4 +2305,186 @@ test('CLI runs a package script directly, by its full name or its last part', as
       ['test', apiDirectory, { packageManager: 'pnpm' }],
     ])
   }
+})
+
+const WORK = path.resolve('fake/work')
+const GONE = path.resolve('fake/gone')
+
+// A configuration with two saved workspaces, the current one first, and a
+// third one whose folder is gone.
+function namedDependencies(overrides = {}) {
+  return createDependencies({
+    ...overrides,
+    config: {
+      readSavedWorkspaces: async () => ({
+        dev: WORKSPACE,
+        work: WORK,
+        old: GONE,
+      }),
+      ...overrides.config,
+    },
+    workspace: {
+      isDirectory: async directory => directory !== GONE,
+      ...overrides.workspace,
+    },
+  })
+}
+
+test('CLI switches to a saved workspace by name with --workspace', async () => {
+  const { dependencies, calls } = namedDependencies()
+
+  await createCli(dependencies).start(['--workspace', 'WORK'])
+
+  assert.equal(calls.savedWorkspaces[0].workspace, WORK)
+  assert.equal(calls.discoveredWorkspaces[0].root, WORK)
+  // The header names the workspace.
+  assert.match(
+    calls.menus[0]
+      .header(80)
+      .map(line => line.map(([text]) => text).join(''))
+      .join('\n'),
+    /◆ work ─/,
+  )
+
+  await assert.rejects(
+    createCli(namedDependencies().dependencies).start(['-w', 'old']),
+    /The workspace "old" is unavailable: .*gone\. Remove it with --remove-workspace old\./,
+  )
+})
+
+test('CLI offers the saved workspaces, then the other suggested folders', async () => {
+  const other = path.resolve('fake/other')
+  const choices = [CHANGE_WORKSPACE, null]
+  const shown = []
+  const named = []
+
+  const { dependencies, calls } = namedDependencies({
+    workspace: {
+      suggestWorkspaces: async () => [WORK, other],
+    },
+    prompts: {
+      chooseProject: async () => choices.shift(),
+      chooseWorkspace: async (folders, options) => {
+        shown.push([folders, options])
+        return other
+      },
+      askForWorkspaceName: async (suggested, validate) => {
+        named.push({ suggested, taken: validate('Work'), empty: validate(' ') })
+        return 'clients'
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  const [[folders, options]] = shown
+
+  // A saved folder is not suggested again.
+  assert.deepEqual(folders, [other])
+  assert.deepEqual(options.saved, [
+    { name: 'dev', directory: WORKSPACE, missing: false },
+    { name: 'work', directory: WORK, missing: false },
+    { name: 'old', directory: GONE, missing: true },
+  ])
+  assert.deepEqual(named, [
+    {
+      suggested: 'other',
+      taken: `"work" already names ${WORK}.`,
+      empty: 'Please enter a name.',
+    },
+  ])
+  assert.deepEqual(calls.namedWorkspaces.at(-1).workspaces, {
+    dev: WORKSPACE,
+    work: WORK,
+    old: GONE,
+    clients: other,
+  })
+  assert.match(loggedText(calls), /Workspace saved: .*other as "clients"/)
+})
+
+test('CLI asks no name for a saved workspace, and Escape at the name goes back', async () => {
+  for (const [picked, name, saved] of [
+    [WORK, undefined, WORK],
+    [path.resolve('fake/other'), null, undefined],
+  ]) {
+    const choices = [CHANGE_WORKSPACE, null]
+    let asked = false
+
+    const { dependencies, calls } = namedDependencies({
+      prompts: {
+        chooseProject: async () => choices.shift(),
+        chooseWorkspace: async () => picked,
+        askForWorkspaceName: async () => {
+          asked = true
+          return name
+        },
+      },
+    })
+
+    await createCli(dependencies).run()
+
+    assert.equal(asked, name !== undefined)
+    assert.equal(calls.savedWorkspaces[0]?.workspace, saved)
+  }
+})
+
+test('CLI names a new workspace after its folder, made unique', async () => {
+  const otherDev = path.resolve('elsewhere/dev')
+  const { dependencies, calls } = namedDependencies()
+
+  await createCli(dependencies).start(['--workspace', otherDev])
+
+  assert.equal(calls.namedWorkspaces.at(-1).workspaces['dev-2'], otherDev)
+})
+
+test('CLI lists and removes saved workspaces', async () => {
+  const { dependencies, calls } = namedDependencies()
+
+  await createCli(dependencies).start(['--list-workspaces'])
+
+  assert.deepEqual(
+    calls.logs.map(([line]) => line),
+    [`  dev   ${WORKSPACE} (current)`, `  work  ${WORK}`, `  old   ${GONE}`],
+  )
+
+  await createCli(dependencies).start(['--remove-workspace', 'old'])
+
+  assert.deepEqual(calls.namedWorkspaces.at(-1).workspaces, {
+    dev: WORKSPACE,
+    work: WORK,
+  })
+  assert.match(calls.logs.at(-1)[0], /Removed the workspace "old"/)
+
+  await assert.rejects(
+    createCli(dependencies).start(['--remove-workspace', 'dev']),
+    /"dev" is the current workspace\. Switch to another one first/,
+  )
+  await assert.rejects(
+    createCli(dependencies).start(['--remove-workspace', 'nope']),
+    /No saved workspace named "nope"\. See them with --list-workspaces\./,
+  )
+})
+
+test('CLI lists a workspace saved before names existed under its folder name', async () => {
+  const { dependencies, calls } = createDependencies()
+
+  await createCli(dependencies).start(['--list-workspaces'])
+  assert.deepEqual(calls.logs, [[`  workspace  ${WORKSPACE} (current)`]])
+
+  const none = createDependencies({
+    config: { readWorkspaceConfig: async () => null },
+  })
+
+  await createCli(none.dependencies).start(['--list-workspaces'])
+  assert.match(none.calls.logs[0][0], /No saved workspaces yet/)
+})
+
+test('checkWorkspaceName refuses names that read as paths or are taken', () => {
+  const saved = { work: WORK }
+
+  assert.equal(checkWorkspaceName('personal', saved), true)
+  for (const name of ['a/b', String.raw`a\b`, '.hidden', '~home']) {
+    assert.match(checkWorkspaceName(name, saved), /cannot contain/)
+  }
+  assert.match(checkWorkspaceName('WORK', saved), /"work" already names/)
 })

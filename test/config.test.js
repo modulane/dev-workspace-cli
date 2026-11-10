@@ -19,11 +19,13 @@ import {
   readColorSetting,
   readDepthSetting,
   readMouseSetting,
+  readSavedWorkspaces,
   readWorkspaceConfig,
   resetWorkspaceConfig,
   saveColorSetting,
   saveDepthSetting,
   saveMouseSetting,
+  saveSavedWorkspaces,
   saveWorkspaceConfig,
 } from '../lib/config.js'
 
@@ -412,5 +414,39 @@ test('saveDepthSetting saves the depth, and readDepthSetting checks it', async (
 
     await writeFile(file, '{ not json', 'utf8')
     assert.equal(await readDepthSetting(file), 1)
+  })
+})
+
+test('saveSavedWorkspaces saves the names, and readSavedWorkspaces checks them', async () => {
+  await withTempHome(async home => {
+    const { directory, file } = pathsIn(home)
+
+    assert.deepEqual(await readSavedWorkspaces(file), {})
+
+    await saveWorkspaceConfig('/work', file)
+    await saveSavedWorkspaces({ work: '/work', personal: '/me' }, file)
+
+    assert.deepEqual(JSON.parse(await readFile(file, 'utf8')), {
+      workspace: '/work',
+      workspaces: { work: '/work', personal: '/me' },
+    })
+    assert.deepEqual(await readSavedWorkspaces(file), {
+      work: '/work',
+      personal: '/me',
+    })
+
+    await mkdir(directory, { recursive: true })
+
+    for (const workspaces of [['/work'], 'work', null]) {
+      await writeFile(file, JSON.stringify({ workspaces }), 'utf8')
+      assert.deepEqual(await readSavedWorkspaces(file), {})
+    }
+
+    await writeFile(
+      file,
+      JSON.stringify({ workspaces: { ok: '/ok', ' ': '/x', bad: 3, no: '' } }),
+      'utf8',
+    )
+    assert.deepEqual(await readSavedWorkspaces(file), { ok: '/ok' })
   })
 })
