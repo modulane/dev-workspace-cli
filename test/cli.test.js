@@ -49,6 +49,7 @@ function createDependencies(overrides = {}) {
       }),
       migrateLegacyConfig: async () => null,
       readColorSetting: async () => 'cyan',
+      readDepthSetting: async () => 1,
       readMouseSetting: async () => true,
       readWorkspaceConfig: async () => WORKSPACE,
       resetWorkspaceConfig: async () => [],
@@ -1323,6 +1324,26 @@ test('findProject matches exactly, then ignoring case, then by unique prefix', (
   assert.throws(() => find('mobile'), /No project named "mobile" in /)
 })
 
+test('findProject finds nested projects by path or by their last part', () => {
+  const projects = [
+    'web',
+    'clients/acme/api',
+    'clients/acme/site',
+    'x/site',
+  ].map(name => ({ name, directory: path.join(WORKSPACE, name) }))
+  const find = name => findProject(projects, name, WORKSPACE).name
+
+  assert.equal(find('clients/acme/api'), 'clients/acme/api')
+  assert.equal(find('clients\\acme\\api'), 'clients/acme/api')
+  assert.equal(find('API'), 'clients/acme/api')
+  assert.equal(find('web'), 'web')
+  assert.equal(find('clients/acme/s'), 'clients/acme/site')
+  assert.throws(
+    () => find('site'),
+    /"site" matches several projects: clients\/acme\/site, x\/site\./,
+  )
+})
+
 test('CLI runs a script directly and returns its exit code', async () => {
   const { dependencies, calls, runs } = directDependencies()
 
@@ -2091,4 +2112,42 @@ test('CLI goes back to the scripts on Escape at the arguments prompt', async () 
   assert.deepEqual(answers, [])
   assert.deepEqual(runs, [])
   assert.match(loggedText(calls), /Press Esc to go back to the scripts\./)
+})
+
+test('CLI --set-depth saves the depth and exits', async () => {
+  const saved = []
+  const { dependencies, calls } = createDependencies({
+    config: {
+      saveDepthSetting: async (depth, file) => saved.push({ depth, file }),
+    },
+  })
+
+  await createCli(dependencies).start(['--set-depth', '2'])
+
+  assert.deepEqual(saved, [
+    { depth: 2, file: '/fake/home/.dev-workspace-cli/config.json' },
+  ])
+  assert.match(calls.logs.at(-1)[0], /searches 2 folder levels/)
+  assert.equal(calls.discoveredWorkspaces.length, 0)
+
+  await createCli(dependencies).start(['--set-depth', '1'])
+
+  assert.match(calls.logs.at(-1)[0], /workspace folders only/)
+})
+
+test('CLI lists projects down to the saved depth', async () => {
+  const asked = []
+  const { dependencies } = createDependencies({
+    config: { readDepthSetting: async () => 3 },
+    workspace: {
+      getProjects: async (root, options) => {
+        asked.push({ root, ...options })
+        return []
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.deepEqual(asked, [{ root: WORKSPACE, depth: 3 }])
 })

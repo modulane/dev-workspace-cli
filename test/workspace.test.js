@@ -496,3 +496,86 @@ test('suggestWorkspaces skips a drive that does not answer in time', async () =>
 
   assert.deepEqual(result, ['C:\\dev'])
 })
+
+// Create each folder, with a package.json for the paths that end in /.
+async function createTree(root, paths) {
+  for (const entry of paths) {
+    const folder = path.join(root, ...entry.split('/').filter(Boolean))
+
+    await mkdir(folder, { recursive: true })
+
+    if (entry.endsWith('/')) {
+      await writeFile(path.join(folder, 'package.json'), '{}', 'utf8')
+    }
+  }
+}
+
+test('getProjects searches nested folders down to the depth', async () => {
+  await withTempDirectory(async directory => {
+    await createTree(directory, [
+      'web/',
+      'web/packages/ui/',
+      'apps/site/',
+      'apps/notes',
+      'clients/acme/web/',
+      'clients/acme/api/',
+      'clients/beta/site/',
+      'clients/empty',
+      'clients/node_modules/lib/',
+      'clients/.cache/tool/',
+      'docs/images',
+      'deep/a/b/c/',
+    ])
+
+    const names = async depth =>
+      (await getProjects(directory, { depth })).map(project => [
+        project.name,
+        project.hasPackageJson,
+      ])
+
+    // Depth 1, the default, lists the workspace's own folders only.
+    assert.deepEqual(await names(undefined), [
+      ['web', true],
+      ['apps', false],
+      ['clients', false],
+      ['deep', false],
+      ['docs', false],
+    ])
+
+    // A folder is replaced by what it holds only when that includes a
+    // project; a folder with a package.json is never searched.
+    assert.deepEqual(await names(2), [
+      ['apps/site', true],
+      ['web', true],
+      ['apps/notes', false],
+      ['clients', false],
+      ['deep', false],
+      ['docs', false],
+    ])
+
+    // node_modules and dot-folders are never entered, and deep/a/b/c is
+    // below the deepest level.
+    assert.deepEqual(await names(3), [
+      ['apps/site', true],
+      ['clients/acme/api', true],
+      ['clients/acme/web', true],
+      ['clients/beta/site', true],
+      ['web', true],
+      ['apps/notes', false],
+      ['clients/empty', false],
+      ['deep', false],
+      ['docs', false],
+    ])
+
+    // The depth is kept between 1 and 3.
+    assert.deepEqual(await names(9), await names(3))
+    assert.deepEqual(await names(0), await names(1))
+
+    const projects = await getProjects(directory, { depth: 3 })
+
+    assert.equal(
+      projects.find(project => project.name === 'clients/acme/api').directory,
+      path.join(directory, 'clients', 'acme', 'api'),
+    )
+  })
+})

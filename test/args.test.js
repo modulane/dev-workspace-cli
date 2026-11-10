@@ -58,6 +58,7 @@ test('formatHelp documents every option', () => {
     '--no-mouse',
     '--set-mouse',
     '--set-color',
+    '--set-depth',
     '--config-path',
     '--clear-history',
     '--add-alias',
@@ -98,6 +99,9 @@ test('formatHelp defaults to plain text', () => {
         --set-color <name>   Save the accent colour: cyan, blue, purple,
                              magenta, pink, orange, teal, sky, lavender,
                              coral, gold, bold
+        --set-depth <1-3>    Save how many folder levels to search for
+                             projects (1, the default, lists only the
+                             workspace's own subfolders)
         --config-path        Print the configuration file location
         --clear-history      Forget recently used projects and scripts
         --add-alias <name>   Create another command that starts the CLI
@@ -204,6 +208,26 @@ test('parseCliArgs accepts only the accent colours for --set-color', () => {
     () => parseCliArgs(['--set-color', 'green']),
     /Use --set-color with cyan, blue, .*, gold or bold, not "green"\.\n.*--help/,
   )
+})
+
+test('parseCliArgs accepts only 1, 2 and 3 for --set-depth', () => {
+  for (const depth of ['1', '2', '3']) {
+    assert.deepEqual(
+      { ...parseCliArgs(['--set-depth', depth]) },
+      {
+        'set-depth': depth,
+      },
+    )
+  }
+
+  for (const depth of ['0', '4', 'two', '1.5']) {
+    assert.throws(
+      () => parseCliArgs(['--set-depth', depth]),
+      new RegExp(
+        `Use --set-depth with 1, 2 or 3, not "${depth}"\\.\\n.*--help`,
+      ),
+    )
+  }
 })
 
 test('formatHelp names every accent colour', () => {

@@ -182,7 +182,7 @@ Every screen checked in the terminals people use, on their own schedule: they ne
 ## Bigger workspaces
 
 - [ ] **Monorepos:** detect npm, Yarn and pnpm workspaces. A monorepo appears as one project with expandable packages; scripts run in the selected package.
-- [ ] **Nested discovery:** optional search depth (default 1, maximum 3) for workspaces organised in folders such as `clients/acme/web`. It must stop at any folder with a `package.json` and never enter `node_modules`.
+- [x] **Nested discovery:** optional search depth (default 1, maximum 3) for workspaces organised in folders such as `clients/acme/web`, saved with `--set-depth`. It must stop at any folder with a `package.json` and never enter `node_modules`. Projects found deeper are named by their path, and direct mode also finds them by their last part (`dws web`) [#37](https://github.com/modulane/dev-workspace-cli/issues/37).
 - [ ] **Multiple named workspaces:** save several workspaces (for example `work` and `personal`), switch between them from the menu, and choose one with `--workspace <name>`.
 
 **Done when:** a 200-project workspace with depth 2 lists in under 500 ms on a typical SSD, measured in a benchmark test.

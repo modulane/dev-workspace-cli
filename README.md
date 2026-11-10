@@ -154,7 +154,9 @@ To pass arguments to a script, press → on it, or click its **… run with args
 
 ### Projects
 
-Every subfolder of the workspace is listed as a project, including links to folders (symbolic links, and junctions on Windows), except folders that are never projects: names starting with a dot (such as `.git` or `.vscode`) and `node_modules`. Only the immediate subfolders are listed; projects nested deeper are not discovered.
+Every subfolder of the workspace is listed as a project, including links to folders (symbolic links, and junctions on Windows), except folders that are never projects: names starting with a dot (such as `.git` or `.vscode`) and `node_modules`.
+
+By default, only the immediate subfolders are listed. If your workspace groups projects in folders, such as `clients/acme/web`, let the CLI look deeper with `dws --set-depth 2` (or `3`, the maximum): it then also searches the folders that have no `package.json`, down to that many levels. The search stops at every folder with a `package.json`, so a project's own subfolders are never listed, and never enters `node_modules` or dot-folders. Projects found this way are named by their path (`clients/acme/web`); a folder that holds no project at all stays one dimmed entry. `dws --set-depth 1` goes back to the default.
 
 Projects are sorted by name, ignoring case. Folders without a `package.json` have no scripts to run, so they appear dimmed at the end of the list, tagged `no package.json`, and cannot be selected. A `package.json` that starts with a UTF-8 byte order mark, as Windows PowerShell 5.1 and some editors write it, is read normally, as npm does.
 
@@ -194,7 +196,7 @@ dws web dev                    # run its "dev" script, then exit
 dws web dev -- --port 4000     # pass everything after -- to the script
 ```
 
-- The project is found by its exact name first, then ignoring case, then by the start of its name, as long as only one project starts that way: `dws des build` runs `build` in `design-system`. If several projects match, the CLI lists them.
+- The project is found by its exact name first, then ignoring case, then by the last part of a nested project's name (`dws web` finds `clients/acme/web`, see [Projects](#projects)), then by the start of its name, as long as only one project starts that way: `dws des build` runs `build` in `design-system`. If several projects match, the CLI lists them. Nested names can be typed with `/`, or `` on Windows.
 - Any script in `package.json` can be run by name, including `pre` and `post` hooks.
 - With a script, nothing is asked and the screen is not cleared, so direct mode also works in other scripts. The CLI exits with the script's exit code, or 128 plus the signal number if a signal stopped it, as shells do (130 after Ctrl+C). It exits with code 1 if it cannot start the script, for example when no workspace is saved yet.
 - Without a script, the CLI needs a terminal to read keys from. When its input is redirected (`dws < file`, or in a CI job), it exits with code 1 and a message saying how to run a script directly, instead of waiting for keys that never come.
@@ -205,20 +207,21 @@ dws web dev -- --port 4000     # pass everything after -- to the script
 dev-workspace [options] [project [script] [-- arguments]]
 ```
 
-| Option                   | Description                                                  |
-| ------------------------ | ------------------------------------------------------------ |
-| `-w, --workspace <path>` | Use `<path>` as the workspace and save it                    |
-| `--no-mouse`             | Use only the keyboard in menus, for this run                 |
-| `--set-mouse <on\|off>`  | Save whether menus use the mouse                             |
-| `--set-color <name>`     | Save the accent colour (see [Colours](#colours))             |
-| `--config-path`          | Print the location of the configuration file                 |
-| `--clear-history`        | Forget the recent projects and last scripts                  |
-| `--add-alias <name>`     | Create another command that starts the CLI                   |
-| `--remove-alias <name>`  | Delete an alias created with `--add-alias`                   |
-| `--list-aliases`         | List the commands that start the CLI                         |
-| `--reset`                | Delete the configuration, history and custom aliases         |
-| `-v, --version`          | Print the version                                            |
-| `-h, --help`             | Show the help (coloured as described in [Colours](#colours)) |
+| Option                   | Description                                                       |
+| ------------------------ | ----------------------------------------------------------------- |
+| `-w, --workspace <path>` | Use `<path>` as the workspace and save it                         |
+| `--no-mouse`             | Use only the keyboard in menus, for this run                      |
+| `--set-mouse <on\|off>`  | Save whether menus use the mouse                                  |
+| `--set-color <name>`     | Save the accent colour (see [Colours](#colours))                  |
+| `--set-depth <1-3>`      | Save how many folder levels to search (see [Projects](#projects)) |
+| `--config-path`          | Print the location of the configuration file                      |
+| `--clear-history`        | Forget the recent projects and last scripts                       |
+| `--add-alias <name>`     | Create another command that starts the CLI                        |
+| `--remove-alias <name>`  | Delete an alias created with `--add-alias`                        |
+| `--list-aliases`         | List the commands that start the CLI                              |
+| `--reset`                | Delete the configuration, history and custom aliases              |
+| `-v, --version`          | Print the version                                                 |
+| `-h, --help`             | Show the help (coloured as described in [Colours](#colours))      |
 
 ## Aliases
 
@@ -251,6 +254,7 @@ The workspace path is saved in the standard configuration folder of your operati
 - The `DEV_WORKSPACE_CONFIG` environment variable points the CLI at a different file.
 - If you edit the file by hand, an editor that saves it with a UTF-8 byte order mark does no harm.
 - The accent colour chosen on the first launch is saved as `"color"`: `{ "workspace": "…", "color": "teal" }`. `dws --set-color <name>` changes it. A file saved by a version without this setting keeps cyan and is never asked again.
+- `dws --set-depth 2` saves `"depth": 2`, the number of folder levels searched for projects (1 to 3, 1 when it is missing).
 - `dws --set-mouse off` saves `"mouse": false` in the file, so menus use only the keyboard: `{ "workspace": "…", "mouse": false }`. `dws --set-mouse on` saves `true`. Changing the workspace keeps these settings, and they can be saved before any workspace is chosen.
 - To switch workspaces, press the **⚙ Workspace** button in the project list or run `dws --workspace <path>`. The button shows the same folders as the first launch, with the current one tagged `current`, and **… Enter another path**. In that list, and at the path prompt, Esc keeps the current workspace and goes back to the projects. If the saved workspace no longer exists, the CLI asks for a new one.
 - Versions before 0.3.0 stored the file in `~/.dev-workspace-cli/config.json`. If that file exists, it is moved to the new location automatically.
