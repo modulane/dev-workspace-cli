@@ -27,7 +27,7 @@ Dev Workspace CLI detects each project's package manager (npm, pnpm, Yarn or Bun
 
 ## Features
 
-- **One menu for every project:** lists the projects in your workspace folder and the scripts defined in each `package.json`.
+- **One menu for every project:** lists the projects in your workspace folder and the scripts defined in each `package.json`, including the packages of npm, Yarn and pnpm monorepos.
 - **The right package manager:** runs each project's scripts with npm, pnpm, Yarn or Bun, detected from the project itself.
 - **Fast to navigate:** type a few letters to find a project or script, recently used projects come first, and `dws web dev` runs a script in one command. Menus also work with the mouse, with buttons for every action.
 - **Stays out of the way:** scripts run in the project folder with full terminal output. Pressing Ctrl+C stops the script and brings you back to the menu.
@@ -164,6 +164,20 @@ Next to each project, the list shows how many scripts it has and its Git branch 
 
 In the script list, each script's command is shown next to its name, shortened to fit the terminal. Lifecycle hooks are listed with their main script instead of separately: with `prebuild`, `build` and `postbuild` scripts, the list shows only `build`, with the command `node build.js  (+ prebuild, postbuild)`; when the command is shortened, the hooks are always kept. Running `build` runs its hooks too, as the package manager normally does. A hook without its main script, such as `postinstall` on its own, is listed like any other script. In Yarn 2+ projects, which never run these hooks, every hook is listed as a separate script so you can still run it.
 
+#### Monorepos
+
+A project that declares workspaces is shown as a monorepo: the `workspaces` field of its `package.json` (npm, Yarn and Bun) or a `pnpm-workspace.yaml` (pnpm). It has a `▸` before its name and its package count in its details (`3 packages · 2 scripts · main`). Press → on it, or click the `▸`, to show its packages under it, and ← to hide them again; Enter or a click on its name opens the scripts of the monorepo itself, as for any project.
+
+```text
+  ❯ ▾ shop               3 packages · 2 scripts · main          pnpm
+        apps/web         1 script
+        packages/api     2 scripts                         @shop/api
+        packages/ui      1 script                           @shop/ui
+      web                2 scripts · main                        npm
+```
+
+Each package is listed by its folder in the monorepo, with its `name` from `package.json` on the right when it differs from the folder name. Opening a package shows its scripts, and they run in the package's folder with the monorepo's package manager, so `pnpm run dev` starts in `shop/packages/api`. The packages are the folders the workspace patterns match (`packages/*`, `apps/**`, and patterns starting with `!` to leave folders out) that have a `package.json`; they are read once per session. Searching looks through every package, shown or not: typing `ui` finds `shop › packages/ui`. Packages appear in the recent projects too, under their full name (`shop/packages/api`).
+
 ## Package managers
 
 Each project's scripts run with the package manager that project uses. It is chosen in this order:
@@ -196,7 +210,7 @@ dws web dev                    # run its "dev" script, then exit
 dws web dev -- --port 4000     # pass everything after -- to the script
 ```
 
-- The project is found by its exact name first, then ignoring case, then by the last part of a nested project's name (`dws web` finds `clients/acme/web`, see [Projects](#projects)), then by the start of its name, as long as only one project starts that way: `dws des build` runs `build` in `design-system`. If several projects match, the CLI lists them. Nested names can be typed with `/`, or `` on Windows.
+- The project is found by its exact name first, then ignoring case, then by the last part of a nested project's name (`dws web` finds `clients/acme/web`, see [Projects](#projects)), then by the start of its name, as long as only one project starts that way: `dws des build` runs `build` in `design-system`. If several projects match, the CLI lists them. Nested names can be typed with `/`, or `` on Windows. A monorepo's packages are found the same way, by their full name or its last part: `dws shop/packages/api test`, or `dws api test` when no other project or package is called `api`.
 - Any script in `package.json` can be run by name, including `pre` and `post` hooks.
 - With a script, nothing is asked and the screen is not cleared, so direct mode also works in other scripts. The CLI exits with the script's exit code, or 128 plus the signal number if a signal stopped it, as shells do (130 after Ctrl+C). It exits with code 1 if it cannot start the script, for example when no workspace is saved yet.
 - Without a script, the CLI needs a terminal to read keys from. When its input is redirected (`dws < file`, or in a CI job), it exits with code 1 and a message saying how to run a script directly, instead of waiting for keys that never come.

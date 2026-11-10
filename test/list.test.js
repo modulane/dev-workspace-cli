@@ -1657,3 +1657,96 @@ test('row buttons are divided by a line in the faint accent', async () => {
   terminal.type(KEYS.enter)
   await result
 })
+
+// A monorepo with two packages, next to an ordinary project.
+function treeItems() {
+  const api = { label: 'packages/api', value: 'shop/api' }
+  const ui = { label: 'packages/ui', value: 'shop/ui' }
+
+  return [
+    { label: 'shop', value: 'shop', children: [api, ui] },
+    { label: 'web', value: 'web' },
+  ]
+}
+
+test('an item with children opens with → and closes with ←', async () => {
+  const terminal = createTerminal()
+  const result = terminal.select({ message: 'Pick', items: treeItems() })
+
+  assert.deepEqual(terminal.screen().slice(2, 4), ['  ❯ ▸ shop', '      web'])
+  assert.match(terminal.screen().at(-1), /→ expand/)
+
+  terminal.type(KEYS.right)
+
+  assert.deepEqual(terminal.screen().slice(2, 6), [
+    '  ❯ ▾ shop',
+    '        packages/api',
+    '        packages/ui',
+    '      web',
+  ])
+  assert.match(terminal.screen().at(-1), /← collapse/)
+
+  // ← on a child closes its parent and selects it.
+  terminal.type(KEYS.down, KEYS.down)
+  assert.equal(terminal.screen()[4], '  ❯     packages/ui')
+
+  terminal.type(KEYS.left)
+  assert.deepEqual(terminal.screen().slice(2, 4), ['  ❯ ▸ shop', '      web'])
+
+  terminal.type(KEYS.right, KEYS.down, KEYS.enter)
+  assert.equal(await result, 'shop/api')
+  // The summary names the child with its parent.
+  assert.match(terminal.written, /Pick {2}shop › packages\/api/)
+})
+
+test('a search looks through every child, each value once', async () => {
+  const terminal = createTerminal()
+  const items = treeItems()
+  const result = terminal.select({
+    message: 'Pick',
+    // A recent copy of a child is not shown twice.
+    items: [{ label: 'shop/api', value: 'shop/api' }, ...items],
+  })
+
+  terminal.type('u', 'i')
+
+  assert.deepEqual(terminal.screen().slice(2, 3), ['  ❯ shop › packages/ui'])
+
+  terminal.type(KEYS.backspace, KEYS.backspace, 'a', 'p', 'i')
+
+  const lines = terminal
+    .screen()
+    .slice(2)
+    .filter(line => line.includes('api'))
+
+  assert.equal(lines.length, 1, lines.join('\n'))
+
+  // ← and → do nothing to the tree while searching.
+  terminal.type(KEYS.left, KEYS.enter)
+  assert.equal(await result, 'shop/api')
+})
+
+test('the parent of the default value starts open, and its ▸ is a button', async () => {
+  const terminal = createTerminal()
+  const result = terminal.select({
+    message: 'Pick',
+    items: treeItems(),
+    default: 'shop/ui',
+    mouse: true,
+    fullscreen: true,
+    clickOpens: true,
+  })
+
+  // The list is drawn from row 1: the message, then shop on row 3.
+  assert.equal(terminal.screen()[4], '  ❯     packages/ui')
+
+  terminal.click(3, 5)
+  assert.deepEqual(terminal.screen().slice(2, 4), ['  ❯ ▸ shop', '      web'])
+
+  terminal.click(3, 5)
+  assert.equal(terminal.screen()[3], '        packages/api')
+
+  // A click on the name opens the parent itself.
+  terminal.click(3, 9)
+  assert.equal(await result, 'shop')
+})

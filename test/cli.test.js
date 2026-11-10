@@ -2151,3 +2151,144 @@ test('CLI lists projects down to the saved depth', async () => {
 
   assert.deepEqual(asked, [{ root: WORKSPACE, depth: 3 }])
 })
+
+// A monorepo, shop, with one package, next to an ordinary project.
+function monorepoDependencies(overrides = {}) {
+  const shop = {
+    name: 'shop',
+    directory: path.join(WORKSPACE, 'shop'),
+    hasPackageJson: true,
+    workspaces: ['packages/*'],
+  }
+  const web = {
+    name: 'web',
+    directory: path.join(WORKSPACE, 'web'),
+    hasPackageJson: true,
+  }
+  const apiDirectory = path.join(shop.directory, 'packages', 'api')
+  const asked = { packageManagers: [], packages: [], branches: [], runs: [] }
+  const result = createDependencies({
+    ...overrides,
+    workspace: {
+      getProjects: async () => [shop, web],
+      getPackages: async (directory, patterns) => {
+        asked.packages.push([directory, patterns])
+        return [
+          {
+            path: 'packages/api',
+            directory: apiDirectory,
+            packageName: '@shop/api',
+          },
+        ]
+      },
+      getScripts: async directory =>
+        directory === shop.directory
+          ? [{ name: 'build', command: 'turbo build' }]
+          : [
+              { name: 'dev', command: 'vite' },
+              { name: 'test', command: 'vitest' },
+            ],
+      detectPackageManager: async directory => {
+        asked.packageManagers.push(directory)
+        return { name: 'pnpm', source: 'pnpm-lock.yaml', runsHooks: true }
+      },
+      readGitBranch: async directory => {
+        asked.branches.push(directory)
+        return 'main'
+      },
+      ...overrides.workspace,
+    },
+    commands: {
+      runCommand: async (...args) => {
+        asked.runs.push(args)
+        return { code: 0 }
+      },
+    },
+  })
+
+  return { ...result, shop, web, apiDirectory, asked }
+}
+
+test('CLI opens a package of a monorepo and runs its script there', async () => {
+  const lists = []
+  let scriptMenus = 0
+  const { dependencies, shop, web, apiDirectory, asked } = monorepoDependencies(
+    {
+      prompts: {
+        chooseProject: async (projects, options) => {
+          lists.push(options)
+
+          // The first time, open the package; then exit.
+          return lists.length === 1 ? options.packages(shop)[0] : null
+        },
+        chooseScript: async scripts => {
+          scriptMenus++
+          return scriptMenus === 1 ? { script: scripts[0] } : null
+        },
+        waitAfterCommand: async () => false,
+      },
+    },
+  )
+
+  await createCli(dependencies).run()
+
+  const [api] = lists[0].packages(shop)
+
+  assert.equal(api.name, 'shop/packages/api')
+  assert.equal(api.monorepo, shop)
+  assert.equal(lists[0].packages(web), undefined)
+  // Read once for the session.
+  assert.deepEqual(asked.packages, [[shop.directory, ['packages/*']]])
+
+  // The package runs in its own folder, with its monorepo's tool.
+  assert.deepEqual(asked.runs, [
+    ['dev', apiDirectory, { packageManager: 'pnpm' }],
+  ])
+  assert.equal(asked.packageManagers.at(-1), shop.directory)
+
+  // Back in the list, the package is recent and selected again.
+  assert.equal(lists[1].recent[0].directory, apiDirectory)
+  assert.equal(lists[1].default.directory, apiDirectory)
+})
+
+test('CLI shows a monorepo with its package count, and a package with its name', async () => {
+  let options
+  const { dependencies, shop, asked } = monorepoDependencies({
+    prompts: {
+      chooseProject: async (projects, given) => {
+        options = given
+        return null
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  const [api] = options.packages(shop)
+
+  assert.deepEqual(await options.details(shop), {
+    detail: '1 package · 1 script',
+    detailEnd: [
+      [' · ', 'dim'],
+      ['main', 'mainBranch'],
+    ],
+    hint: 'pnpm',
+  })
+  assert.deepEqual(await options.details(api), {
+    detail: '2 scripts',
+    hint: '@shop/api',
+  })
+  // A package has its monorepo's branch, so it is not read again.
+  assert.deepEqual(asked.branches, [shop.directory])
+})
+
+test('CLI runs a package script directly, by its full name or its last part', async () => {
+  for (const name of ['shop/packages/api', 'api']) {
+    const { dependencies, apiDirectory, asked } = monorepoDependencies()
+
+    assert.equal(await createCli(dependencies).start([name, 'test']), 0)
+    assert.deepEqual(asked.runs, [
+      ['test', apiDirectory, { packageManager: 'pnpm' }],
+    ])
+  }
+})

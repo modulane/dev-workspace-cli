@@ -6,10 +6,13 @@ import path from 'node:path'
 
 import {
   isDirectory,
+  getPackages,
   getProjects,
   getScripts,
   normalizePathInput,
+  parsePnpmWorkspace,
   readGitBranch,
+  readWorkspacePatterns,
   resolveDirectoryInput,
   suggestWorkspaces,
 } from '../lib/workspace.js'
@@ -577,5 +580,137 @@ test('getProjects searches nested folders down to the depth', async () => {
       projects.find(project => project.name === 'clients/acme/api').directory,
       path.join(directory, 'clients', 'acme', 'api'),
     )
+  })
+})
+
+test('parsePnpmWorkspace reads the packages list in either style', () => {
+  assert.deepEqual(
+    parsePnpmWorkspace(
+      [
+        '﻿# the workspace',
+        'packages:',
+        "  - 'packages/*'",
+        '  - "apps/**"',
+        '',
+        '  # tools too',
+        '  - tools/cli # the CLI',
+        "  - '!**/test/**'",
+        'catalog:',
+        '  - not-a-package',
+      ].join('\r\n'),
+    ),
+    ['packages/*', 'apps/**', 'tools/cli', '!**/test/**'],
+  )
+  assert.deepEqual(parsePnpmWorkspace('packages: [\'a/*\', "b"]\n'), [
+    'a/*',
+    'b',
+  ])
+  assert.deepEqual(parsePnpmWorkspace('catalog:\n  react: ^19\n'), [])
+})
+
+test('readWorkspacePatterns finds the npm, Yarn and pnpm workspaces', async () => {
+  await withTempDirectory(async directory => {
+    const project = async (name, files) => {
+      const folder = path.join(directory, name)
+
+      await mkdir(folder)
+
+      for (const [file, content] of Object.entries(files)) {
+        await writeFile(path.join(folder, file), content, 'utf8')
+      }
+
+      return readWorkspacePatterns(folder)
+    }
+
+    assert.deepEqual(
+      await project('npm', {
+        'package.json': JSON.stringify({ workspaces: ['packages/*', 3] }),
+      }),
+      ['packages/*'],
+    )
+    assert.deepEqual(
+      await project('yarn', {
+        'package.json': JSON.stringify({
+          workspaces: { packages: ['apps/*'], nohoist: ['**/react'] },
+        }),
+      }),
+      ['apps/*'],
+    )
+    assert.deepEqual(
+      await project('pnpm', {
+        'package.json': '{}',
+        'pnpm-workspace.yaml': 'packages:\n  - libs/*\n',
+      }),
+      ['libs/*'],
+    )
+    assert.equal(
+      await project('plain', { 'package.json': '{ "name": "plain" }' }),
+      null,
+    )
+    assert.equal(await project('broken', { 'package.json': '{' }), null)
+  })
+})
+
+test('getProjects marks monorepos with their workspace patterns', async () => {
+  await withTempDirectory(async directory => {
+    await createTree(directory, ['shop/', 'web/'])
+    await writeFile(
+      path.join(directory, 'shop', 'package.json'),
+      JSON.stringify({ workspaces: ['packages/*'] }),
+    )
+
+    assert.deepEqual(await getProjects(directory), [
+      {
+        name: 'shop',
+        directory: path.join(directory, 'shop'),
+        hasPackageJson: true,
+        workspaces: ['packages/*'],
+      },
+      {
+        name: 'web',
+        directory: path.join(directory, 'web'),
+        hasPackageJson: true,
+      },
+    ])
+  })
+})
+
+test('getPackages expands the workspace patterns into packages', async () => {
+  await withTempDirectory(async directory => {
+    await createTree(directory, [
+      'packages/api/',
+      'packages/ui/',
+      'packages/notes',
+      'packages/node_modules/dependency/',
+      'apps/web/',
+      'apps/mobile/ios/',
+      'apps/mobile/ios/test/',
+      'tools/cli/',
+    ])
+    await writeFile(
+      path.join(directory, 'packages', 'api', 'package.json'),
+      JSON.stringify({ name: '@shop/api' }),
+    )
+
+    const packages = await getPackages(directory, [
+      './packages/*/',
+      'apps/**',
+      'tools/cli',
+      'missing/*',
+      '.',
+      '!**/test',
+    ])
+
+    assert.deepEqual(
+      packages.map(({ path: folder, packageName }) => [folder, packageName]),
+      [
+        ['apps/mobile/ios', undefined],
+        ['apps/web', undefined],
+        ['packages/api', '@shop/api'],
+        ['packages/ui', undefined],
+        ['tools/cli', undefined],
+      ],
+    )
+    assert.equal(packages[2].directory, path.join(directory, 'packages', 'api'))
   })
 })

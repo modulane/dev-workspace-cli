@@ -530,3 +530,36 @@ test('askForArguments returns null on Escape, to go back', async () => {
   assert.equal(await answer, null)
   assert.equal(keys.listenerCount('keypress'), 0)
 })
+
+test('chooseProject expands a monorepo into its packages', async () => {
+  const shop = { name: 'shop', directory: '/projects/shop', workspaces: ['*'] }
+  const web = { name: 'web', directory: '/projects/web' }
+  const api = {
+    name: 'shop/packages/api',
+    path: 'packages/api',
+    directory: '/projects/shop/packages/api',
+    monorepo: shop,
+  }
+  const { calls, prompts } = createPromptMocks({ select: api })
+
+  const result = await prompts.chooseProject([shop, web], {
+    recent: [api],
+    packages: project => (project === shop ? [api] : undefined),
+    default: api,
+  })
+
+  assert.equal(result, api)
+  assert.deepEqual(calls.select[0].items, [
+    { separator: 'Recent' },
+    // In "Recent", a package has its full name and no packages of its own.
+    { label: 'shop/packages/api', value: api },
+    { separator: 'All projects' },
+    {
+      label: 'shop',
+      value: shop,
+      children: [{ label: 'packages/api', value: api }],
+    },
+    { label: 'web', value: web },
+  ])
+  assert.equal(calls.select[0].default, api)
+})
