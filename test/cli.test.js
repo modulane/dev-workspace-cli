@@ -2488,3 +2488,91 @@ test('checkWorkspaceName refuses names that read as paths or are taken', () => {
   }
   assert.match(checkWorkspaceName('WORK', saved), /"work" already names/)
 })
+
+test('CLI asks for the arguments of a script that needs them, showing its command', async () => {
+  const project = projectFixtures()[0]
+  const packages = {
+    name: 'packages',
+    command: 'yarn workspaces foreach -A',
+    needsArguments: true,
+  }
+  const asked = []
+  let scriptMenus = 0
+  const runs = []
+
+  const { dependencies, calls } = createDependencies({
+    workspace: {
+      getProjects: async () => [project],
+      getScripts: async () => [packages],
+    },
+    commands: {
+      runCommand: async (...args) => {
+        runs.push(args)
+        return { code: 0 }
+      },
+    },
+    prompts: {
+      chooseProject: async () => (scriptMenus === 0 ? project : null),
+      chooseScript: async () =>
+        scriptMenus++ === 0 ? { script: packages, withArguments: true } : null,
+      askForArguments: async (name, options) => {
+        asked.push([name, options])
+        return ['run', 'test']
+      },
+      waitAfterCommand: async () => false,
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.deepEqual(asked, [['packages', { required: true }]])
+  assert.match(
+    loggedText(calls),
+    /packages runs: yarn workspaces foreach -A <arguments>/,
+  )
+  assert.deepEqual(runs[0].slice(0, 2), ['packages', project.directory])
+  assert.deepEqual(runs[0][2].args, ['run', 'test'])
+})
+
+test('CLI does not run a script that needs arguments directly without any', async () => {
+  const { dependencies, runs } = directDependencies({
+    workspace: {
+      getScripts: async () => [
+        {
+          name: 'packages',
+          command: 'yarn workspaces foreach -A',
+          needsArguments: true,
+        },
+      ],
+    },
+  })
+
+  await assert.rejects(
+    createCli(dependencies).start(['web', 'packages']),
+    /"packages" cannot run without arguments \(it runs: yarn workspaces foreach -A\)\. Add them after --, for example: dws web packages -- <arguments>/,
+  )
+  assert.deepEqual(runs, [])
+
+  assert.equal(
+    await createCli(dependencies).start(['web', 'packages', '--', 'run', 'x']),
+    0,
+  )
+})
+
+test('CLI shows only the script count on a monorepo root entry', async () => {
+  let options
+  const { dependencies, shop } = monorepoDependencies({
+    prompts: {
+      chooseProject: async (projects, given) => {
+        options = given
+        return null
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.deepEqual(await options.details(shop, { root: true }), {
+    detail: '1 script',
+  })
+})

@@ -152,6 +152,8 @@ Then **↻ Run again** and **← Back to scripts** sit side by side. Run again i
 
 To pass arguments to a script, press → on it, or click its **… run with args** button, then type the arguments, for example `--port 4000`. The **… Run with args** button in the header box does the same after asking which script to run. Use quotes for an argument that contains spaces: `--title "my app"`. The arguments are passed to the script as they are, without a shell. Press Esc at the arguments prompt to go back to the scripts without running anything.
 
+Some scripts are helpers that only work with the rest of a command after them, such as `"packages": "yarn workspaces foreach --all"`, which other scripts call as `yarn packages run test`. Run on their own, they fail. The CLI recognises the common forms from the command, and tags them `needs arguments`: `yarn workspaces foreach` and `yarn workspace <name>` with nothing after them, and `pnpm`, `bun` and `npm` with only options such as `-r`, `--filter` or `--workspaces`, `npm exec`, `npx`, `turbo run`, `lerna run` and `lerna exec`. Running one, with Enter, a click or **▶ run**, asks for the arguments first, shows the command they complete (`packages runs: yarn workspaces foreach --all <arguments>`), and an empty answer is refused.
+
 ### Projects
 
 Every subfolder of the workspace is listed as a project, including links to folders (symbolic links, and junctions on Windows), except folders that are never projects: names starting with a dot (such as `.git` or `.vscode`) and `node_modules`.
@@ -166,10 +168,11 @@ In the script list, each script's command is shown next to its name, shortened t
 
 #### Monorepos
 
-A project that declares workspaces is shown as a monorepo: the `workspaces` field of its `package.json` (npm, Yarn and Bun) or a `pnpm-workspace.yaml` (pnpm). It has a `▸` before its name and its package count in its details (`3 packages · 2 scripts · main`). Press → on it, or click the `▸`, to show its packages under it, and ← to hide them again; Enter or a click on its name opens the scripts of the monorepo itself, as for any project.
+A project that declares workspaces is shown as a monorepo: the `workspaces` field of its `package.json` (npm, Yarn and Bun) or a `pnpm-workspace.yaml` (pnpm). It has a `▸` before its name and its package count in its details (`3 packages · 2 scripts · main`). Opening it (Enter, a click, or →) shows what it holds under it: **root** first, which opens the scripts of the monorepo's own `package.json`, then its packages. Opening it again, or ← from any of its entries, hides them. A monorepo found by a search opens the same way, and the search is cleared. In **Recent**, a monorepo expands too.
 
 ```text
   ❯ ▾ shop               3 packages · 2 scripts · main          pnpm
+        root             2 scripts
         apps/web         1 script
         packages/api     2 scripts                         @shop/api
         packages/ui      1 script                           @shop/ui
@@ -211,7 +214,7 @@ dws web dev -- --port 4000     # pass everything after -- to the script
 ```
 
 - The project is found by its exact name first, then ignoring case, then by the last part of a nested project's name (`dws web` finds `clients/acme/web`, see [Projects](#projects)), then by the start of its name, as long as only one project starts that way: `dws des build` runs `build` in `design-system`. If several projects match, the CLI lists them. Nested names can be typed with `/`, or `` on Windows. A monorepo's packages are found the same way, by their full name or its last part: `dws shop/packages/api test`, or `dws api test` when no other project or package is called `api`.
-- Any script in `package.json` can be run by name, including `pre` and `post` hooks.
+- Any script in `package.json` can be run by name, including `pre` and `post` hooks. A script tagged `needs arguments` in the menu (see [Running scripts](#running-scripts)) is not started without arguments after `--`: the CLI exits with code 1 and says how to add them.
 - With a script, nothing is asked and the screen is not cleared, so direct mode also works in other scripts. The CLI exits with the script's exit code, or 128 plus the signal number if a signal stopped it, as shells do (130 after Ctrl+C). It exits with code 1 if it cannot start the script, for example when no workspace is saved yet.
 - Without a script, the CLI needs a terminal to read keys from. When its input is redirected (`dws < file`, or in a CI job), it exits with code 1 and a message saying how to run a script directly, instead of waiting for keys that never come.
 

@@ -557,7 +557,11 @@ test('chooseProject expands a monorepo into its packages', async () => {
     {
       label: 'shop',
       value: shop,
-      children: [{ label: 'packages/api', value: api }],
+      // root opens the monorepo's own scripts.
+      children: [
+        { label: 'root', value: shop },
+        { label: 'packages/api', value: api },
+      ],
     },
     { label: 'web', value: web },
   ])
@@ -627,8 +631,76 @@ test('chooseProject keeps the packages of a recent monorepo', async () => {
 
   assert.deepEqual(calls.select[0].items, [
     { separator: 'Recent' },
-    { label: 'shop', value: shop, children: [{ label: 'api', value: api }] },
+    {
+      label: 'shop',
+      value: shop,
+      children: [
+        { label: 'root', value: shop },
+        { label: 'api', value: api },
+      ],
+    },
     { separator: 'All projects' },
     { label: 'web', value: web },
   ])
+})
+
+test('chooseScript asks for the arguments of a script that needs them', async () => {
+  const packages = {
+    name: 'packages',
+    command: 'yarn workspaces foreach -A',
+    needsArguments: true,
+  }
+  const { calls, prompts } = createPromptMocks({ select: packages })
+
+  assert.deepEqual(await prompts.chooseScript([packages]), {
+    script: packages,
+    withArguments: true,
+  })
+
+  const { items, rowButtons } = calls.select[0]
+
+  assert.equal(items[0].hint, 'needs arguments')
+  assert.deepEqual(rowButtons[0].value(packages), {
+    script: packages,
+    withArguments: true,
+  })
+
+  // "last run" is the tag that wins.
+  await prompts.chooseScript([packages], { lastScript: 'packages' })
+  assert.equal(calls.select[1].items[0].hint, 'last run')
+})
+
+test('askForArguments refuses an empty answer when arguments are required', async () => {
+  const { calls, prompts } = createPromptMocks({ input: 'run test' })
+
+  assert.deepEqual(
+    await prompts.askForArguments('packages', { required: true }),
+    ['run', 'test'],
+  )
+  assert.equal(
+    calls.input[0].validate('  '),
+    'packages cannot run without arguments.',
+  )
+  assert.equal(calls.input[0].validate('run test'), true)
+
+  await prompts.askForArguments('dev')
+  assert.equal(calls.input[1].validate(''), true)
+})
+
+test('the root entry of a monorepo loads its own details', async () => {
+  const shop = { name: 'shop', directory: '/projects/shop' }
+  const api = { name: 'shop/api', path: 'api', directory: '/projects/shop/api' }
+  const asked = []
+  const { calls, prompts } = createPromptMocks({ select: null })
+
+  await prompts.chooseProject([shop], {
+    packages: () => [api],
+    details: async (project, options) => {
+      asked.push([project, options])
+      return {}
+    },
+  })
+  await calls.select[0].items[0].children[0].load()
+
+  assert.deepEqual(asked, [[shop, { root: true }]])
 })

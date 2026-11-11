@@ -714,3 +714,26 @@ test('getPackages expands the workspace patterns into packages', async () => {
     assert.equal(packages[2].directory, path.join(directory, 'packages', 'api'))
   })
 })
+
+test('getScripts marks scripts that cannot run without arguments', async () => {
+  await withTempDirectory(async directory => {
+    await writeFile(
+      path.join(directory, 'package.json'),
+      JSON.stringify({
+        scripts: {
+          test: 'yarn packages run test',
+          packages: 'yarn workspaces foreach --all --verbose',
+        },
+      }),
+    )
+
+    assert.deepEqual(await getScripts(directory), [
+      { name: 'test', command: 'yarn packages run test' },
+      {
+        name: 'packages',
+        command: 'yarn workspaces foreach --all --verbose',
+        needsArguments: true,
+      },
+    ])
+  })
+})
