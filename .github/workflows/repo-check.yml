@@ -1,0 +1,25 @@
+name: Repo check
+
+# Every Monday, modulane/workflows compares this repository with
+# modulane/repo-template and keeps one pull request open with what a file
+# change can bring back, as Dependabot does for dependencies. Drift that only
+# a maintainer can fix, such as a ruleset or a setting, fails the run. The
+# repo-check GitHub App makes the pull request, so its checks run.
+on:
+  schedule:
+    - cron: '0 5 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  repo-check:
+    name: Repo check
+    # Skipped until the App's client ID is set, as in a repository made from
+    # the template outside modulane (see the README).
+    if: vars.REPO_CHECK_CLIENT_ID != ''
+    uses: modulane/workflows/.github/workflows/repo-check.yml@410a423e4487e60eccb5863c5574cb2ae02669ce # v1.3.0
+    with:
+      client-id: ${{ vars.REPO_CHECK_CLIENT_ID }}
+    secrets:
+      private-key: ${{ secrets.REPO_CHECK_PRIVATE_KEY }}

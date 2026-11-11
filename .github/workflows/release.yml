@@ -116,7 +116,7 @@ jobs:
     needs: release
     # A dry run creates no release to add notes to.
     if: ${{ !inputs.dry-run }}
-    uses: modulane/workflows/.github/workflows/release-notes.yml@eeae1ae14ad19a1710cf529474323ebfb59bcc90 # v1.2.0
+    uses: modulane/workflows/.github/workflows/release-notes.yml@410a423e4487e60eccb5863c5574cb2ae02669ce # v1.3.0
     permissions:
       contents: write # edit the GitHub releases
       issues: read # list the issues a pull request closes
