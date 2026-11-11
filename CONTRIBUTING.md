@@ -90,6 +90,8 @@ Every change is made on a short-lived branch and reaches `main` through a pull r
 4. The maintainer reviews it. A pull request needs the maintainer's approval, given after its last push, and every review conversation resolved. A new push dismisses an earlier approval. The first workflow run of a first-time contributor also waits for the maintainer's approval.
 5. The maintainer squash-merges it. The pull request title becomes the only commit on `main`.
 
+For a `feat:` or `fix:`, fill in the **Release notes** section of the pull request template: what users will notice, in a sentence or two. It appears under the pull request's entry in the GitHub release, so the title says what changed and the notes say what it means for users. Leave it empty for any other change.
+
 The pull request title decides what is released, so choose its type carefully:
 
 | Title starts with                                                           | Release                          |
@@ -100,7 +102,7 @@ The pull request title decides what is released, so choose its type carefully:
 
 Keep the summary lowercase and in the imperative: `feat: add project search`, not `Feat: Added project search`.
 
-**Do not mark changes as breaking before 1.0.0.** A `!` after the type (`feat!:`) or a `BREAKING CHANGE:` footer makes a major release, which would publish 1.0.0 early. Until then, describe incompatible changes in the pull request and release them as `feat:`.
+**Do not mark changes as breaking before 1.0.0.** A `!` after the type (`feat!:`) or a `BREAKING CHANGE:` footer makes a major release, which would publish 1.0.0 early. Until then, describe incompatible changes in the pull request's **Release notes** section and release them as `feat:`.
 
 ### AI use
 
@@ -141,6 +143,9 @@ Releases are fully automated with [semantic-release](https://semantic-release.gi
 5. Otherwise it computes the next version and:
    - publishes the package to npm through [trusted publishing](https://docs.npmjs.com/trusted-publishers), so no npm token is stored in the repository, and with a provenance attestation linking the package to this workflow run;
    - creates the `vX.Y.Z` git tag and a GitHub release with notes generated from the commits.
+6. A last job adds detail to the GitHub release: under each pull request's entry, the **Release notes** section of its description and the issues it closes. It handles each release once, so running the Release workflow by hand fills in any release it missed.
+
+The [GitHub releases](https://github.com/modulane/dev-workspace-cli/releases) are the changelog. There is no `CHANGELOG.md`: semantic-release would have to commit it to `main`, which the `main` ruleset only accepts through a pull request.
 
 The version in `package.json` is always `0.0.0-development`. The real version exists only in git tags and on npm; semantic-release writes it into the package at publish time.
 

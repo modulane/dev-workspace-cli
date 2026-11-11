@@ -208,7 +208,7 @@ No new features; this milestone makes the existing ones dependable, then freezes
 - [ ] **End-to-end tests:** spawn the real binary on every operating system in CI, covering flags, direct mode, exit codes and non-TTY behaviour.
 - [ ] **Signal handling:** SIGINT and SIGTERM are forwarded correctly, and no child process is left behind when the terminal closes.
 - [ ] **Performance budget:** startup to first menu in under 150 ms, checked in CI.
-- [ ] **Release safety:**
+- [x] **Release safety:**
   - [x] publish automatically once CI passes on `main`, in the same workflow run and from the same commit;
   - [x] publish with the npm bundled with Node.js 24, checked to be 11.5.1 or newer, instead of installing `npm@latest`;
   - [x] run `npm run check` (not only `npm test`) before publishing;
@@ -216,7 +216,7 @@ No new features; this milestone makes the existing ones dependable, then freezes
   - [x] pin every action to a full commit SHA, kept up to date by Dependabot, and audit the workflows with zizmor on pull requests;
   - [x] give the publish job only the permissions it needs, with no git credential on disk and no dependency install scripts while it can request an OIDC token;
   - [x] require the `CI passed` and `Conventional Commit title` checks in the `main` ruleset, so a pull request with failing CI cannot be merged;
-  - publish a `CHANGELOG.md` with `@semantic-release/changelog`.
+  - [x] publish a detailed changelog as the GitHub releases: each entry gets the release notes written in its pull request and the issues it closes ([#49](https://github.com/modulane/dev-workspace-cli/issues/49)). A committed `CHANGELOG.md` is not possible, because the `main` ruleset accepts changes only through pull requests.
 - [x] **Contributor files:**
   - [x] `CONTRIBUTING.md` with the development setup, workflow and release process;
   - [x] labels defined in `.github/labels.json`, applied to pull requests from their title, with reviews requested through `CODEOWNERS`;

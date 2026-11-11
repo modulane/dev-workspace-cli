@@ -2,6 +2,10 @@
 
 <!-- What this pull request changes, and why. Link the issue it closes: "Closes #12". -->
 
+## Release notes
+
+<!-- For a feat: or fix:, what users will notice, in a sentence or two. It goes under this pull request's entry in the GitHub release. Leave it empty for any other change. -->
+
 ## AI use
 
 <!-- Required, for everyone. Tick exactly one box: the "AI disclosure" check fails until you do. -->
