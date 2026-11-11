@@ -22,3 +22,4 @@
 - [ ] The README describes the change
 - [ ] The roadmap is updated if this completes a roadmap item
 - [ ] Tested in a real terminal with a temporary configuration (`DEV_WORKSPACE_CONFIG`), if the change affects what the CLI shows or does
+- [ ] The README, roadmap and guides are up to date with the change
