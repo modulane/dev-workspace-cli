@@ -13,6 +13,6 @@ permissions: {}
 jobs:
   zizmor:
     name: Workflow security
-    uses: modulane/workflows/.github/workflows/zizmor.yml@PENDING-V1.2.0-SHA # v1.2.0
+    uses: modulane/workflows/.github/workflows/zizmor.yml@eeae1ae14ad19a1710cf529474323ebfb59bcc90 # v1.2.0
     permissions:
       contents: read # read the workflows
