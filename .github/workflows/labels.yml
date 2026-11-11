@@ -15,7 +15,7 @@ permissions: {}
 jobs:
   labels:
     name: Labels
-    uses: modulane/workflows/.github/workflows/labels.yml@257e72d8c09ea09b3fb0831124d667e7e7e1a915 # v1.1.0
+    uses: modulane/workflows/.github/workflows/labels.yml@eeae1ae14ad19a1710cf529474323ebfb59bcc90 # v1.2.0
     permissions:
       contents: read # read .github/labels.json
       issues: write # create and edit labels

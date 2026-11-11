@@ -4,7 +4,7 @@
 
 ## Release notes
 
-<!-- For a feat: or fix:, what users will notice, in a sentence or two. It goes under this pull request's entry in the GitHub release. Leave it empty for any other change. -->
+<!-- For a feat: or fix:, what users will notice, as a list with one item per feature or fix: each item becomes its own entry in the GitHub release. Start an item with fix: or feat: when its type differs from the title's, and mention the issue it closes, for example (#12). Leave it empty for any other change. -->
 
 ## AI use
 

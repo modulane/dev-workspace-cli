@@ -16,6 +16,6 @@ permissions: {}
 jobs:
   pr-labels:
     name: Pull request labels
-    uses: modulane/workflows/.github/workflows/pr-labels.yml@257e72d8c09ea09b3fb0831124d667e7e7e1a915 # v1.1.0
+    uses: modulane/workflows/.github/workflows/pr-labels.yml@eeae1ae14ad19a1710cf529474323ebfb59bcc90 # v1.2.0
     permissions:
       pull-requests: write # add and remove labels, assign the author
