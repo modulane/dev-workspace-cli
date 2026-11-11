@@ -76,7 +76,7 @@ Menus use the list in `list.js`, which owns the terminal while it is open; free-
 
 Every colour comes from the theme in `ui.js`: `color()` for plain output, `styleText()` for the list, and `inquirerTheme()` for the `@inquirer/prompts` questions. Do not write ANSI codes elsewhere, so `NO_COLOR` and `FORCE_COLOR` are always respected. Ask for the `accent` style, never for cyan or another colour by name, so the user's chosen accent (`setAccent()`) reaches every screen.
 
-Each file in `lib/` starts with a comment describing what it contains and how it is used. Keep that comment accurate when you change the file.
+Each file in `lib/` starts with two comment lines: what the file is for, and which files use it. Update them only if your change makes them wrong, for example a new file that imports it. Explain how something works in a comment next to the code instead, where it is easier to keep right.
 
 Modules receive their side effects (file system, prompts, process spawning) as parameters with real defaults, so tests can replace them with fakes. Tests live in `test/`, one file per module.
 
