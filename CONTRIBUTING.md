@@ -90,7 +90,15 @@ Every change is made on a short-lived branch and reaches `main` through a pull r
 4. The maintainer reviews it. A pull request needs the maintainer's approval, given after its last push, and every review conversation resolved. A new push dismisses an earlier approval. The first workflow run of a first-time contributor also waits for the maintainer's approval.
 5. The maintainer squash-merges it. The pull request title becomes the only commit on `main`.
 
-For a `feat:` or `fix:`, fill in the **Release notes** section of the pull request template: what users will notice, in a sentence or two. It appears under the pull request's entry in the GitHub release, so the title says what changed and the notes say what it means for users. Leave it empty for any other change.
+For a `feat:` or `fix:`, fill in the **Release notes** section of the pull request template: what users will notice, as a list with one item per feature or fix. Each item becomes its own entry in the GitHub release, so a pull request that adds fuzzy search and direct mode lists them as two entries, not one. Start an item with `fix:` or `feat:` when its type differs from the title's, and mention the issue it closes, for example `(#12)`. Lines indented under an item give more detail. Leave the section empty for any other change.
+
+```markdown
+## Release notes
+
+- fuzzy search in every menu (#12)
+- direct mode: `dws <project> <script>` runs a script without prompts
+- fix: Ctrl+C no longer leaves the cursor hidden
+```
 
 The pull request title decides what is released, so choose its type carefully:
 
@@ -143,7 +151,7 @@ Releases are fully automated with [semantic-release](https://semantic-release.gi
 5. Otherwise it computes the next version and:
    - publishes the package to npm through [trusted publishing](https://docs.npmjs.com/trusted-publishers), so no npm token is stored in the repository, and with a provenance attestation linking the package to this workflow run;
    - creates the `vX.Y.Z` git tag and a GitHub release with notes generated from the commits.
-6. A last job adds detail to the GitHub release: under each pull request's entry, the **Release notes** section of its description and the issues it closes. It handles each release once, so running the Release workflow by hand fills in any release it missed.
+6. A last job rebuilds the GitHub releases from the **Release notes** section of each pull request: one entry per feature or fix it lists, with the issues it closes. Every run rebuilds every release, so a change to a pull request's notes reaches its release on the next run, or right away by running the Release workflow by hand.
 
 The [GitHub releases](https://github.com/modulane/dev-workspace-cli/releases) are the changelog. There is no `CHANGELOG.md`: semantic-release would have to commit it to `main`, which the `main` ruleset only accepts through a pull request.
 

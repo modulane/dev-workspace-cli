@@ -13,4 +13,4 @@ permissions: {}
 jobs:
   ai-disclosure:
     name: AI disclosure
-    uses: modulane/workflows/.github/workflows/ai-disclosure.yml@257e72d8c09ea09b3fb0831124d667e7e7e1a915 # v1.1.0
+    uses: modulane/workflows/.github/workflows/ai-disclosure.yml@PENDING-V1.2.0-SHA # v1.2.0
