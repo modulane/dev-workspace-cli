@@ -2206,9 +2206,10 @@ function monorepoDependencies(overrides = {}) {
         asked.packageManagers.push(directory)
         return { name: 'pnpm', source: 'pnpm-lock.yaml', runsHooks: true }
       },
+      // Only the monorepo is a Git repository: its package has no .git.
       readGitBranch: async directory => {
         asked.branches.push(directory)
-        return 'main'
+        return directory === shop.directory ? 'main' : null
       },
       ...overrides.workspace,
     },
@@ -2267,7 +2268,7 @@ test('CLI opens a package of a monorepo and runs its script there', async () => 
 
 test('CLI shows a monorepo with its package count, and a package with its name', async () => {
   let options
-  const { dependencies, shop, asked } = monorepoDependencies({
+  const { dependencies, shop } = monorepoDependencies({
     prompts: {
       chooseProject: async (projects, given) => {
         options = given
@@ -2288,12 +2289,40 @@ test('CLI shows a monorepo with its package count, and a package with its name',
     ],
     hint: 'pnpm',
   })
+  // A package without a .git of its own shows no branch.
   assert.deepEqual(await options.details(api), {
     detail: '2 scripts',
     hint: '@shop/api',
   })
-  // A package has its monorepo's branch, so it is not read again.
-  assert.deepEqual(asked.branches, [shop.directory])
+})
+
+test('CLI shows the branch of a package that is a Git repository of its own', async () => {
+  let options
+  const { dependencies, shop, apiDirectory } = monorepoDependencies({
+    prompts: {
+      chooseProject: async (projects, given) => {
+        options = given
+        return null
+      },
+    },
+    workspace: {
+      readGitBranch: async directory =>
+        directory === apiDirectory ? 'feat/login' : 'main',
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  const [api] = options.packages(shop)
+
+  assert.deepEqual(await options.details(api), {
+    detail: '2 scripts',
+    detailEnd: [
+      [' · ', 'dim'],
+      ['feat/login', 'branch'],
+    ],
+    hint: '@shop/api',
+  })
 })
 
 test('CLI runs a package script directly, by its full name or its last part', async () => {

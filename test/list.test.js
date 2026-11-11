@@ -1685,9 +1685,9 @@ test('Enter on an item with children opens or closes it, and ← closes it', asy
 
   assert.deepEqual(terminal.screen().slice(2, 7), [
     '  ❯ ▾ shop',
-    '        root',
-    '        packages/api',
-    '        packages/ui',
+    '      ├ root',
+    '      ├ packages/api',
+    '      └ packages/ui',
     '      web',
   ])
   assert.match(terminal.screen().at(-1), /enter collapse/)
@@ -1697,7 +1697,7 @@ test('Enter on an item with children opens or closes it, and ← closes it', asy
 
   // → opens it too; ← on a child closes its parent and selects it.
   terminal.type(KEYS.right, KEYS.down, KEYS.down)
-  assert.equal(terminal.screen()[4], '  ❯     packages/api')
+  assert.equal(terminal.screen()[4], '  ❯   ├ packages/api')
   assert.match(terminal.screen().at(-1), /enter open · ← collapse/)
 
   terminal.type(KEYS.left)
@@ -1745,7 +1745,7 @@ test('Enter on a parent found by a search clears it and opens the parent', async
   terminal.type(KEYS.enter)
   assert.deepEqual(terminal.screen().slice(2, 4), [
     '  ❯ ▾ shop',
-    '        root',
+    '      ├ root',
   ])
 
   terminal.type(KEYS.down, KEYS.enter)
@@ -1765,14 +1765,14 @@ test('the default value opens its parent, and a click opens or closes it', async
   })
 
   // The list is drawn from row 1: the message, then shop on row 3.
-  assert.equal(terminal.screen()[3], '  ❯     root')
+  assert.equal(terminal.screen()[3], '  ❯   ├ root')
 
   // A click on the ▸ or on the name closes and opens it.
   terminal.click(3, 5)
   assert.deepEqual(terminal.screen().slice(2, 4), ['  ❯ ▸ shop', '      web'])
 
   terminal.click(3, 9)
-  assert.equal(terminal.screen()[4], '        packages/api')
+  assert.equal(terminal.screen()[4], '      ├ packages/api')
 
   // A child is chosen with one click.
   terminal.click(5, 12)

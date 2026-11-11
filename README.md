@@ -172,14 +172,14 @@ A project that declares workspaces is shown as a monorepo: the `workspaces` fiel
 
 ```text
   ❯ ▾ shop               3 packages · 2 scripts · main          pnpm
-        root             2 scripts
-        apps/web         1 script
-        packages/api     2 scripts                         @shop/api
-        packages/ui      1 script                           @shop/ui
+      ├ root             2 scripts
+      ├ web              1 script · feat/landing
+      ├ api              2 scripts                         @shop/api
+      └ ui               1 script                           @shop/ui
       web                2 scripts · main                        npm
 ```
 
-Each package is listed by its folder in the monorepo, with its `name` from `package.json` on the right when it differs from the folder name. Opening a package shows its scripts, and they run in the package's folder with the monorepo's package manager, so `pnpm run dev` starts in `shop/packages/api`. The packages are the folders the workspace patterns match (`packages/*`, `apps/**`, and patterns starting with `!` to leave folders out) that have a `package.json`; they are read once per session. Searching looks through every package, shown or not: typing `ui` finds `shop › packages/ui`. Packages appear in the recent projects too, under their full name (`shop/packages/api`).
+The tree lines show which entries belong to the monorepo. Each package is listed by its folder name (`api` for `packages/api`), or by its whole path when two packages share a folder name (`apps/web` and `packages/web`), with its `name` from `package.json` on the right when it differs from the folder name. A package that is a Git repository of its own (it has its own `.git`, such as a submodule) shows its branch too. Opening a package shows its scripts, and they run in the package's folder with the monorepo's package manager, so `pnpm run dev` starts in `shop/packages/api`. The packages are the folders the workspace patterns match (`packages/*`, `apps/**`, and patterns starting with `!` to leave folders out) that have a `package.json`; they are read once per session. Searching looks through every package, shown or not: typing `ui` finds `shop › ui`. Packages appear in the recent projects too, under their full name (`shop/packages/api`).
 
 ## Package managers
 

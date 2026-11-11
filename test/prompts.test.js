@@ -560,12 +560,31 @@ test('chooseProject expands a monorepo into its packages', async () => {
       // root opens the monorepo's own scripts.
       children: [
         { label: 'root', value: shop },
-        { label: 'packages/api', value: api },
+        { label: 'api', value: api },
       ],
     },
     { label: 'web', value: web },
   ])
   assert.equal(calls.select[0].default, api)
+})
+
+test('chooseProject keeps the whole path of packages with the same folder name', async () => {
+  const shop = { name: 'shop', directory: '/projects/shop', workspaces: ['*'] }
+  const pkg = path => ({
+    name: `shop/${path}`,
+    path,
+    directory: `/projects/shop/${path}`,
+    monorepo: shop,
+  })
+  const packages = [pkg('apps/web'), pkg('packages/web'), pkg('packages/ui')]
+  const { calls, prompts } = createPromptMocks({ select: null })
+
+  await prompts.chooseProject([shop], { packages: () => packages })
+
+  assert.deepEqual(
+    calls.select[0].items[0].children.map(child => child.label),
+    ['root', 'apps/web', 'packages/web', 'ui'],
+  )
 })
 
 test('chooseWorkspace lists the saved workspaces first, by name', async () => {
