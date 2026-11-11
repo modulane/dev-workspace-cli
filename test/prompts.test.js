@@ -613,3 +613,22 @@ test('askForWorkspaceName suggests a name, trims it, and Escape returns null', a
   keys.emit('keypress', undefined, { name: 'escape' })
   assert.equal(await answer, null)
 })
+
+test('chooseProject keeps the packages of a recent monorepo', async () => {
+  const shop = { name: 'shop', directory: '/projects/shop', workspaces: ['*'] }
+  const web = { name: 'web', directory: '/projects/web' }
+  const api = { name: 'shop/api', path: 'api', directory: '/projects/shop/api' }
+  const { calls, prompts } = createPromptMocks({ select: null })
+
+  await prompts.chooseProject([shop, web], {
+    recent: [shop],
+    packages: project => (project === shop ? [api] : undefined),
+  })
+
+  assert.deepEqual(calls.select[0].items, [
+    { separator: 'Recent' },
+    { label: 'shop', value: shop, children: [{ label: 'api', value: api }] },
+    { separator: 'All projects' },
+    { label: 'web', value: web },
+  ])
+})
