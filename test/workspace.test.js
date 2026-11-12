@@ -607,6 +607,12 @@ test('parsePnpmWorkspace reads the packages list in either style', () => {
     'b',
   ])
   assert.deepEqual(
+    parsePnpmWorkspace(
+      'packages: [\n  \'apps/*\', # the apps\n  "libs/*",\n]\ncatalog:\n  a: b\n',
+    ),
+    ['apps/*', 'libs/*'],
+  )
+  assert.deepEqual(
     parsePnpmWorkspace('packages:\n- apps/*\n- libs/*\ncatalog:\n- no\n'),
     ['apps/*', 'libs/*'],
   )
