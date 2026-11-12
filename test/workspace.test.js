@@ -595,11 +595,12 @@ test('parsePnpmWorkspace reads the packages list in either style', () => {
         '  # tools too',
         '  - tools/cli # the CLI',
         "  - '!**/test/**'",
+        "  - 'docs' # it's the site",
         'catalog:',
         '  - not-a-package',
       ].join('\r\n'),
     ),
-    ['packages/*', 'apps/**', 'tools/cli', '!**/test/**'],
+    ['packages/*', 'apps/**', 'tools/cli', '!**/test/**', 'docs'],
   )
   assert.deepEqual(parsePnpmWorkspace('packages: [\'a/*\', "b"]\n'), [
     'a/*',
