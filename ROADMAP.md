@@ -26,7 +26,7 @@ These apply to every milestone:
 | Fast navigation                 | Released in 0.6.0                         | Fuzzy search, recent items, direct mode, script arguments                 |
 | A polished interface            | Released in 0.9.0                         | Mouse support, framed header, buttons, themes, project details, first run |
 | Terminal compatibility          | Planned                                   | Mouse and screens checked in macOS Terminal, iTerm2 and Linux terminals   |
-| Bigger workspaces               | Released in 0.10.0                        | Monorepos, nested projects, multiple named workspaces                     |
+| Bigger workspaces               | Released in 0.11.0                        | Monorepos, nested projects, multiple named workspaces                     |
 | Configuration and scripts       | Planned                                   | Versioned config schema, `config` command, JSON output, project commands  |
 | Hardening and release candidate | Planned                                   | Linting, type checks, end-to-end tests, interface freeze, feedback period |
 | Stable                          | Planned: 1.0.0                            | Semver guarantees for flags, config and exit codes                        |
@@ -179,7 +179,7 @@ Every screen checked in the terminals people use, on their own schedule: they ne
 
 **Done when:** screenshots of the main screens look correct in Windows Terminal, PowerShell, macOS Terminal, iTerm2 and a Linux terminal, at 80 and 120 columns, with and without `NO_COLOR`, and resizing the window while a menu is open never leaves broken lines or duplicate headers in any of them.
 
-## Bigger workspaces _(released in 0.10.0)_
+## Bigger workspaces _(released in 0.11.0)_
 
 - [x] **Monorepos:** detect npm, Yarn and pnpm workspaces. A monorepo appears as one project with expandable packages; scripts run in the selected package. Opening it shows a **root** entry for its own scripts and its packages, search looks through all of them, and each package runs with its monorepo's package manager [#36](https://github.com/modulane/dev-workspace-cli/issues/36).
 - [x] **Nested discovery:** optional search depth (default 1, maximum 3) for workspaces organised in folders such as `clients/acme/web`, saved with `--set-depth`. It must stop at any folder with a `package.json` and never enter `node_modules`. Projects found deeper are named by their path, and direct mode also finds them by their last part (`dws web`) [#37](https://github.com/modulane/dev-workspace-cli/issues/37).
