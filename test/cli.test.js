@@ -1358,6 +1358,29 @@ test('findProject finds nested projects by path or by their last part', () => {
   )
 })
 
+test('findProject finds a monorepo by prefix, not its packages too', () => {
+  const shop = { name: 'shop', directory: path.join(WORKSPACE, 'shop') }
+  const projects = [
+    shop,
+    { name: 'blog', directory: path.join(WORKSPACE, 'blog') },
+    ...['packages/api', 'packages/web'].map(folder => ({
+      name: `shop/${folder}`,
+      directory: path.join(shop.directory, folder),
+      // A copy, as the session's package lists hold the monorepo read first.
+      monorepo: { ...shop },
+    })),
+  ]
+  const find = name => findProject(projects, name, WORKSPACE).name
+
+  assert.equal(find('sho'), 'shop')
+  assert.equal(find('shop/packages/a'), 'shop/packages/api')
+  assert.equal(find('api'), 'shop/packages/api')
+  assert.throws(
+    () => find('shop/packages'),
+    /"shop\/packages" matches several projects: shop\/packages\/api, shop\/packages\/web\./,
+  )
+})
+
 test('CLI runs a script directly and returns its exit code', async () => {
   const { dependencies, calls, runs } = directDependencies()
 
