@@ -1535,7 +1535,10 @@ test('drawLines draws lines once, at the width a list uses', () => {
     drawLines(build, { columns: 300, useColors: true })[0],
     '  \x1b[32mdone\x1b[39m',
   )
-  assert.deepEqual(widths, [39, 100])
+  // A new cmd or Windows Terminal window is 120 columns wide: the list
+  // leaves the last one free, and gets no wider on larger windows.
+  drawLines(build, { columns: 120, useColors: false })
+  assert.deepEqual(widths, [39, 120, 119])
 })
 
 test('an item style colours its label until it is selected', async () => {
