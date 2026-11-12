@@ -55,9 +55,12 @@ test('parseCliArgs explains how to get help for invalid input', () => {
 test('formatHelp documents every option', () => {
   for (const flag of [
     '--workspace',
+    '--list-workspaces',
+    '--remove-workspace',
     '--no-mouse',
     '--set-mouse',
     '--set-color',
+    '--set-depth',
     '--config-path',
     '--clear-history',
     '--add-alias',
@@ -91,13 +94,20 @@ test('formatHelp defaults to plain text', () => {
     dws web dev -- --port 4000
 
   Options:
-    -w, --workspace <path>   Use <path> as the workspace and save it
+    -w, --workspace <name|path>
+                             Use a saved workspace, or <path> (saved too)
+        --list-workspaces    List the saved workspaces
+        --remove-workspace <name>
+                             Forget a saved workspace
         --no-mouse           Use only the keyboard in menus, this time
         --set-mouse <on|off>
                              Save whether menus use the mouse
         --set-color <name>   Save the accent colour: cyan, blue, purple,
                              magenta, pink, orange, teal, sky, lavender,
                              coral, gold, bold
+        --set-depth <1-3>    Save how many folder levels to search for
+                             projects (1, the default, lists only the
+                             workspace's own subfolders)
         --config-path        Print the configuration file location
         --clear-history      Forget recently used projects and scripts
         --add-alias <name>   Create another command that starts the CLI
@@ -135,9 +145,9 @@ test('formatHelp applies colors to headings, commands, options and environment',
   assert.ok(colored.includes('[accent]dws web[/accent]'))
   assert.ok(colored.includes('[bold]Options:[/bold]'))
   assert.ok(
-    colored.includes('[accent]-w, --workspace[/accent] [dim]<path>[/dim]'),
+    colored.includes('[accent]-w, --workspace[/accent] [dim]<name|path>[/dim]'),
   )
-  assert.ok(colored.includes('Use <path> as the workspace'))
+  assert.ok(colored.includes('Use a saved workspace, or <path>'))
   assert.ok(colored.includes('[bold]Environment:[/bold]'))
   assert.ok(colored.includes('[accent]DEV_WORKSPACE_CONFIG[/accent]'))
 })
@@ -204,6 +214,26 @@ test('parseCliArgs accepts only the accent colours for --set-color', () => {
     () => parseCliArgs(['--set-color', 'green']),
     /Use --set-color with cyan, blue, .*, gold or bold, not "green"\.\n.*--help/,
   )
+})
+
+test('parseCliArgs accepts only 1, 2 and 3 for --set-depth', () => {
+  for (const depth of ['1', '2', '3']) {
+    assert.deepEqual(
+      { ...parseCliArgs(['--set-depth', depth]) },
+      {
+        'set-depth': depth,
+      },
+    )
+  }
+
+  for (const depth of ['0', '4', 'two', '1.5']) {
+    assert.throws(
+      () => parseCliArgs(['--set-depth', depth]),
+      new RegExp(
+        `Use --set-depth with 1, 2 or 3, not "${depth}"\\.\\n.*--help`,
+      ),
+    )
+  }
 })
 
 test('formatHelp names every accent colour', () => {

@@ -6,10 +6,13 @@ import path from 'node:path'
 
 import {
   isDirectory,
+  getPackages,
   getProjects,
   getScripts,
   normalizePathInput,
+  parsePnpmWorkspace,
   readGitBranch,
+  readWorkspacePatterns,
   resolveDirectoryInput,
   suggestWorkspaces,
 } from '../lib/workspace.js'
@@ -495,4 +498,274 @@ test('suggestWorkspaces skips a drive that does not answer in time', async () =>
   })
 
   assert.deepEqual(result, ['C:\\dev'])
+})
+
+// Create each folder, with a package.json for the paths that end in /.
+async function createTree(root, paths) {
+  for (const entry of paths) {
+    const folder = path.join(root, ...entry.split('/').filter(Boolean))
+
+    await mkdir(folder, { recursive: true })
+
+    if (entry.endsWith('/')) {
+      await writeFile(path.join(folder, 'package.json'), '{}', 'utf8')
+    }
+  }
+}
+
+test('getProjects searches nested folders down to the depth', async () => {
+  await withTempDirectory(async directory => {
+    await createTree(directory, [
+      'web/',
+      'web/packages/ui/',
+      'apps/site/',
+      'apps/notes',
+      'clients/acme/web/',
+      'clients/acme/api/',
+      'clients/beta/site/',
+      'clients/empty',
+      'clients/node_modules/lib/',
+      'clients/.cache/tool/',
+      'docs/images',
+      'deep/a/b/c/',
+    ])
+
+    const names = async depth =>
+      (await getProjects(directory, { depth })).map(project => [
+        project.name,
+        project.hasPackageJson,
+      ])
+
+    // Depth 1, the default, lists the workspace's own folders only.
+    assert.deepEqual(await names(undefined), [
+      ['web', true],
+      ['apps', false],
+      ['clients', false],
+      ['deep', false],
+      ['docs', false],
+    ])
+
+    // A folder is replaced by what it holds only when that includes a
+    // project; a folder with a package.json is never searched.
+    assert.deepEqual(await names(2), [
+      ['apps/site', true],
+      ['web', true],
+      ['apps/notes', false],
+      ['clients', false],
+      ['deep', false],
+      ['docs', false],
+    ])
+
+    // node_modules and dot-folders are never entered, and deep/a/b/c is
+    // below the deepest level.
+    assert.deepEqual(await names(3), [
+      ['apps/site', true],
+      ['clients/acme/api', true],
+      ['clients/acme/web', true],
+      ['clients/beta/site', true],
+      ['web', true],
+      ['apps/notes', false],
+      ['clients/empty', false],
+      ['deep', false],
+      ['docs', false],
+    ])
+
+    // The depth is kept between 1 and 3.
+    assert.deepEqual(await names(9), await names(3))
+    assert.deepEqual(await names(0), await names(1))
+
+    const projects = await getProjects(directory, { depth: 3 })
+
+    assert.equal(
+      projects.find(project => project.name === 'clients/acme/api').directory,
+      path.join(directory, 'clients', 'acme', 'api'),
+    )
+  })
+})
+
+test('parsePnpmWorkspace reads the packages list in either style', () => {
+  assert.deepEqual(
+    parsePnpmWorkspace(
+      [
+        '﻿# the workspace',
+        'packages:',
+        "  - 'packages/*'",
+        '  - "apps/**"',
+        '',
+        '  # tools too',
+        '  - tools/cli # the CLI',
+        "  - '!**/test/**'",
+        "  - 'docs' # it's the site",
+        'catalog:',
+        '  - not-a-package',
+      ].join('\r\n'),
+    ),
+    ['packages/*', 'apps/**', 'tools/cli', '!**/test/**', 'docs'],
+  )
+  assert.deepEqual(parsePnpmWorkspace('packages: [\'a/*\', "b"]\n'), [
+    'a/*',
+    'b',
+  ])
+  assert.deepEqual(
+    parsePnpmWorkspace(
+      'packages: [\n  \'apps/*\', # the apps\n  "libs/*",\n]\ncatalog:\n  a: b\n',
+    ),
+    ['apps/*', 'libs/*'],
+  )
+  assert.deepEqual(
+    parsePnpmWorkspace('packages:\n- apps/*\n- libs/*\ncatalog:\n- no\n'),
+    ['apps/*', 'libs/*'],
+  )
+  assert.deepEqual(parsePnpmWorkspace('catalog:\n  react: ^19\n'), [])
+})
+
+test('readWorkspacePatterns finds the npm, Yarn and pnpm workspaces', async () => {
+  await withTempDirectory(async directory => {
+    const project = async (name, files) => {
+      const folder = path.join(directory, name)
+
+      await mkdir(folder)
+
+      for (const [file, content] of Object.entries(files)) {
+        await writeFile(path.join(folder, file), content, 'utf8')
+      }
+
+      return readWorkspacePatterns(folder)
+    }
+
+    assert.deepEqual(
+      await project('npm', {
+        'package.json': JSON.stringify({ workspaces: ['packages/*', 3] }),
+      }),
+      ['packages/*'],
+    )
+    assert.deepEqual(
+      await project('yarn', {
+        'package.json': JSON.stringify({
+          workspaces: { packages: ['apps/*'], nohoist: ['**/react'] },
+        }),
+      }),
+      ['apps/*'],
+    )
+    assert.deepEqual(
+      await project('pnpm', {
+        'package.json': '{}',
+        'pnpm-workspace.yaml': 'packages:\n  - libs/*\n',
+      }),
+      ['libs/*'],
+    )
+    assert.equal(
+      await project('plain', { 'package.json': '{ "name": "plain" }' }),
+      null,
+    )
+    assert.equal(await project('broken', { 'package.json': '{' }), null)
+  })
+})
+
+test('getProjects marks monorepos with their workspace patterns', async () => {
+  await withTempDirectory(async directory => {
+    await createTree(directory, ['shop/', 'web/'])
+    await writeFile(
+      path.join(directory, 'shop', 'package.json'),
+      JSON.stringify({ workspaces: ['packages/*'] }),
+    )
+
+    assert.deepEqual(await getProjects(directory), [
+      {
+        name: 'shop',
+        directory: path.join(directory, 'shop'),
+        hasPackageJson: true,
+        workspaces: ['packages/*'],
+      },
+      {
+        name: 'web',
+        directory: path.join(directory, 'web'),
+        hasPackageJson: true,
+      },
+    ])
+  })
+})
+
+test('getPackages expands the workspace patterns into packages', async () => {
+  await withTempDirectory(async directory => {
+    await createTree(directory, [
+      'packages/api/',
+      'packages/ui/',
+      'packages/notes',
+      'packages/node_modules/dependency/',
+      'apps/web/',
+      'apps/mobile/ios/',
+      'apps/mobile/ios/test/',
+      'tools/cli/',
+    ])
+    await writeFile(
+      path.join(directory, 'packages', 'api', 'package.json'),
+      JSON.stringify({ name: '@shop/api' }),
+    )
+
+    const packages = await getPackages(directory, [
+      './packages/*/',
+      'apps/**',
+      'tools/cli',
+      'missing/*',
+      '.',
+      '!**/test',
+    ])
+
+    assert.deepEqual(
+      packages.map(({ path: folder, packageName }) => [folder, packageName]),
+      [
+        ['apps/mobile/ios', undefined],
+        ['apps/web', undefined],
+        ['packages/api', '@shop/api'],
+        ['packages/ui', undefined],
+        ['tools/cli', undefined],
+      ],
+    )
+    assert.equal(packages[2].directory, path.join(directory, 'packages', 'api'))
+  })
+})
+
+test('getPackages leaves out a folder and what it holds with a trailing /**', async () => {
+  await withTempDirectory(async directory => {
+    await createTree(directory, [
+      'packages/api/',
+      'packages/test/',
+      'packages/test/fixture/',
+      'packages/testing/',
+    ])
+
+    const packages = await getPackages(directory, [
+      'packages/**',
+      '!**/test/**',
+    ])
+
+    assert.deepEqual(
+      packages.map(({ path: folder }) => folder),
+      ['packages/api', 'packages/testing'],
+    )
+  })
+})
+
+test('getScripts marks scripts that cannot run without arguments', async () => {
+  await withTempDirectory(async directory => {
+    await writeFile(
+      path.join(directory, 'package.json'),
+      JSON.stringify({
+        scripts: {
+          test: 'yarn packages run test',
+          packages: 'yarn workspaces foreach --all --verbose',
+        },
+      }),
+    )
+
+    assert.deepEqual(await getScripts(directory), [
+      { name: 'test', command: 'yarn packages run test' },
+      {
+        name: 'packages',
+        command: 'yarn workspaces foreach --all --verbose',
+        needsArguments: true,
+      },
+    ])
+  })
 })

@@ -27,7 +27,7 @@ Dev Workspace CLI detects each project's package manager (npm, pnpm, Yarn or Bun
 
 ## Features
 
-- **One menu for every project:** lists the projects in your workspace folder and the scripts defined in each `package.json`.
+- **One menu for every project:** lists the projects in your workspace folder and the scripts defined in each `package.json`, including the packages of npm, Yarn and pnpm monorepos.
 - **The right package manager:** runs each project's scripts with npm, pnpm, Yarn or Bun, detected from the project itself.
 - **Fast to navigate:** type a few letters to find a project or script, recently used projects come first, and `dws web dev` runs a script in one command. Menus also work with the mouse, with buttons for every action.
 - **Stays out of the way:** scripts run in the project folder with full terminal output. Pressing Ctrl+C stops the script and brings you back to the menu.
@@ -105,7 +105,7 @@ This installs two equivalent commands, `dev-workspace` and the shorter `dws`. Ru
 
 Escape goes back one screen: from a project to the project list, from the workspace list or path prompt to the project list, and from the project list it exits. While you are searching, it only clears the search. The help line under each menu shows what it does (`esc back` or `esc exit`).
 
-Every menu opens with a small box that shows where you are: the name of the workspace folder, followed by the project you are in (`◆ dev › web-app`), the workspace folder, and in a project, its package manager on the right. The box also holds the buttons of the screen, on the right of the workspace line: **⚙ Workspace** and **✕ Exit** in the project list, **← Back** and **… Run with args** in a project. The buttons sit just above the list: press ↑ on the first entry to reach the first button, ↑ again for the next one, and ↓ to come back (Tab and Shift+Tab work too, and ← and → move between buttons). The focused button is shown in reverse, or between brackets without colours, and Enter presses it. Each script's command is shown next to its name, in a column of its own, and tags such as `last run` sit at the right edge. When a list is longer than the window, `▲ 3 more` and `▼ 12 more` show how many entries are hidden above and below. The layout fills a new cmd or Windows Terminal window (120 columns) and stays within that width on wider ones; in a smaller window, such as the 80 columns macOS and Linux terminals open at, it uses the window's width. Long workspace paths are shortened in the middle (`C:Users…projectsweb`), keeping the folders that tell them apart, and script commands are cut with `…` to fit, and emoji or CJK characters in folder names never break the layout.
+Every menu opens with a small box that shows where you are: the name of the workspace (see [Workspaces](#workspaces)), followed by the project you are in (`◆ dev › web-app`), the workspace folder, and in a project, its package manager on the right. The box also holds the buttons of the screen, on the right of the workspace line: **⚙ Workspace** and **✕ Exit** in the project list, **← Back** and **… Run with args** in a project. The buttons sit just above the list: press ↑ on the first entry to reach the first button, ↑ again for the next one, and ↓ to come back (Tab and Shift+Tab work too, and ← and → move between buttons). The focused button is shown in reverse, or between brackets without colours, and Enter presses it. Each script's command is shown next to its name, in a column of its own, and tags such as `last run` sit at the right edge. When a list is longer than the window, `▲ 3 more` and `▼ 12 more` show how many entries are hidden above and below. The layout fills a new cmd or Windows Terminal window (120 columns) and stays within that width on wider ones; in a smaller window, such as the 80 columns macOS and Linux terminals open at, it uses the window's width. Long workspace paths are shortened in the middle (`C:Users…projectsweb`), keeping the folders that tell them apart, and script commands are cut with `…` to fit, and emoji or CJK characters in folder names never break the layout.
 
 The menus are drawn on the terminal's alternate screen, as `less` and `vim` do, so resizing the window redraws the whole screen cleanly and the menus never fill your scrollback. A script's output appears on the normal screen and stays there after you return to the menus.
 
@@ -152,15 +152,34 @@ Then **↻ Run again** and **← Back to scripts** sit side by side. Run again i
 
 To pass arguments to a script, press → on it, or click its **… run with args** button, then type the arguments, for example `--port 4000`. The **… Run with args** button in the header box does the same after asking which script to run. Use quotes for an argument that contains spaces: `--title "my app"`. The arguments are passed to the script as they are, without a shell. Press Esc at the arguments prompt to go back to the scripts without running anything.
 
+Some scripts are helpers that only work with the rest of a command after them, such as `"packages": "yarn workspaces foreach --all"`, which other scripts call as `yarn packages run test`. Run on their own, they fail. The CLI recognises the common forms from the command, and tags them `needs arguments`: `yarn workspaces foreach` and `yarn workspace <name>` with nothing after them, and `pnpm`, `bun` and `npm` with only options such as `-r`, `--filter` or `--workspaces`, `npm exec`, `npx`, `turbo run`, `lerna run` and `lerna exec`. Running one, with Enter, a click or **▶ run**, asks for the arguments first, shows the command they complete (`packages runs: yarn workspaces foreach --all <arguments>`), and an empty answer is refused.
+
 ### Projects
 
-Every subfolder of the workspace is listed as a project, including links to folders (symbolic links, and junctions on Windows), except folders that are never projects: names starting with a dot (such as `.git` or `.vscode`) and `node_modules`. Only the immediate subfolders are listed; projects nested deeper are not discovered.
+Every subfolder of the workspace is listed as a project, including links to folders (symbolic links, and junctions on Windows), except folders that are never projects: names starting with a dot (such as `.git` or `.vscode`) and `node_modules`.
+
+By default, only the immediate subfolders are listed. If your workspace groups projects in folders, such as `clients/acme/web`, let the CLI look deeper with `dws --set-depth 2` (or `3`, the maximum): it then also searches the folders that have no `package.json`, down to that many levels. The search stops at every folder with a `package.json`, so a project's own subfolders are never listed, and never enters `node_modules` or dot-folders. Projects found this way are named by their path (`clients/acme/web`); a folder that holds no project at all stays one dimmed entry. `dws --set-depth 1` goes back to the default.
 
 Projects are sorted by name, ignoring case. Folders without a `package.json` have no scripts to run, so they appear dimmed at the end of the list, tagged `no package.json`, and cannot be selected. A `package.json` that starts with a UTF-8 byte order mark, as Windows PowerShell 5.1 and some editors write it, is read normally, as npm does.
 
 Next to each project, the list shows how many scripts it has and its Git branch (`12 scripts · main`, or the short commit when nothing is checked out), with its package manager on the right. These details are read only for the projects in view, as they scroll into the window, so a large workspace still opens at once. They are kept for the rest of the session, and read again for a project after you open it. The branch is read from `.git/HEAD`, so Git does not need to be installed.
 
 In the script list, each script's command is shown next to its name, shortened to fit the terminal. Lifecycle hooks are listed with their main script instead of separately: with `prebuild`, `build` and `postbuild` scripts, the list shows only `build`, with the command `node build.js  (+ prebuild, postbuild)`; when the command is shortened, the hooks are always kept. Running `build` runs its hooks too, as the package manager normally does. A hook without its main script, such as `postinstall` on its own, is listed like any other script. In Yarn 2+ projects, which never run these hooks, every hook is listed as a separate script so you can still run it.
+
+#### Monorepos
+
+A project that declares workspaces is shown as a monorepo: the `workspaces` field of its `package.json` (npm, Yarn and Bun) or a `pnpm-workspace.yaml` (pnpm). It has a `▸` before its name and its package count in its details (`3 packages · 2 scripts · main`). Opening it (Enter, a click, or →) shows what it holds under it: **root** first, which opens the scripts of the monorepo's own `package.json`, then its packages. Opening it again, or ← from any of its entries, hides them. A monorepo found by a search opens the same way, and the search is cleared. In **Recent**, a monorepo expands too.
+
+```text
+  ❯ ▾ shop               3 packages · 2 scripts · main          pnpm
+      ├ root             2 scripts
+      ├ web              1 script · feat/landing
+      ├ api              2 scripts                         @shop/api
+      └ ui               1 script                           @shop/ui
+      web                2 scripts · main                        npm
+```
+
+The tree lines show which entries belong to the monorepo. Each package is listed by its folder name (`api` for `packages/api`), or by its whole path when two packages share a folder name (`apps/web` and `packages/web`), with its `name` from `package.json` on the right when it differs from the folder name. A package that is a Git repository of its own (it has its own `.git`, such as a submodule) shows its branch too. Opening a package shows its scripts, and they run in the package's folder with the monorepo's package manager, so `pnpm run dev` starts in `shop/packages/api`. The packages are the folders the workspace patterns match (`packages/*`, `apps/**`, and patterns starting with `!` to leave folders out) that have a `package.json`; a `**` is followed down to five folders, whatever the search depth (see [Projects](#projects)), which only applies to the workspace folder. They are read once per session. Searching looks through every package, shown or not: typing `ui` finds `shop › ui`. Packages appear in the recent projects too, under their full name (`shop/packages/api`).
 
 ## Package managers
 
@@ -194,8 +213,8 @@ dws web dev                    # run its "dev" script, then exit
 dws web dev -- --port 4000     # pass everything after -- to the script
 ```
 
-- The project is found by its exact name first, then ignoring case, then by the start of its name, as long as only one project starts that way: `dws des build` runs `build` in `design-system`. If several projects match, the CLI lists them.
-- Any script in `package.json` can be run by name, including `pre` and `post` hooks.
+- The project is found by its exact name first, then ignoring case, then by the last part of a nested project's name (`dws web` finds `clients/acme/web`, see [Projects](#projects)), then by the start of its name, as long as only one project starts that way: `dws des build` runs `build` in `design-system`. If several projects match, the CLI lists them. Nested names can be typed with `/`, or `` on Windows. A monorepo's packages are found the same way, by their full name or its last part: `dws shop/packages/api test`, or `dws api test` when no other project or package is called `api`.
+- Any script in `package.json` can be run by name, including `pre` and `post` hooks. A script tagged `needs arguments` in the menu (see [Running scripts](#running-scripts)) is not started without arguments after `--`: the CLI exits with code 1 and says how to add them.
 - With a script, nothing is asked and the screen is not cleared, so direct mode also works in other scripts. The CLI exits with the script's exit code, or 128 plus the signal number if a signal stopped it, as shells do (130 after Ctrl+C). It exits with code 1 if it cannot start the script, for example when no workspace is saved yet.
 - Without a script, the CLI needs a terminal to read keys from. When its input is redirected (`dws < file`, or in a CI job), it exits with code 1 and a message saying how to run a script directly, instead of waiting for keys that never come.
 
@@ -205,20 +224,23 @@ dws web dev -- --port 4000     # pass everything after -- to the script
 dev-workspace [options] [project [script] [-- arguments]]
 ```
 
-| Option                   | Description                                                  |
-| ------------------------ | ------------------------------------------------------------ |
-| `-w, --workspace <path>` | Use `<path>` as the workspace and save it                    |
-| `--no-mouse`             | Use only the keyboard in menus, for this run                 |
-| `--set-mouse <on\|off>`  | Save whether menus use the mouse                             |
-| `--set-color <name>`     | Save the accent colour (see [Colours](#colours))             |
-| `--config-path`          | Print the location of the configuration file                 |
-| `--clear-history`        | Forget the recent projects and last scripts                  |
-| `--add-alias <name>`     | Create another command that starts the CLI                   |
-| `--remove-alias <name>`  | Delete an alias created with `--add-alias`                   |
-| `--list-aliases`         | List the commands that start the CLI                         |
-| `--reset`                | Delete the configuration, history and custom aliases         |
-| `-v, --version`          | Print the version                                            |
-| `-h, --help`             | Show the help (coloured as described in [Colours](#colours)) |
+| Option                         | Description                                                                   |
+| ------------------------------ | ----------------------------------------------------------------------------- |
+| `-w, --workspace <name\|path>` | Use a saved workspace, or `<path>` (saved too, see [Workspaces](#workspaces)) |
+| `--list-workspaces`            | List the saved workspaces                                                     |
+| `--remove-workspace <name>`    | Forget a saved workspace (its folder is left as it is)                        |
+| `--no-mouse`                   | Use only the keyboard in menus, for this run                                  |
+| `--set-mouse <on\|off>`        | Save whether menus use the mouse                                              |
+| `--set-color <name>`           | Save the accent colour (see [Colours](#colours))                              |
+| `--set-depth <1-3>`            | Save how many folder levels to search (see [Projects](#projects))             |
+| `--config-path`                | Print the location of the configuration file                                  |
+| `--clear-history`              | Forget the recent projects and last scripts                                   |
+| `--add-alias <name>`           | Create another command that starts the CLI                                    |
+| `--remove-alias <name>`        | Delete an alias created with `--add-alias`                                    |
+| `--list-aliases`               | List the commands that start the CLI                                          |
+| `--reset`                      | Delete the configuration, history and custom aliases                          |
+| `-v, --version`                | Print the version                                                             |
+| `-h, --help`                   | Show the help (coloured as described in [Colours](#colours))                  |
 
 ## Aliases
 
@@ -251,11 +273,23 @@ The workspace path is saved in the standard configuration folder of your operati
 - The `DEV_WORKSPACE_CONFIG` environment variable points the CLI at a different file.
 - If you edit the file by hand, an editor that saves it with a UTF-8 byte order mark does no harm.
 - The accent colour chosen on the first launch is saved as `"color"`: `{ "workspace": "…", "color": "teal" }`. `dws --set-color <name>` changes it. A file saved by a version without this setting keeps cyan and is never asked again.
+- `dws --set-depth 2` saves `"depth": 2`, the number of folder levels searched for projects (1 to 3, 1 when it is missing).
 - `dws --set-mouse off` saves `"mouse": false` in the file, so menus use only the keyboard: `{ "workspace": "…", "mouse": false }`. `dws --set-mouse on` saves `true`. Changing the workspace keeps these settings, and they can be saved before any workspace is chosen.
-- To switch workspaces, press the **⚙ Workspace** button in the project list or run `dws --workspace <path>`. The button shows the same folders as the first launch, with the current one tagged `current`, and **… Enter another path**. In that list, and at the path prompt, Esc keeps the current workspace and goes back to the projects. If the saved workspace no longer exists, the CLI asks for a new one.
+- Saved workspaces are kept as `"workspaces"`, by name, and `"workspace"` holds the path of the current one: `{ "workspace": "…/work", "workspaces": { "dev": "…/dev", "work": "…/work" } }`. A file saved by a version without names keeps working: its workspace is listed under its folder name. See [Workspaces](#workspaces).
 - Versions before 0.3.0 stored the file in `~/.dev-workspace-cli/config.json`. If that file exists, it is moved to the new location automatically.
 
 The history of recent projects and last scripts, and which mouse notes were shown, is kept apart from the settings, in `state.json` in the same folder as `config.json`. With `DEV_WORKSPACE_CONFIG`, it is named after your file instead (`dws.json` keeps it in `dws.state.json`), so it never overwrites a `state.json` of your own. It is only a convenience: if it is missing or damaged, the CLI starts with an empty history. `dws --clear-history` deletes it.
+
+### Workspaces
+
+You can keep several workspaces, for example `work` and `personal`, and switch between them. Every workspace you use is saved under a name: the first one, and any folder passed with `--workspace <path>`, under its folder name (`dev`, or `dev-2` when that name is taken).
+
+- Press the **⚙ Workspace** button in the project list to switch. It lists the saved workspaces by name, with the current one tagged `current` and those whose folder is gone dimmed as `not found`, then the suggested folders of the first launch that are not saved yet, and **… Enter another path**. Choosing a saved workspace switches to it at once; for a new folder, the CLI asks for a name, filled in with the folder name, so Enter keeps it. Names cannot contain `/` or `\`, or start with `.` or `~`, so they never read as a path.
+- `dws --workspace work` switches to the saved workspace `work` (the name is matched exactly, then ignoring case), also in direct mode: `dws -w work web dev`. Anything that is not a saved name is read as a path. To use a folder that has the same name as a saved workspace, give it as a path, such as `./work`.
+- `dws --list-workspaces` prints the saved workspaces and marks the current one; `dws --remove-workspace <name>` forgets one, but never the current one, and leaves its folder as it is.
+- In the workspace list, the name prompt and the path prompt, Esc keeps the current workspace and goes back to the projects. If the current workspace no longer exists, the CLI asks for another one, and the list offers the other saved workspaces.
+
+The header box starts with the workspace's name (`◆ work › web-app`).
 
 ## Uninstalling
 

@@ -3,7 +3,12 @@ import path from 'node:path'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { createCli, findProject, formatDuration } from '../lib/cli.js'
+import {
+  checkWorkspaceName,
+  createCli,
+  findProject,
+  formatDuration,
+} from '../lib/cli.js'
 import {
   CHANGE_WORKSPACE,
   ENTER_PATH,
@@ -20,6 +25,7 @@ const WORKSPACE = path.resolve('fake/workspace')
 function createDependencies(overrides = {}) {
   const calls = {
     savedWorkspaces: [],
+    namedWorkspaces: [],
     discoveredWorkspaces: [],
     savedStates: [],
     mouse: [],
@@ -49,6 +55,11 @@ function createDependencies(overrides = {}) {
       }),
       migrateLegacyConfig: async () => null,
       readColorSetting: async () => 'cyan',
+      readDepthSetting: async () => 1,
+      readSavedWorkspaces: async () => ({}),
+      saveSavedWorkspaces: async (workspaces, file) => {
+        calls.namedWorkspaces.push({ workspaces, file })
+      },
       readMouseSetting: async () => true,
       readWorkspaceConfig: async () => WORKSPACE,
       resetWorkspaceConfig: async () => [],
@@ -100,6 +111,9 @@ function createDependencies(overrides = {}) {
     prompts: {
       askForArguments: async () => [],
       askForWorkspace: async () => WORKSPACE,
+      askForWorkspaceName: async suggested => suggested,
+      // The saved workspace is always offered: type a path by default.
+      chooseWorkspace: async () => ENTER_PATH,
       chooseProject: async (projects, options) => {
         calls.menus.push(options)
         return null
@@ -354,7 +368,12 @@ test('CLI runs a selected script and reports success', async () => {
   const lines = loggedText(calls).split('\n')
 
   assert.deepEqual(calls.runHeaders, [
-    { workspace: WORKSPACE, crumbs: ['example', 'dev'], tag: 'npm · default' },
+    {
+      workspace: WORKSPACE,
+      name: 'workspace',
+      crumbs: ['example', 'dev'],
+      tag: 'npm · default',
+    },
   ])
   assert.deepEqual(lines.slice(0, 6), [
     '',
@@ -771,21 +790,17 @@ test('CLI offers a workspace change when the project list is empty', async () =>
 
 test('CLI saves the workspace passed with --workspace', async () => {
   const otherWorkspace = path.resolve('fake/other')
-  let configRead = false
 
-  const { dependencies, calls } = createDependencies({
-    config: {
-      readWorkspaceConfig: async () => {
-        configRead = true
-        return WORKSPACE
-      },
-    },
-  })
+  const { dependencies, calls } = createDependencies()
 
   await createCli(dependencies).start(['--workspace', 'fake/other'])
 
-  assert.equal(configRead, false)
   assert.equal(calls.savedWorkspaces[0].workspace, otherWorkspace)
+  // The previous workspace stays saved, under its folder name.
+  assert.deepEqual(calls.namedWorkspaces.at(-1).workspaces, {
+    workspace: WORKSPACE,
+    other: otherWorkspace,
+  })
   assert.equal(calls.discoveredWorkspaces[0].root, otherWorkspace)
 })
 
@@ -1321,6 +1336,49 @@ test('findProject matches exactly, then ignoring case, then by unique prefix', (
     /"we" matches several projects: web, web-admin\. Type more of the name\./,
   )
   assert.throws(() => find('mobile'), /No project named "mobile" in /)
+})
+
+test('findProject finds nested projects by path or by their last part', () => {
+  const projects = [
+    'web',
+    'clients/acme/api',
+    'clients/acme/site',
+    'x/site',
+  ].map(name => ({ name, directory: path.join(WORKSPACE, name) }))
+  const find = name => findProject(projects, name, WORKSPACE).name
+
+  assert.equal(find('clients/acme/api'), 'clients/acme/api')
+  assert.equal(find('clients\\acme\\api'), 'clients/acme/api')
+  assert.equal(find('API'), 'clients/acme/api')
+  assert.equal(find('web'), 'web')
+  assert.equal(find('clients/acme/s'), 'clients/acme/site')
+  assert.throws(
+    () => find('site'),
+    /"site" matches several projects: clients\/acme\/site, x\/site\./,
+  )
+})
+
+test('findProject finds a monorepo by prefix, not its packages too', () => {
+  const shop = { name: 'shop', directory: path.join(WORKSPACE, 'shop') }
+  const projects = [
+    shop,
+    { name: 'blog', directory: path.join(WORKSPACE, 'blog') },
+    ...['packages/api', 'packages/web'].map(folder => ({
+      name: `shop/${folder}`,
+      directory: path.join(shop.directory, folder),
+      // A copy, as the session's package lists hold the monorepo read first.
+      monorepo: { ...shop },
+    })),
+  ]
+  const find = name => findProject(projects, name, WORKSPACE).name
+
+  assert.equal(find('sho'), 'shop')
+  assert.equal(find('shop/packages/a'), 'shop/packages/api')
+  assert.equal(find('api'), 'shop/packages/api')
+  assert.throws(
+    () => find('shop/packages'),
+    /"shop\/packages" matches several projects: shop\/packages\/api, shop\/packages\/web\./,
+  )
 })
 
 test('CLI runs a script directly and returns its exit code', async () => {
@@ -2091,4 +2149,500 @@ test('CLI goes back to the scripts on Escape at the arguments prompt', async () 
   assert.deepEqual(answers, [])
   assert.deepEqual(runs, [])
   assert.match(loggedText(calls), /Press Esc to go back to the scripts\./)
+})
+
+test('CLI --set-depth saves the depth and exits', async () => {
+  const saved = []
+  const { dependencies, calls } = createDependencies({
+    config: {
+      saveDepthSetting: async (depth, file) => saved.push({ depth, file }),
+    },
+  })
+
+  await createCli(dependencies).start(['--set-depth', '2'])
+
+  assert.deepEqual(saved, [
+    { depth: 2, file: '/fake/home/.dev-workspace-cli/config.json' },
+  ])
+  assert.match(calls.logs.at(-1)[0], /searches 2 folder levels/)
+  assert.equal(calls.discoveredWorkspaces.length, 0)
+
+  await createCli(dependencies).start(['--set-depth', '1'])
+
+  assert.match(calls.logs.at(-1)[0], /workspace folders only/)
+})
+
+test('CLI lists projects down to the saved depth', async () => {
+  const asked = []
+  const { dependencies } = createDependencies({
+    config: { readDepthSetting: async () => 3 },
+    workspace: {
+      getProjects: async (root, options) => {
+        asked.push({ root, ...options })
+        return []
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.deepEqual(asked, [{ root: WORKSPACE, depth: 3 }])
+})
+
+// A monorepo, shop, with one package, next to an ordinary project.
+function monorepoDependencies(overrides = {}) {
+  const shop = {
+    name: 'shop',
+    directory: path.join(WORKSPACE, 'shop'),
+    hasPackageJson: true,
+    workspaces: ['packages/*'],
+  }
+  const web = {
+    name: 'web',
+    directory: path.join(WORKSPACE, 'web'),
+    hasPackageJson: true,
+  }
+  const apiDirectory = path.join(shop.directory, 'packages', 'api')
+  const asked = { packageManagers: [], packages: [], branches: [], runs: [] }
+  const result = createDependencies({
+    ...overrides,
+    workspace: {
+      getProjects: async () => [shop, web],
+      getPackages: async (directory, patterns) => {
+        asked.packages.push([directory, patterns])
+        return [
+          {
+            path: 'packages/api',
+            directory: apiDirectory,
+            packageName: '@shop/api',
+          },
+        ]
+      },
+      getScripts: async directory =>
+        directory === shop.directory
+          ? [{ name: 'build', command: 'turbo build' }]
+          : [
+              { name: 'dev', command: 'vite' },
+              { name: 'test', command: 'vitest' },
+            ],
+      detectPackageManager: async directory => {
+        asked.packageManagers.push(directory)
+        return { name: 'pnpm', source: 'pnpm-lock.yaml', runsHooks: true }
+      },
+      // Only the monorepo is a Git repository: its package has no .git.
+      readGitBranch: async directory => {
+        asked.branches.push(directory)
+        return directory === shop.directory ? 'main' : null
+      },
+      ...overrides.workspace,
+    },
+    commands: {
+      runCommand: async (...args) => {
+        asked.runs.push(args)
+        return { code: 0 }
+      },
+    },
+  })
+
+  return { ...result, shop, web, apiDirectory, asked }
+}
+
+test('CLI opens a package of a monorepo and runs its script there', async () => {
+  const lists = []
+  let scriptMenus = 0
+  const { dependencies, shop, web, apiDirectory, asked } = monorepoDependencies(
+    {
+      prompts: {
+        chooseProject: async (projects, options) => {
+          lists.push(options)
+
+          // The first time, open the package; then exit.
+          return lists.length === 1 ? options.packages(shop)[0] : null
+        },
+        chooseScript: async scripts => {
+          scriptMenus++
+          return scriptMenus === 1 ? { script: scripts[0] } : null
+        },
+        waitAfterCommand: async () => false,
+      },
+    },
+  )
+
+  await createCli(dependencies).run()
+
+  const [api] = lists[0].packages(shop)
+
+  assert.equal(api.name, 'shop/packages/api')
+  assert.equal(api.monorepo, shop)
+  assert.equal(lists[0].packages(web), undefined)
+  // Read for the list, then again once back from one of its packages.
+  assert.deepEqual(asked.packages, [
+    [shop.directory, ['packages/*']],
+    [shop.directory, ['packages/*']],
+  ])
+
+  // The package runs in its own folder, with its monorepo's tool.
+  assert.deepEqual(asked.runs, [
+    ['dev', apiDirectory, { packageManager: 'pnpm' }],
+  ])
+  assert.equal(asked.packageManagers.at(-1), shop.directory)
+
+  // Back in the list, the package is recent and selected again.
+  assert.equal(lists[1].recent[0].directory, apiDirectory)
+  assert.equal(lists[1].default.directory, apiDirectory)
+})
+
+test('CLI keeps the packages of a monorepo after another project is opened', async () => {
+  let lists = 0
+  const { dependencies, shop, web, asked } = monorepoDependencies({
+    prompts: {
+      chooseProject: async () => (++lists === 1 ? web : null),
+      chooseScript: async () => null,
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.equal(lists, 2)
+  assert.deepEqual(asked.packages, [[shop.directory, ['packages/*']]])
+})
+
+test('CLI shows a monorepo with its package count, and a package with its name', async () => {
+  let options
+  const { dependencies, shop } = monorepoDependencies({
+    prompts: {
+      chooseProject: async (projects, given) => {
+        options = given
+        return null
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  const [api] = options.packages(shop)
+
+  assert.deepEqual(await options.details(shop), {
+    detail: '1 package · 1 script',
+    detailEnd: [
+      [' · ', 'dim'],
+      ['main', 'mainBranch'],
+    ],
+    hint: 'pnpm',
+  })
+  // A package without a .git of its own shows no branch.
+  assert.deepEqual(await options.details(api), {
+    detail: '2 scripts',
+    hint: '@shop/api',
+  })
+})
+
+test('CLI shows the branch of a package that is a Git repository of its own', async () => {
+  let options
+  const { dependencies, shop, apiDirectory } = monorepoDependencies({
+    prompts: {
+      chooseProject: async (projects, given) => {
+        options = given
+        return null
+      },
+    },
+    workspace: {
+      readGitBranch: async directory =>
+        directory === apiDirectory ? 'feat/login' : 'main',
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  const [api] = options.packages(shop)
+
+  assert.deepEqual(await options.details(api), {
+    detail: '2 scripts',
+    detailEnd: [
+      [' · ', 'dim'],
+      ['feat/login', 'branch'],
+    ],
+    hint: '@shop/api',
+  })
+})
+
+test('CLI runs a package script directly, by its full name or its last part', async () => {
+  for (const name of ['shop/packages/api', 'api']) {
+    const { dependencies, apiDirectory, asked } = monorepoDependencies()
+
+    assert.equal(await createCli(dependencies).start([name, 'test']), 0)
+    assert.deepEqual(asked.runs, [
+      ['test', apiDirectory, { packageManager: 'pnpm' }],
+    ])
+  }
+})
+
+const WORK = path.resolve('fake/work')
+const GONE = path.resolve('fake/gone')
+
+// A configuration with two saved workspaces, the current one first, and a
+// third one whose folder is gone.
+function namedDependencies(overrides = {}) {
+  return createDependencies({
+    ...overrides,
+    config: {
+      readSavedWorkspaces: async () => ({
+        dev: WORKSPACE,
+        work: WORK,
+        old: GONE,
+      }),
+      ...overrides.config,
+    },
+    workspace: {
+      isDirectory: async directory => directory !== GONE,
+      ...overrides.workspace,
+    },
+  })
+}
+
+test('CLI switches to a saved workspace by name with --workspace', async () => {
+  const { dependencies, calls } = namedDependencies()
+
+  await createCli(dependencies).start(['--workspace', 'WORK'])
+
+  assert.equal(calls.savedWorkspaces[0].workspace, WORK)
+  assert.equal(calls.discoveredWorkspaces[0].root, WORK)
+  // The header names the workspace.
+  assert.match(
+    calls.menus[0]
+      .header(80)
+      .map(line => line.map(([text]) => text).join(''))
+      .join('\n'),
+    /◆ work ─/,
+  )
+
+  await assert.rejects(
+    createCli(namedDependencies().dependencies).start(['-w', 'old']),
+    /The workspace "old" is unavailable: .*gone\. Remove it with --remove-workspace old\./,
+  )
+})
+
+test('CLI offers the saved workspaces, then the other suggested folders', async () => {
+  const other = path.resolve('fake/other')
+  const choices = [CHANGE_WORKSPACE, null]
+  const shown = []
+  const named = []
+
+  const { dependencies, calls } = namedDependencies({
+    workspace: {
+      suggestWorkspaces: async () => [WORK, other],
+    },
+    prompts: {
+      chooseProject: async () => choices.shift(),
+      chooseWorkspace: async (folders, options) => {
+        shown.push([folders, options])
+        return other
+      },
+      askForWorkspaceName: async (suggested, validate) => {
+        named.push({ suggested, taken: validate('Work'), empty: validate(' ') })
+        return 'clients'
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  const [[folders, options]] = shown
+
+  // A saved folder is not suggested again.
+  assert.deepEqual(folders, [other])
+  assert.deepEqual(options.saved, [
+    { name: 'dev', directory: WORKSPACE, missing: false },
+    { name: 'work', directory: WORK, missing: false },
+    { name: 'old', directory: GONE, missing: true },
+  ])
+  assert.deepEqual(named, [
+    {
+      suggested: 'other',
+      taken: `"work" already names ${WORK}.`,
+      empty: 'Please enter a name.',
+    },
+  ])
+  assert.deepEqual(calls.namedWorkspaces.at(-1).workspaces, {
+    dev: WORKSPACE,
+    work: WORK,
+    old: GONE,
+    clients: other,
+  })
+  assert.match(loggedText(calls), /Workspace saved: .*other as "clients"/)
+})
+
+test('CLI asks no name for a saved workspace, and Escape at the name goes back', async () => {
+  for (const [picked, name, saved] of [
+    [WORK, undefined, WORK],
+    [path.resolve('fake/other'), null, undefined],
+  ]) {
+    const choices = [CHANGE_WORKSPACE, null]
+    let asked = false
+
+    const { dependencies, calls } = namedDependencies({
+      prompts: {
+        chooseProject: async () => choices.shift(),
+        chooseWorkspace: async () => picked,
+        askForWorkspaceName: async () => {
+          asked = true
+          return name
+        },
+      },
+    })
+
+    await createCli(dependencies).run()
+
+    assert.equal(asked, name !== undefined)
+    assert.equal(calls.savedWorkspaces[0]?.workspace, saved)
+  }
+})
+
+test('CLI names a new workspace after its folder, made unique', async () => {
+  const otherDev = path.resolve('elsewhere/dev')
+  const { dependencies, calls } = namedDependencies()
+
+  await createCli(dependencies).start(['--workspace', otherDev])
+
+  assert.equal(calls.namedWorkspaces.at(-1).workspaces['dev-2'], otherDev)
+})
+
+test('CLI lists and removes saved workspaces', async () => {
+  const { dependencies, calls } = namedDependencies()
+
+  await createCli(dependencies).start(['--list-workspaces'])
+
+  assert.deepEqual(
+    calls.logs.map(([line]) => line),
+    [`  dev   ${WORKSPACE} (current)`, `  work  ${WORK}`, `  old   ${GONE}`],
+  )
+
+  await createCli(dependencies).start(['--remove-workspace', 'old'])
+
+  assert.deepEqual(calls.namedWorkspaces.at(-1).workspaces, {
+    dev: WORKSPACE,
+    work: WORK,
+  })
+  assert.match(calls.logs.at(-1)[0], /Removed the workspace "old"/)
+
+  await assert.rejects(
+    createCli(dependencies).start(['--remove-workspace', 'dev']),
+    /"dev" is the current workspace\. Switch to another one first/,
+  )
+  await assert.rejects(
+    createCli(dependencies).start(['--remove-workspace', 'nope']),
+    /No saved workspace named "nope"\. See them with --list-workspaces\./,
+  )
+})
+
+test('CLI lists a workspace saved before names existed under its folder name', async () => {
+  const { dependencies, calls } = createDependencies()
+
+  await createCli(dependencies).start(['--list-workspaces'])
+  assert.deepEqual(calls.logs, [[`  workspace  ${WORKSPACE} (current)`]])
+
+  const none = createDependencies({
+    config: { readWorkspaceConfig: async () => null },
+  })
+
+  await createCli(none.dependencies).start(['--list-workspaces'])
+  assert.match(none.calls.logs[0][0], /No saved workspaces yet/)
+})
+
+test('checkWorkspaceName refuses names that read as paths or are taken', () => {
+  const saved = { work: WORK }
+
+  assert.equal(checkWorkspaceName('personal', saved), true)
+  for (const name of ['a/b', String.raw`a\b`, '.hidden', '~home']) {
+    assert.match(checkWorkspaceName(name, saved), /cannot contain/)
+  }
+  assert.match(checkWorkspaceName('WORK', saved), /"work" already names/)
+})
+
+test('CLI asks for the arguments of a script that needs them, showing its command', async () => {
+  const project = projectFixtures()[0]
+  const packages = {
+    name: 'packages',
+    command: 'yarn workspaces foreach -A',
+    needsArguments: true,
+  }
+  const asked = []
+  let scriptMenus = 0
+  const runs = []
+
+  const { dependencies, calls } = createDependencies({
+    workspace: {
+      getProjects: async () => [project],
+      getScripts: async () => [packages],
+    },
+    commands: {
+      runCommand: async (...args) => {
+        runs.push(args)
+        return { code: 0 }
+      },
+    },
+    prompts: {
+      chooseProject: async () => (scriptMenus === 0 ? project : null),
+      chooseScript: async () =>
+        scriptMenus++ === 0 ? { script: packages, withArguments: true } : null,
+      askForArguments: async (name, options) => {
+        asked.push([name, options])
+        return ['run', 'test']
+      },
+      waitAfterCommand: async () => false,
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.deepEqual(asked, [['packages', { required: true }]])
+  assert.match(
+    loggedText(calls),
+    /packages runs: yarn workspaces foreach -A <arguments>/,
+  )
+  assert.deepEqual(runs[0].slice(0, 2), ['packages', project.directory])
+  assert.deepEqual(runs[0][2].args, ['run', 'test'])
+})
+
+test('CLI does not run a script that needs arguments directly without any', async () => {
+  const { dependencies, runs } = directDependencies({
+    workspace: {
+      getScripts: async () => [
+        {
+          name: 'packages',
+          command: 'yarn workspaces foreach -A',
+          needsArguments: true,
+        },
+      ],
+    },
+  })
+
+  await assert.rejects(
+    createCli(dependencies).start(['web', 'packages']),
+    /"packages" cannot run without arguments \(it runs: yarn workspaces foreach -A\)\. Add them after --, for example: dws web packages -- <arguments>/,
+  )
+  assert.deepEqual(runs, [])
+
+  assert.equal(
+    await createCli(dependencies).start(['web', 'packages', '--', 'run', 'x']),
+    0,
+  )
+})
+
+test('CLI shows only the script count on a monorepo root entry', async () => {
+  let options
+  const { dependencies, shop } = monorepoDependencies({
+    prompts: {
+      chooseProject: async (projects, given) => {
+        options = given
+        return null
+      },
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.deepEqual(await options.details(shop, { root: true }), {
+    detail: '1 script',
+  })
 })

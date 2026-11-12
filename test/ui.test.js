@@ -117,6 +117,13 @@ test('headerLines draws the workspace folder and path in a box', () => {
   ])
 })
 
+test('headerLines starts the breadcrumb with a saved workspace name', () => {
+  assert.equal(
+    header({ workspace: '/projects', name: 'personal' }, 40)[0],
+    '  ╭─ ◆ personal ───────────────────────╮',
+  )
+})
+
 test('headerLines shows the breadcrumb and the tag in the top border', () => {
   const [top] = header(
     { workspace: '/projects', crumbs: ['web-app'], tag: 'npm · default' },
