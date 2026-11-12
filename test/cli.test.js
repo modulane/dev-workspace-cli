@@ -2275,8 +2275,11 @@ test('CLI opens a package of a monorepo and runs its script there', async () => 
   assert.equal(api.name, 'shop/packages/api')
   assert.equal(api.monorepo, shop)
   assert.equal(lists[0].packages(web), undefined)
-  // Read once for the session.
-  assert.deepEqual(asked.packages, [[shop.directory, ['packages/*']]])
+  // Read for the list, then again once back from one of its packages.
+  assert.deepEqual(asked.packages, [
+    [shop.directory, ['packages/*']],
+    [shop.directory, ['packages/*']],
+  ])
 
   // The package runs in its own folder, with its monorepo's tool.
   assert.deepEqual(asked.runs, [
@@ -2287,6 +2290,21 @@ test('CLI opens a package of a monorepo and runs its script there', async () => 
   // Back in the list, the package is recent and selected again.
   assert.equal(lists[1].recent[0].directory, apiDirectory)
   assert.equal(lists[1].default.directory, apiDirectory)
+})
+
+test('CLI keeps the packages of a monorepo after another project is opened', async () => {
+  let lists = 0
+  const { dependencies, shop, web, asked } = monorepoDependencies({
+    prompts: {
+      chooseProject: async () => (++lists === 1 ? web : null),
+      chooseScript: async () => null,
+    },
+  })
+
+  await createCli(dependencies).run()
+
+  assert.equal(lists, 2)
+  assert.deepEqual(asked.packages, [[shop.directory, ['packages/*']]])
 })
 
 test('CLI shows a monorepo with its package count, and a package with its name', async () => {
