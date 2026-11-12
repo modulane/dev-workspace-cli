@@ -3,7 +3,8 @@ name: Release
 # Every push to main runs the CI workflow, then publishes once it has passed,
 # in the same run and from the same commit. semantic-release decides from the
 # commit messages whether a release is needed: fix: and feat: commits publish,
-# docs:, style: and chore: do not.
+# docs:, style: and chore: do not. The Release notes job then adds each pull
+# request's notes to the GitHub release.
 # The manual trigger remains available as a fallback, and its dry run shows
 # what the next release would be without publishing anything.
 on:
@@ -109,3 +110,14 @@ jobs:
           else
             npx --no-install semantic-release
           fi
+
+  release-notes:
+    name: Release notes
+    needs: release
+    # A dry run creates no release to add notes to.
+    if: ${{ !inputs.dry-run }}
+    uses: modulane/workflows/.github/workflows/release-notes.yml@410a423e4487e60eccb5863c5574cb2ae02669ce # v1.3.0
+    permissions:
+      contents: write # edit the GitHub releases
+      issues: read # list the issues a pull request closes
+      pull-requests: read # read the pull request descriptions

@@ -76,7 +76,7 @@ Menus use the list in `list.js`, which owns the terminal while it is open; free-
 
 Every colour comes from the theme in `ui.js`: `color()` for plain output, `styleText()` for the list, and `inquirerTheme()` for the `@inquirer/prompts` questions. Do not write ANSI codes elsewhere, so `NO_COLOR` and `FORCE_COLOR` are always respected. Ask for the `accent` style, never for cyan or another colour by name, so the user's chosen accent (`setAccent()`) reaches every screen.
 
-Each file in `lib/` starts with a comment describing what it contains and how it is used. Keep that comment accurate when you change the file.
+Each file in `lib/` starts with two comment lines: what the file is for, and which files use it. Update them only if your change makes them wrong, for example a new file that imports it. Explain how something works in a comment next to the code instead, where it is easier to keep right.
 
 Modules receive their side effects (file system, prompts, process spawning) as parameters with real defaults, so tests can replace them with fakes. Tests live in `test/`, one file per module. `test/benchmark.test.js` is the exception: it checks the time budget of the "Bigger workspaces" milestone, a 200-project workspace searched two levels deep in under 500 ms, on real folders in a temporary directory.
 
@@ -90,6 +90,16 @@ Every change is made on a short-lived branch and reaches `main` through a pull r
 4. The maintainer reviews it. A pull request needs the maintainer's approval, given after its last push, and every review conversation resolved. A new push dismisses an earlier approval. The first workflow run of a first-time contributor also waits for the maintainer's approval.
 5. The maintainer squash-merges it. The pull request title becomes the only commit on `main`.
 
+For a `feat:` or `fix:`, fill in the **Release notes** section of the pull request template: what users will notice, as a list with one item per feature or fix. Each item becomes its own entry in the GitHub release, so a pull request that adds fuzzy search and direct mode lists them as two entries, not one. Start an item with `fix:` or `feat:` when its type differs from the title's, and mention the issue it closes, for example `(#12)`. Lines indented under an item give more detail. Leave the section empty for any other change.
+
+```markdown
+## Release notes
+
+- fuzzy search in every menu (#12)
+- direct mode: `dws <project> <script>` runs a script without prompts
+- fix: Ctrl+C no longer leaves the cursor hidden
+```
+
 The pull request title decides what is released, so choose its type carefully:
 
 | Title starts with                                                           | Release                          |
@@ -100,7 +110,7 @@ The pull request title decides what is released, so choose its type carefully:
 
 Keep the summary lowercase and in the imperative: `feat: add project search`, not `Feat: Added project search`.
 
-**Do not mark changes as breaking before 1.0.0.** A `!` after the type (`feat!:`) or a `BREAKING CHANGE:` footer makes a major release, which would publish 1.0.0 early. Until then, describe incompatible changes in the pull request and release them as `feat:`.
+**Do not mark changes as breaking before 1.0.0.** A `!` after the type (`feat!:`) or a `BREAKING CHANGE:` footer makes a major release, which would publish 1.0.0 early. Until then, describe incompatible changes in the pull request's **Release notes** section and release them as `feat:`.
 
 ### AI use
 
@@ -141,6 +151,9 @@ Releases are fully automated with [semantic-release](https://semantic-release.gi
 5. Otherwise it computes the next version and:
    - publishes the package to npm through [trusted publishing](https://docs.npmjs.com/trusted-publishers), so no npm token is stored in the repository, and with a provenance attestation linking the package to this workflow run;
    - creates the `vX.Y.Z` git tag and a GitHub release with notes generated from the commits.
+6. A last job rebuilds the GitHub releases from the **Release notes** section of each pull request: one entry per feature or fix it lists, with the issues it closes. Every run rebuilds every release, so a change to a pull request's notes reaches its release on the next run, or right away by running the Release workflow by hand.
+
+The [GitHub releases](https://github.com/modulane/dev-workspace-cli/releases) are the changelog. There is no `CHANGELOG.md`: semantic-release would have to commit it to `main`, which the `main` ruleset only accepts through a pull request.
 
 The version in `package.json` is always `0.0.0-development`. The real version exists only in git tags and on npm; semantic-release writes it into the package at publish time.
 

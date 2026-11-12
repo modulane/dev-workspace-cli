@@ -43,7 +43,7 @@ Dev Workspace CLI requires [Node.js](https://nodejs.org/) 22.13 or newer in the 
 npm install --global @modulane/dev-workspace-cli
 ```
 
-This installs two equivalent commands, `dev-workspace` and the shorter `dws`.
+This installs two equivalent commands, `dev-workspace` and the shorter `dws`. Run the same command again to update. What changed in each version is in the [GitHub releases](https://github.com/modulane/dev-workspace-cli/releases).
 
 ## Quick start
 
