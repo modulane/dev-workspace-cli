@@ -605,6 +605,10 @@ test('parsePnpmWorkspace reads the packages list in either style', () => {
     'a/*',
     'b',
   ])
+  assert.deepEqual(
+    parsePnpmWorkspace('packages:\n- apps/*\n- libs/*\ncatalog:\n- no\n'),
+    ['apps/*', 'libs/*'],
+  )
   assert.deepEqual(parsePnpmWorkspace('catalog:\n  react: ^19\n'), [])
 })
 
