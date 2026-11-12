@@ -27,7 +27,7 @@ These apply to every milestone:
 | A polished interface            | Released in 0.9.0                         | Mouse support, framed header, buttons, themes, project details, first run |
 | Terminal compatibility          | Planned                                   | Mouse and screens checked in macOS Terminal, iTerm2 and Linux terminals   |
 | Bigger workspaces               | Planned                                   | Monorepos, nested projects, multiple named workspaces                     |
-| Configuration and scripts       | Planned                                   | Versioned config schema, `config` command, JSON output                    |
+| Configuration and scripts       | Planned                                   | Versioned config schema, `config` command, JSON output, project commands  |
 | Hardening and release candidate | Planned                                   | Linting, type checks, end-to-end tests, interface freeze, feedback period |
 | Stable                          | Planned: 1.0.0                            | Semver guarantees for flags, config and exit codes                        |
 
@@ -193,6 +193,8 @@ Every screen checked in the terminals people use, on their own schedule: they ne
 - [ ] **Settings:** default package manager, hidden scripts (glob patterns), hidden folders, search depth, and whether to show folders without a `package.json` (currently always shown, dimmed).
 - [ ] **`config` command:** `dev-workspace config get|set|list|edit`, so users never have to edit JSON by hand. `edit` opens the file in `$EDITOR` / `%EDITOR%`.
 - [ ] **JSON output for automation:** `dev-workspace --list --json` prints projects and scripts as JSON and exits.
+- [ ] **Open in VS Code:** an action in a project or package that runs `code .` in its folder, with a hint when the `code` command is missing [#89](https://github.com/modulane/dev-workspace-cli/issues/89).
+- [ ] **Run any command:** an action in a project or package that asks for a command and runs it in its folder through the user's shell, as if they had typed `cd` there, with the same result line and **Run again** as a script [#90](https://github.com/modulane/dev-workspace-cli/issues/90).
 - [ ] **Update notice:** at most once a day, after a run, mention when a newer version exists on npm. It must never delay startup, and can be disabled with `DEV_WORKSPACE_NO_UPDATE_CHECK=1` and in CI.
 
 **Done when:** every setting is documented, can be set via the `config` command, and is covered by migration tests from every earlier config format.
