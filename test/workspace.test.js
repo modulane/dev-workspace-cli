@@ -726,6 +726,27 @@ test('getPackages expands the workspace patterns into packages', async () => {
   })
 })
 
+test('getPackages leaves out a folder and what it holds with a trailing /**', async () => {
+  await withTempDirectory(async directory => {
+    await createTree(directory, [
+      'packages/api/',
+      'packages/test/',
+      'packages/test/fixture/',
+      'packages/testing/',
+    ])
+
+    const packages = await getPackages(directory, [
+      'packages/**',
+      '!**/test/**',
+    ])
+
+    assert.deepEqual(
+      packages.map(({ path: folder }) => folder),
+      ['packages/api', 'packages/testing'],
+    )
+  })
+})
+
 test('getScripts marks scripts that cannot run without arguments', async () => {
   await withTempDirectory(async directory => {
     await writeFile(
